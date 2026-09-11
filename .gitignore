@@ -1,4 +1,4 @@
-﻿# Dependencies
+# Dependencies
 node_modules/
 /.pnp
 .pnp.js
@@ -68,4 +68,7 @@ yarn-error.log*
 logs/
 *.log
 .vercel
+.wrangler/
 .env*
+!.env.example
+!backend/.env.example
