@@ -7,6 +7,11 @@ export type RouteCategoryBadge =
   | 'FEWEST TRANSFERS'
   | 'MOST RELIABLE'
   | 'MINIMUM WAIT'
+  | 'BRTS BUSWAY'
+  | 'SUBURBAN RAIL'
+  | 'CITY FEEDER'
+  | 'MULTIMODAL'
+  | 'RECOMMENDED'
   | 'ACCESSIBLE'
   | 'ALTERNATIVE'
 
@@ -132,6 +137,7 @@ export interface JourneyRouteOption {
   departure_time: string
   arrival_time: string
   total_distance_km: number
+  walking_distance_km?: number
   reliability_score: number
   is_live: boolean
   delay_minutes: number

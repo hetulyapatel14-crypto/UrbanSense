@@ -6,12 +6,10 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
-  FileText,
   Radio,
   MapPin,
   Layers,
   ArrowLeft,
-  ShieldCheck,
   Compass,
   Sparkles,
   Menu,
@@ -54,8 +52,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { to: '/traffic-analytics', icon: Activity, label: 'Traffic Analytics' },
     { to: '/incident-center', icon: AlertTriangle, label: 'Incident Center' },
     { to: '/vehicle-tracking', icon: BarChart3, label: 'Vehicle Tracking' },
-    { to: '/reports', icon: FileText, label: 'Reports & Insights' },
-    { to: '/architecture', icon: Layers, label: 'Architecture' },
   ]
 
   return (
@@ -134,7 +130,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             {!isCollapsed && (
               <div className="px-3 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center justify-between">
                 <span>Platform Modules</span>
-                <span className="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-mono font-bold">10</span>
+                <span className="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-mono font-bold">{navItems.length}</span>
               </div>
             )}
 
@@ -180,39 +176,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Footer Area */}
           <div className={`border-t border-slate-200/80 bg-slate-50/70 transition-all ${
-            isCollapsed ? 'p-2 space-y-2 text-center' : 'p-3.5 space-y-2'
+            isCollapsed ? 'p-2 text-center' : 'p-3.5'
           }`}>
             {!isCollapsed ? (
-              <>
-                <div className="flex items-center justify-between text-xs px-2.5 py-1.5 bg-emerald-50/90 text-emerald-800 rounded-lg border border-emerald-200/60 font-semibold shadow-xs">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
-                    <span>Django API Online</span>
-                  </span>
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                </div>
-
-                <a
-                  href="http://localhost:8000/api/docs/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-center space-x-1.5 w-full py-1.5 px-3 text-[11px] font-bold text-blue-700 bg-white hover:bg-blue-50 border border-slate-200/90 hover:border-blue-300 rounded-lg transition-all duration-200 shadow-xs hover:shadow-sm"
-                >
-                  <span>Swagger API Docs ↗</span>
-                </a>
-
-                <Link
-                  to="/"
-                  className="flex items-center justify-center space-x-2 w-full py-2 px-3 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100/80 border border-slate-200 rounded-lg transition-all duration-200 shadow-xs hover:shadow-sm"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Back to Portal Home</span>
-                </Link>
-              </>
+              <Link
+                to="/"
+                className="flex items-center justify-center space-x-2 w-full py-2 px-3 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100/80 border border-slate-200 rounded-lg transition-all duration-200 shadow-xs hover:shadow-sm"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Portal Home</span>
+              </Link>
             ) : (
-              <div className="flex flex-col items-center space-y-2">
-                <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" title="Django API Online" />
+              <div className="flex flex-col items-center">
                 <Link to="/" title="Back to Portal Home" className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors">
                   <ArrowLeft className="w-4 h-4" />
                 </Link>

@@ -131,14 +131,24 @@ export const RouteComparisonTable: React.FC<RouteComparisonTableProps> = ({
                               ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                               : r.category_badge === 'LEAST WALKING'
                               ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                              : r.category_badge === 'MINIMUM WAIT'
+                              : r.category_badge === 'FEWEST TRANSFERS'
                               ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                              : r.category_badge === 'MOST RELIABLE'
+                              ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                              : r.category_badge === 'MINIMUM WAIT'
+                              ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                              : r.category_badge === 'BRTS BUSWAY'
+                              ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                              : r.category_badge === 'SUBURBAN RAIL'
+                              ? 'bg-purple-600/20 text-purple-300 border border-purple-600/30'
+                              : r.category_badge === 'CITY FEEDER'
+                              ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-600/30'
                               : r.category_badge === 'ACCESSIBLE'
                               ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
                               : 'bg-slate-800 text-slate-300 border border-slate-700'
                           }`}
                         >
-                          {r.tag_label || r.category_badge}
+                          {r.tag_label || r.category_badge || 'RECOMMENDED'}
                         </span>
                         <span className="font-semibold text-slate-100">{r.summary_title}</span>
                       </div>

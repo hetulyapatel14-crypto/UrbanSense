@@ -143,7 +143,8 @@ class MultimodalRoutingEngine:
     ) -> List[Dict[str, Any]]:
         routes = []
 
-        # 1. Direct Single-Line Transit Routes
+        # 1. Direct Single-Line Transit Routes (best boarding/alighting pair per route)
+        best_direct_by_route: Dict[str, Dict[str, Any]] = {}
         for o_stop in origin_stops:
             o_stop_id = o_stop['stop_id']
             o_rs_list = RouteStop.objects.filter(stop__stop_id=o_stop_id).select_related('route', 'stop')
@@ -160,6 +161,12 @@ class MultimodalRoutingEngine:
 
                     d_rs = RouteStop.objects.filter(route=route, stop__stop_id=d_stop_id).exclude(sequence=o_rs.sequence).select_related('stop').first()
                     if d_rs:
+                        walk_total = o_stop['walking_time_mins'] + d_stop['walking_time_mins']
+                        stops_count = abs(d_rs.sequence - o_rs.sequence)
+                        # Avoid taking a 1-stop trip that leaves user with excessive walking
+                        if stops_count <= 2 and walk_total > 20:
+                            continue
+
                         r_obj = cls._build_direct_journey(
                             start_name, start_lat, start_lng,
                             o_stop, o_rs,
@@ -167,9 +174,16 @@ class MultimodalRoutingEngine:
                             d_stop, d_rs,
                             route, dep_time
                         )
-                        routes.append(r_obj)
+
+                        # Keep the best boarding/alighting station pair for this specific route (minimize duration & walking)
+                        prev_best = best_direct_by_route.get(route.route_id)
+                        if not prev_best or r_obj['duration_minutes'] < prev_best['duration_minutes']:
+                            best_direct_by_route[route.route_id] = r_obj
+
+        routes.extend(best_direct_by_route.values())
 
         # 2a. Direct Common-Stop Transfer Interchange (e.g. Motera Stadium, Old High Court, GNLU, Tapovan, Infocity)
+        best_transfers_by_pair: Dict[Tuple[str, str, Any], Dict[str, Any]] = {}
         for o_stop in origin_stops:
             o_rs_list = RouteStop.objects.filter(stop__stop_id=o_stop['stop_id']).select_related('route')
             for o_rs in o_rs_list:
@@ -215,7 +229,10 @@ class MultimodalRoutingEngine:
                                     d_stop, d_rs,
                                     r1, r2, dep_time
                                 )
-                                routes.append(r_obj)
+                                pair_key = (r1.route_id, r2.route_id, common_id)
+                                prev_t = best_transfers_by_pair.get(pair_key)
+                                if not prev_t or r_obj['duration_minutes'] < prev_t['duration_minutes']:
+                                    best_transfers_by_pair[pair_key] = r_obj
 
         # 2b. Explicit Cross-Station Walking Transfers (e.g. Bus Stand <-> Metro Station)
         transfers = Transfer.objects.all().select_related('from_stop', 'to_stop')
@@ -251,8 +268,12 @@ class MultimodalRoutingEngine:
                                     d_stop, d_rs,
                                     r1, r2, dep_time
                                 )
-                                routes.append(r_obj)
+                                pair_key = (r1.route_id, r2.route_id, transfer.id)
+                                prev_t = best_transfers_by_pair.get(pair_key)
+                                if not prev_t or r_obj['duration_minutes'] < prev_t['duration_minutes']:
+                                    best_transfers_by_pair[pair_key] = r_obj
 
+        routes.extend(best_transfers_by_pair.values())
         return routes
 
     @classmethod
@@ -286,6 +307,7 @@ class MultimodalRoutingEngine:
         total_walk_mins = walk1_mins + walk2_mins
         total_duration = total_walk_mins + wait_mins + in_transit_mins + delay_mins
         total_dist_km = walk1_dist_km + transit_dist_km + walk2_dist_km
+        total_walk_dist_km = round(walk1_dist_km + walk2_dist_km, 2)
 
         arr_time = dep_time + timedelta(minutes=total_duration)
 
@@ -394,6 +416,7 @@ class MultimodalRoutingEngine:
             'departure_time': dep_time.strftime('%I:%M %p'),
             'arrival_time': arr_time.strftime('%I:%M %p'),
             'total_distance_km': round(total_dist_km, 1),
+            'walking_distance_km': total_walk_dist_km,
             'reliability_score': route.reliability_score,
             'is_live': is_live,
             'delay_minutes': delay_mins,
@@ -447,6 +470,7 @@ class MultimodalRoutingEngine:
         total_wait_mins = wait1_mins + wait2_mins
         total_duration = total_walk_mins + total_wait_mins + in_transit1_mins + in_transit2_mins
         total_dist_km = walk1_dist_km + dist1_km + (transfer.walking_distance_m / 1000.0) + dist2_km + walk2_dist_km
+        total_walk_dist_km = round(walk1_dist_km + (transfer.walking_distance_m / 1000.0) + walk2_dist_km, 2)
 
         arr_time = dep_time + timedelta(minutes=total_duration)
 
@@ -605,6 +629,7 @@ class MultimodalRoutingEngine:
             'departure_time': dep_time.strftime('%I:%M %p'),
             'arrival_time': arr_time.strftime('%I:%M %p'),
             'total_distance_km': round(total_dist_km, 1),
+            'walking_distance_km': total_walk_dist_km,
             'reliability_score': avg_reliability,
             'is_live': False,
             'delay_minutes': 0,
@@ -651,6 +676,7 @@ class MultimodalRoutingEngine:
             'departure_time': dep_time.strftime('%I:%M %p'),
             'arrival_time': arr_time.strftime('%I:%M %p'),
             'total_distance_km': round(dist_km, 2),
+            'walking_distance_km': round(dist_km, 2),
             'reliability_score': 0.99,
             'is_live': False,
             'delay_minutes': 0,
@@ -683,45 +709,150 @@ class MultimodalRoutingEngine:
         }
 
     @classmethod
+    def _filter_unreasonable_and_dominated_routes(cls, routes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        if not routes:
+            return []
+
+        fastest_duration = min(r['duration_minutes'] for r in routes)
+        min_walk = min(r['walking_minutes'] for r in routes)
+
+        # 1. Filter out extreme outliers & unfeasible walks
+        valid = []
+        for r in routes:
+            dur = r['duration_minutes']
+            walk = r['walking_minutes']
+
+            if r['type'] != 'WALK_DIRECT':
+                # Skip if total duration exceeds 2.2x fastest and requires > 20 min walk
+                if dur > max(65, fastest_duration * 2.2) and walk > 20:
+                    continue
+                # Skip if walking is excessive (> 35 min) when there is an option with <= 10 min walking
+                if walk > 35 and min_walk <= 10:
+                    continue
+                # Skip excessive transfers (> 2 transfers)
+                if r.get('transfers', 0) > 2:
+                    continue
+
+            valid.append(r)
+
+        if not valid:
+            valid = routes
+
+        # 2. Deduplicate identical transit itineraries
+        by_sig = {}
+        for r in valid:
+            sig = tuple((s.get('mode'), s.get('route_number'), s.get('from_name'), s.get('to_name'))
+                        for s in r.get('steps', []) if s.get('step_type') == 'TRANSIT')
+            if not sig:
+                sig = (r.get('summary_title'), r.get('duration_minutes'))
+            if sig not in by_sig or r['duration_minutes'] < by_sig[sig]['duration_minutes']:
+                by_sig[sig] = r
+
+        deduped = list(by_sig.values())
+
+        # 3. Preserve Mode & Multi-modal Diversity
+        by_profile = {}
+        for r in deduped:
+            prof = (r.get('type'), r.get('primary_mode'))
+            if prof not in by_profile:
+                by_profile[prof] = []
+            by_profile[prof].append(r)
+
+        diverse_candidates = []
+        for prof, r_list in by_profile.items():
+            r_list.sort(key=lambda x: (x['duration_minutes'], x['fare']))
+            # Within the same profile, drop strictly dominated routes
+            kept = []
+            for r in r_list:
+                is_dom = False
+                for other in r_list:
+                    if other is r:
+                        continue
+                    if (other['duration_minutes'] <= r['duration_minutes'] and
+                        other['walking_minutes'] <= r['walking_minutes'] and
+                        other['transfers'] <= r['transfers'] and
+                        other['fare'] <= r['fare'] and
+                        (other['duration_minutes'] < r['duration_minutes'] or
+                         other['walking_minutes'] < r['walking_minutes'] or
+                         other['fare'] < r['fare'])):
+                        is_dom = True
+                        break
+                if not is_dom:
+                    kept.append(r)
+            diverse_candidates.extend(kept[:2])
+
+        return diverse_candidates if diverse_candidates else deduped
+
+    @classmethod
     def _rank_and_categorize_routes(cls, routes: List[Dict[str, Any]], user_pref: str) -> List[Dict[str, Any]]:
         if not routes:
             return []
 
-        fastest_r = min(routes, key=lambda x: x['duration_minutes'])
-        cheapest_r = min(routes, key=lambda x: x['fare'])
-        least_walk_r = min(routes, key=lambda x: x['walking_minutes'])
-        fewest_trans_r = min(routes, key=lambda x: (x['transfers'], x['duration_minutes']))
-        most_reliable_r = max(routes, key=lambda x: (x['reliability_score'], -x['duration_minutes']))
-        min_wait_r = min(routes, key=lambda x: (x['waiting_minutes'], x['duration_minutes']))
+        # Filter out unreasonable & duplicate routes while preserving diversity
+        filtered_routes = cls._filter_unreasonable_and_dominated_routes(routes)
+        if not filtered_routes:
+            filtered_routes = routes
 
-        category_map = {
-            id(fastest_r): {'badge': 'FASTEST', 'badge_color': 'bg-amber-500 text-white', 'tag_label': 'FASTEST'},
-            id(cheapest_r): {'badge': 'CHEAPEST', 'badge_color': 'bg-emerald-500 text-white', 'tag_label': 'CHEAPEST'},
-            id(least_walk_r): {'badge': 'LEAST WALKING', 'badge_color': 'bg-blue-500 text-white', 'tag_label': 'LEAST WALKING'},
-            id(fewest_trans_r): {'badge': 'FEWEST TRANSFERS', 'badge_color': 'bg-purple-500 text-white', 'tag_label': 'FEWEST TRANSFERS'},
-            id(most_reliable_r): {'badge': 'MOST RELIABLE', 'badge_color': 'bg-indigo-500 text-white', 'tag_label': 'MOST RELIABLE'},
-            id(min_wait_r): {'badge': 'MINIMUM WAIT', 'badge_color': 'bg-teal-500 text-white', 'tag_label': 'MINIMUM WAIT'},
-        }
+        # Allocate distinct category badges across candidate options
+        assigned_badges = {}
+
+        # 1. Fastest option
+        fastest_r = min(filtered_routes, key=lambda x: x['duration_minutes'])
+        assigned_badges[id(fastest_r)] = ('FASTEST', 'bg-amber-500 text-white')
+
+        # 2. Cheapest option (assign to different route if available)
+        rem_cheapest = [r for r in filtered_routes if id(r) not in assigned_badges]
+        if rem_cheapest:
+            cheapest_r = min(rem_cheapest, key=lambda x: (x['fare'], x['duration_minutes']))
+            assigned_badges[id(cheapest_r)] = ('CHEAPEST', 'bg-emerald-600 text-white')
+
+        # 3. Least Walking option (assign to different route if available)
+        rem_walk = [r for r in filtered_routes if id(r) not in assigned_badges]
+        if rem_walk:
+            least_walk_r = min(rem_walk, key=lambda x: (x['walking_minutes'], x['duration_minutes']))
+            assigned_badges[id(least_walk_r)] = ('LEAST WALKING', 'bg-blue-600 text-white')
+
+        # 4. Fewest Transfers option (assign to different route if available)
+        rem_trans = [r for r in filtered_routes if id(r) not in assigned_badges]
+        if rem_trans:
+            fewest_trans_r = min(rem_trans, key=lambda x: (x['transfers'], x['duration_minutes']))
+            assigned_badges[id(fewest_trans_r)] = ('FEWEST TRANSFERS', 'bg-purple-600 text-white')
+
+        # 5. Most Reliable option (assign to different route if available)
+        rem_rel = [r for r in filtered_routes if id(r) not in assigned_badges]
+        if rem_rel:
+            most_rel_r = max(rem_rel, key=lambda x: (x['reliability_score'], -x['duration_minutes']))
+            assigned_badges[id(most_rel_r)] = ('MOST RELIABLE', 'bg-indigo-600 text-white')
 
         output = []
         seen_keys = set()
-        for r in routes:
+        for r in filtered_routes:
             r_copy = dict(r)
-            cat = category_map.get(id(r), None)
-            if cat:
-                r_copy['category_badge'] = cat['badge']
-                r_copy['badge_color'] = cat['badge_color']
-                r_copy['tag_label'] = cat['tag_label']
+            if id(r) in assigned_badges:
+                badge, color = assigned_badges[id(r)]
             else:
-                r_copy['category_badge'] = 'ALTERNATIVE'
-                r_copy['badge_color'] = 'bg-slate-500 text-white'
-                r_copy['tag_label'] = 'ALTERNATIVE'
+                modes = r_copy.get('modes', [])
+                if 'BRTS' in modes:
+                    badge, color = 'BRTS BUSWAY', 'bg-orange-600 text-white'
+                elif 'RAIL' in modes:
+                    badge, color = 'SUBURBAN RAIL', 'bg-purple-700 text-white'
+                elif 'AMTS' in modes:
+                    badge, color = 'CITY FEEDER', 'bg-emerald-700 text-white'
+                elif r_copy.get('transfers', 0) > 0:
+                    badge, color = 'MULTIMODAL', 'bg-indigo-600 text-white'
+                else:
+                    badge, color = 'ALTERNATIVE', 'bg-slate-600 text-white'
+
+            r_copy['category_badge'] = badge
+            r_copy['tag_label'] = badge
+            r_copy['badge_color'] = color
 
             k = (r_copy['summary_title'], r_copy['duration_minutes'], r_copy['fare'])
             if k not in seen_keys:
                 seen_keys.add(k)
                 output.append(r_copy)
 
+        # Sort according to user preference (top matching option at index 0)
         if user_pref == 'cheapest':
             output.sort(key=lambda x: (x['fare'], x['duration_minutes']))
         elif user_pref == 'least_walking':

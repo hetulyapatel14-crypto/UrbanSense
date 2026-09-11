@@ -12,7 +12,8 @@ import {
   Leaf,
   Layers,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Map
 } from 'lucide-react'
 import { JourneyRouteOption, DelayAlertCallout, LeaveBySummary } from '../../types/transit'
 
@@ -21,8 +22,65 @@ interface RouteResultsListProps {
   selectedRouteKey: string | null
   onSelectRoute: (route: JourneyRouteOption) => void
   onToggleMatrix?: () => void
+  onOpenMap?: (route?: JourneyRouteOption) => void
   delayCallout?: DelayAlertCallout | null
   leaveBySummary?: LeaveBySummary | null
+}
+
+const formatWalkDistance = (route: JourneyRouteOption): string => {
+  if (route.walking_distance_km !== undefined && route.walking_distance_km > 0) {
+    if (route.walking_distance_km < 1) {
+      return `${Math.round(route.walking_distance_km * 1000)}m`
+    }
+    return `${route.walking_distance_km.toFixed(1)} km`
+  }
+  if (route.steps && route.steps.length > 0) {
+    const walkKm = route.steps
+      .filter((s) => s.step_type === 'WALK' || s.step_type === 'TRANSFER')
+      .reduce((sum, s) => sum + (s.distance_km || 0), 0)
+    if (walkKm > 0) {
+      if (walkKm < 1) {
+        return `${Math.round(walkKm * 1000)}m`
+      }
+      return `${walkKm.toFixed(1)} km`
+    }
+  }
+  const estM = (route.walking_minutes || 0) * 75
+  return estM < 1000 ? `${estM}m` : `${(estM / 1000).toFixed(1)} km`
+}
+
+const getBadgeInfo = (route: JourneyRouteOption) => {
+  const rawLabel = (route.tag_label || route.category_badge || '').trim()
+  const label = rawLabel || 'RECOMMENDED'
+  let colorClass = route.badge_color || 'bg-blue-600 text-white'
+
+  if (label === 'FASTEST') {
+    colorClass = 'bg-amber-500 text-white shadow-xs'
+  } else if (label === 'CHEAPEST') {
+    colorClass = 'bg-emerald-600 text-white shadow-xs'
+  } else if (label === 'LEAST WALKING') {
+    colorClass = 'bg-blue-600 text-white shadow-xs'
+  } else if (label === 'FEWEST TRANSFERS') {
+    colorClass = 'bg-purple-600 text-white shadow-xs'
+  } else if (label === 'MOST RELIABLE') {
+    colorClass = 'bg-indigo-600 text-white shadow-xs'
+  } else if (label === 'MINIMUM WAIT') {
+    colorClass = 'bg-teal-600 text-white shadow-xs'
+  } else if (label === 'BRTS BUSWAY') {
+    colorClass = 'bg-orange-600 text-white shadow-xs'
+  } else if (label === 'SUBURBAN RAIL') {
+    colorClass = 'bg-purple-700 text-white shadow-xs'
+  } else if (label === 'CITY FEEDER') {
+    colorClass = 'bg-emerald-700 text-white shadow-xs'
+  } else if (label === 'MULTIMODAL') {
+    colorClass = 'bg-indigo-600 text-white shadow-xs'
+  } else if (label === 'ALTERNATIVE') {
+    colorClass = 'bg-slate-600 text-white shadow-xs'
+  } else if (!route.badge_color) {
+    colorClass = 'bg-blue-600 text-white shadow-xs'
+  }
+
+  return { label, colorClass }
 }
 
 export const RouteResultsList: React.FC<RouteResultsListProps> = ({
@@ -143,22 +201,45 @@ export const RouteResultsList: React.FC<RouteResultsListProps> = ({
               {/* Category Badge Header */}
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <span className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-sm ${route.badge_color || 'bg-blue-600 text-white'}`}>
-                    {route.tag_label || route.category_badge}
-                  </span>
+                  {(() => {
+                    const { label, colorClass } = getBadgeInfo(route)
+                    return (
+                      <span className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-sm ${colorClass}`}>
+                        {label}
+                      </span>
+                    )
+                  })()}
                   <span className="text-xs font-bold text-slate-800">
                     {route.summary_title}
                   </span>
                 </div>
 
-                {/* Fare and Duration Summary */}
-                <div className="flex items-baseline space-x-2 text-right">
-                  <div className="text-xl font-black text-slate-900 tracking-tight">
-                    {route.duration_minutes} <span className="text-xs font-semibold text-slate-500">min</span>
+                {/* Fare, Duration Summary & View on Map Button */}
+                <div className="flex items-center space-x-2">
+                  <div className="flex items-baseline space-x-1.5 text-right">
+                    <div className="text-lg font-black text-slate-900 tracking-tight">
+                      {route.duration_minutes} <span className="text-[10px] font-semibold text-slate-500">min</span>
+                    </div>
+                    <div className="text-xs font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      ₹{route.fare}
+                    </div>
                   </div>
-                  <div className="text-sm font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
-                    ₹{route.fare}
-                  </div>
+
+                  {onOpenMap && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSelectRoute(route)
+                        onOpenMap(route)
+                      }}
+                      title="Open full interactive map modal"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shadow-xs transition-all hover:scale-105 active:scale-95"
+                    >
+                      <Map className="w-3 h-3" />
+                      <span>Map</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -243,12 +324,16 @@ export const RouteResultsList: React.FC<RouteResultsListProps> = ({
 
                 <div className="flex items-center space-x-1.5">
                   <Footprints className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Walk: <strong>{route.walking_minutes} min</strong> ({route.total_distance_km} km)</span>
+                  <span>
+                    Walk: <strong>{route.walking_minutes} min</strong> <span className="text-slate-400 font-normal">({formatWalkDistance(route)})</span>
+                  </span>
                 </div>
 
                 <div className="flex items-center space-x-1.5">
                   <Shuffle className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Transfers: <strong>{route.transfers}</strong></span>
+                  <span>
+                    Transfers: <strong>{route.transfers}</strong> <span className="text-slate-400 font-normal">• {route.total_distance_km} km</span>
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between sm:justify-end space-x-1.5">
