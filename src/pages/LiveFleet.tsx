@@ -19,6 +19,8 @@ import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
 import { buses as defaultBuses } from '../data/buses'
 import { apiService } from '../services/api'
 import HeaderActions from '../components/HeaderActions'
+import { TraccarGpsModal } from '../components/journey/TraccarGpsModal'
+import { traccarApi, TraccarGpsPacket } from '../services/traccarApi'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -40,6 +42,7 @@ export default function LiveFleet() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [activeLens, setActiveLens] = useState<'front' | 'rear' | 'left' | 'right' | 'passenger'>('front')
+  const [showTraccarModal, setShowTraccarModal] = useState(false)
 
   const [searchParams, setSearchParams] = useSearchParams()
   const busQueryParam = searchParams.get('bus')
@@ -51,6 +54,29 @@ export default function LiveFleet() {
     apiService.getBuses(statusFilter).then(data => {
       if (data && data.length > 0) setBuses(data)
     })
+
+    // Listen to live Traccar SSE stream
+    const unsubscribe = traccarApi.connectLiveStream(
+      (packet: TraccarGpsPacket) => {
+        setBuses(prev => prev.map(b => {
+          if (b.id.toLowerCase() === packet.vehicle_id.toLowerCase()) {
+            return {
+              ...b,
+              gps: [packet.latitude, packet.longitude],
+              speed: packet.speed_kmh,
+              location: packet.location_name || b.location,
+              lastUpdate: 'Just now (Live)',
+              status: 'online'
+            }
+          }
+          return b
+        }))
+      }
+    )
+
+    return () => {
+      unsubscribe()
+    }
   }, [statusFilter])
 
   // Sync with URL query parameter
@@ -581,6 +607,12 @@ export default function LiveFleet() {
           </div>
         </div>
       </div>
+
+      {/* Traccar Phone & Live GPS Controller Modal */}
+      <TraccarGpsModal
+        isOpen={showTraccarModal}
+        onClose={() => setShowTraccarModal(false)}
+      />
     </DashboardLayout>
   )
 }

@@ -25,9 +25,11 @@ const PRESET_HUBS = [
   { name: 'GIFT City Club & Omaxe', lat: 23.1550, lng: 72.6810, label: 'GIFT Club' },
 
   // Gandhinagar
-  { name: 'Infocity (Gandhinagar)', lat: 23.2280, lng: 72.6600, label: 'Infocity' },
-  { name: 'Mahatma Mandir Convention', lat: 23.2500, lng: 72.6520, label: 'Mahatma Mandir' },
-  { name: 'Sector 21 Gandhinagar', lat: 23.2380, lng: 72.6420, label: 'Gandhinagar Sec 21' },
+  { name: 'Infocity IT Park & Metro', lat: 23.1965, lng: 72.6288, label: 'Infocity' },
+  { name: 'Dholakuva Circle & Metro', lat: 23.2087, lng: 72.6253, label: 'Dholakuva' },
+  { name: 'Mahatma Mandir Convention', lat: 23.2590, lng: 72.6520, label: 'Mahatma Mandir' },
+  { name: 'Sector 21 Gandhinagar', lat: 23.2380, lng: 72.6420, label: 'Sec 21' },
+  { name: 'GNLU Interchange Hub', lat: 23.1540, lng: 72.6500, label: 'GNLU Hub' },
   { name: 'Akshardham Gandhinagar', lat: 23.2300, lng: 72.6730, label: 'Akshardham' },
 
   // Ahmedabad
@@ -54,6 +56,7 @@ export const NearbyTransportFinder: React.FC<NearbyTransportFinderProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [selectedModeFilter, setSelectedModeFilter] = useState<string | undefined>(undefined)
   const [isOutOfArea, setIsOutOfArea] = useState(false)
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null)
 
   const fetchNearby = async (lat: number, lng: number, radius: number, mode?: string) => {
     setIsLoading(true)
@@ -76,6 +79,9 @@ export const NearbyTransportFinder: React.FC<NearbyTransportFinderProps> = ({
         (pos) => {
           const lat = pos.coords.latitude
           const lng = pos.coords.longitude
+          const acc = pos.coords.accuracy
+          setGpsAccuracy(acc)
+
           // Check if coordinates are in Ahmedabad/Gandhinagar region (~22.8 - 23.4 lat, ~72.3 - 72.8 lng)
           const inArea = lat >= 22.8 && lat <= 23.4 && lng >= 72.3 && lng <= 72.8
           setIsOutOfArea(!inArea)
@@ -86,11 +92,13 @@ export const NearbyTransportFinder: React.FC<NearbyTransportFinderProps> = ({
             // Keep Ahmedabad anchor but inform user
             setUserCoords({ lat: 23.0415, lng: 72.5710, label: 'Ashram Road (Network Center)' })
           }
+          setIsLoading(false)
         },
         () => {
           setIsLoading(false)
+          setGpsAccuracy(null)
         },
-        { timeout: 6000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       )
     }
   }
@@ -98,7 +106,8 @@ export const NearbyTransportFinder: React.FC<NearbyTransportFinderProps> = ({
   const getModeIcon = (mode: string) => {
     if (mode === 'METRO') return <Train className="w-4 h-4 text-blue-600" />
     if (mode === 'BRTS') return <Bus className="w-4 h-4 text-orange-600" />
-    return <Bus className="w-4 h-4 text-emerald-600" />
+    if (mode === 'GANDHINAGAR_ELECTRIC_BUS') return <Bus className="w-4 h-4 text-emerald-600" />
+    return <Bus className="w-4 h-4 text-slate-600" />
   }
 
   return (
@@ -122,14 +131,30 @@ export const NearbyTransportFinder: React.FC<NearbyTransportFinderProps> = ({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleGetCurrentLocation}
-          className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100/80 px-3 py-1.5 rounded-xl border border-blue-200/60 transition-colors"
-        >
-          <Compass className="w-3.5 h-3.5 text-blue-600" />
-          <span>Use GPS</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {gpsAccuracy !== null && (
+            <span
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+                gpsAccuracy <= 30
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : gpsAccuracy <= 100
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-red-50 text-red-700 border-red-200'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+              <span>±{Math.round(gpsAccuracy)}m</span>
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleGetCurrentLocation}
+            className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100/80 px-3 py-1.5 rounded-xl border border-blue-200/60 transition-colors"
+          >
+            <Compass className="w-3.5 h-3.5 text-blue-600" />
+            <span>Use GPS</span>
+          </button>
+        </div>
       </div>
 
       {/* Out-of-area fallback banner */}
@@ -154,6 +179,7 @@ export const NearbyTransportFinder: React.FC<NearbyTransportFinderProps> = ({
                 type="button"
                 onClick={() => {
                   setIsOutOfArea(false)
+                  setGpsAccuracy(null)
                   setUserCoords({ lat: hub.lat, lng: hub.lng, label: hub.name })
                 }}
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold border whitespace-nowrap transition-all flex items-center gap-1 ${
@@ -177,6 +203,7 @@ export const NearbyTransportFinder: React.FC<NearbyTransportFinderProps> = ({
           {[
             { id: undefined, label: 'All Modes' },
             { id: 'METRO', label: 'Metro' },
+            { id: 'GANDHINAGAR_ELECTRIC_BUS', label: '⚡ e-Bus' },
             { id: 'BRTS', label: 'BRTS' },
             { id: 'AMTS', label: 'AMTS' },
           ].map((item) => {

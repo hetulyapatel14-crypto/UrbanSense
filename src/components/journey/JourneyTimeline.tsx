@@ -4,22 +4,25 @@ import {
   Footprints,
   Train,
   Bus,
+  Zap,
   Shuffle,
   Radio,
   CheckCircle2,
   AlertTriangle,
   Clock,
-  ShieldCheck
+  ShieldCheck,
+  Map
 } from 'lucide-react'
 import { JourneyStep, TransportMode } from '../../types/transit'
 
 interface JourneyTimelineProps {
   steps: JourneyStep[]
-  fareBreakdown?: { mode: string; route_number: string; distance_km: number; fare: number }[]
+  fareBreakdown?: { mode: string; mode_display?: string; route_number: string; distance_km: number; fare: number }[]
   totalFare: number
   totalDuration: number
   departureTime: string
   arrivalTime: string
+  onOpenMap?: () => void
 }
 
 export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
@@ -29,18 +32,25 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
   totalDuration,
   departureTime,
   arrivalTime,
+  onOpenMap,
 }) => {
 
-  const getModeIcon = (mode: TransportMode, stepType: string) => {
+  const getModeIcon = (mode: TransportMode, stepType: string, routeNumber?: string) => {
     if (stepType === 'TRANSFER') return <Shuffle className="w-4 h-4 text-purple-600" />
+    if (mode === 'GANDHINAGAR_ELECTRIC_BUS' || mode?.includes('ELECTRIC') || routeNumber?.startsWith('E-') || routeNumber?.startsWith('GIFT-')) {
+      return <Zap className="w-4 h-4 text-emerald-300 fill-emerald-300" />
+    }
     if (mode === 'METRO' || mode === 'RAIL') return <Train className="w-4 h-4 text-white" />
     if (mode === 'BRTS' || mode === 'AMTS' || mode === 'BUS') return <Bus className="w-4 h-4 text-white" />
     return <Footprints className="w-4 h-4 text-slate-500" />
   }
 
-  const getStepBgColor = (mode: TransportMode, stepType: string, customColor?: string) => {
+  const getStepBgColor = (mode: TransportMode, stepType: string, customColor?: string, routeNumber?: string) => {
     if (stepType === 'TRANSFER') return 'bg-purple-100 border-purple-300'
     if (stepType === 'WALK') return 'bg-slate-100 border-slate-300'
+    if (mode === 'GANDHINAGAR_ELECTRIC_BUS' || mode?.includes('ELECTRIC') || routeNumber?.startsWith('E-') || routeNumber?.startsWith('GIFT-')) {
+      return 'bg-gradient-to-r from-emerald-600 to-teal-700 border-emerald-400 text-white shadow-md shadow-emerald-950'
+    }
     if (customColor) return `border-transparent text-white`
     if (mode === 'METRO') return 'bg-red-600 border-red-700 text-white'
     if (mode === 'BRTS') return 'bg-orange-500 border-orange-600 text-white'
@@ -72,6 +82,17 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
           <div className="text-xs text-slate-500">
             Total Fare: <strong className="text-sm font-extrabold text-emerald-600">₹{totalFare}</strong>
           </div>
+
+          {onOpenMap && (
+            <button
+              type="button"
+              onClick={onOpenMap}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all hover:scale-105 active:scale-95"
+            >
+              <Map className="w-3.5 h-3.5" />
+              <span>View on Map</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -85,11 +106,12 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
                 className={`absolute -left-6 top-0 w-7 h-7 rounded-full flex items-center justify-center border shadow-xs transition-transform group-hover:scale-110 ${getStepBgColor(
                   step.mode,
                   step.step_type,
-                  step.route_color
+                  step.route_color,
+                  step.route_number
                 )}`}
                 style={step.step_type === 'TRANSIT' && step.route_color ? { backgroundColor: step.route_color } : undefined}
               >
-                {getModeIcon(step.mode, step.step_type)}
+                {getModeIcon(step.mode, step.step_type, step.route_number)}
               </div>
 
               {/* Step Content Card */}
@@ -99,12 +121,19 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
                     <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                       <span className="text-xs font-bold text-slate-900">{step.title}</span>
                       {step.step_type === 'TRANSIT' && (
-                        <span
-                          className="text-[10px] font-extrabold px-1.5 py-0.5 rounded text-white shadow-2xs"
-                          style={{ backgroundColor: step.route_color || '#2563EB' }}
-                        >
-                          {step.route_number}
-                        </span>
+                        <>
+                          <span
+                            className="text-[10px] font-extrabold px-1.5 py-0.5 rounded text-white shadow-2xs"
+                            style={{ backgroundColor: step.route_color || '#2563EB' }}
+                          >
+                            {step.route_number}
+                          </span>
+                          {step.fare !== undefined && step.fare > 0 && (
+                            <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              ₹{step.fare}
+                            </span>
+                          )}
+                        </>
                       )}
                       {step.step_type === 'TRANSFER' && (
                         <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-200">
@@ -216,18 +245,37 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
 
       {/* Fare Breakdown Box */}
       {fareBreakdown && fareBreakdown.length > 0 && (
-        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
+        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2.5">
           <div className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
-            <span>Fare Breakdown</span>
+            <span className="flex items-center gap-1.5">
+              <span>Fare Breakdown</span>
+              <span className="text-[10px] font-semibold text-slate-400">({fareBreakdown.length} {fareBreakdown.length === 1 ? 'leg' : 'legs'})</span>
+            </span>
             <span className="text-emerald-700 font-extrabold text-sm">Total: ₹{totalFare}</span>
           </div>
-          <div className="space-y-1 text-xs">
-            {fareBreakdown.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between text-slate-600 py-0.5">
-                <span>{item.mode} ({item.route_number || 'Standard'}) • {item.distance_km} km</span>
-                <span className="font-semibold text-slate-800">₹{item.fare}</span>
-              </div>
-            ))}
+          <div className="space-y-1.5 text-xs">
+            {fareBreakdown.map((item, idx) => {
+              const modeDisplay = item.mode_display || (
+                item.mode === 'GANDHINAGAR_ELECTRIC_BUS'
+                  ? '🚌⚡ Gandhinagar Electric Bus'
+                  : item.mode
+              )
+              return (
+                <div key={idx} className="flex items-center justify-between text-slate-600 py-1 px-2.5 rounded-lg bg-white/70 border border-slate-200/60">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-semibold text-slate-800">{modeDisplay}</span>
+                    {item.route_number && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                        {item.route_number}
+                      </span>
+                    )}
+                    <span className="text-slate-400">•</span>
+                    <span className="text-slate-500 text-[11px]">{item.distance_km} km</span>
+                  </div>
+                  <span className="font-bold text-emerald-700">₹{item.fare}</span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

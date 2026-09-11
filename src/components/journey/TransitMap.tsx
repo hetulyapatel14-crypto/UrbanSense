@@ -4,6 +4,8 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { JourneyRouteOption, LiveVehicle, TransitStop } from '../../types/transit'
 import { Navigation, Layers, ChevronDown, ChevronUp } from 'lucide-react'
+import { MovingVehicleMarker } from './MovingVehicleMarker'
+import { traccarApi, TraccarGpsPacket } from '../../services/traccarApi'
 
 // Fix Leaflet icons
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -66,6 +68,7 @@ const createStationIcon = (mode: string, isInterchange: boolean) => {
   else if (mode === 'BRTS') bg = '#F97316'
   else if (mode === 'AMTS') bg = '#059669'
   else if (mode === 'RAIL') bg = '#9333EA'
+  else if (mode === 'GANDHINAGAR_ELECTRIC_BUS' || mode?.includes('ELECTRIC')) bg = '#059669'
   else if (mode === 'BUS') bg = '#0D9488'
 
   return L.divIcon({
@@ -86,61 +89,89 @@ const createStationIcon = (mode: string, isInterchange: boolean) => {
   })
 }
 
-const createVehicleIcon = (mode: string, vehicleId: string, status: string) => {
-  let bg = '#2563EB'
-  if (mode === 'METRO') bg = '#DC2626'
-  else if (mode === 'BRTS') bg = '#EA580C'
-  else if (mode === 'AMTS') bg = '#059669'
-  else if (mode === 'RAIL') bg = '#9333EA'
-  else if (mode === 'BUS') bg = '#0D9488'
-
-  const isDelayed = status === 'DELAYED'
-  return L.divIcon({
-    className: 'live-vehicle-marker',
-    html: `
-      <div style="
-        background: ${bg};
-        color: white;
-        padding: 3px 6px;
-        border-radius: 8px;
-        font-size: 10px;
-        font-weight: 800;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-        border: 1.5px solid ${isDelayed ? '#EF4444' : '#10B981'};
-        white-space: nowrap;
-        transform: translate(-50%, -50%);
-      ">
-        <span style="
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: ${isDelayed ? '#EF4444' : '#10B981'};
-          display: inline-block;
-          animation: pulse 1.5s infinite;
-        "></span>
-        <span>${vehicleId.split('-').slice(-2).join('-')}</span>
-      </div>
-    `,
-    iconSize: [0, 0],
-    iconAnchor: [0, 0],
-  })
-}
-
 export const TransitMap: React.FC<TransitMapProps> = ({
   route,
-  liveVehicles = [],
+  liveVehicles: propVehicles = [],
   onSelectVehicle,
 }) => {
   const [isLegendMinimized, setIsLegendMinimized] = useState(false)
+  const [liveVehiclesMap, setLiveVehiclesMap] = useState<Record<string, LiveVehicle>>({})
+
   const defaultCenter: [number, number] = [23.1000, 72.6000] // Ahmedabad-Gandhinagar Midpoint
+
+  // Initialize and sync vehicles from props
+  useEffect(() => {
+    if (propVehicles && propVehicles.length > 0) {
+      setLiveVehiclesMap((prev) => {
+        const next = { ...prev }
+        propVehicles.forEach((v) => {
+          next[v.vehicle_id] = { ...v, ...(next[v.vehicle_id] || {}) }
+        })
+        return next
+      })
+    }
+  }, [propVehicles])
+
+  // Subscribe to real-time Traccar SSE stream
+  useEffect(() => {
+    const unsubscribe = traccarApi.connectLiveStream(
+      (packet: TraccarGpsPacket) => {
+        setLiveVehiclesMap((prev) => {
+          const existing = prev[packet.vehicle_id] || ({} as Partial<LiveVehicle>)
+          const updated: LiveVehicle = {
+            vehicle_id: packet.vehicle_id,
+            registration: packet.registration || existing.registration || packet.vehicle_id,
+            mode: (packet.mode as any) || existing.mode || 'GANDHINAGAR_ELECTRIC_BUS',
+            is_electric: packet.is_electric ?? true,
+            battery_soc_pct: packet.battery_soc_pct ?? existing.battery_soc_pct ?? 85,
+            charging_status: (packet.charging_status as any) || existing.charging_status || 'DISCHARGING',
+            agency_code: existing.agency_code || 'GGTSL',
+            agency_name: packet.operator || existing.agency_name || 'Gandhinagar Greenline (GGTSL)',
+            route_number: packet.route_number || existing.route_number || 'E-1',
+            route_name: packet.route_name || existing.route_name || 'Gandhinagar Express',
+            latitude: packet.latitude,
+            longitude: packet.longitude,
+            speed_kmh: packet.speed_kmh,
+            heading: packet.heading,
+            current_location_name: packet.location_name || existing.current_location_name || 'Gandhinagar Transit Corridor',
+            next_stop_name: packet.next_stop_name || existing.next_stop_name,
+            next_stop_id: packet.next_stop_id !== undefined ? String(packet.next_stop_id) : existing.next_stop_id,
+            eta_next_stop_mins: existing.eta_next_stop_mins || 3,
+            delay_minutes: existing.delay_minutes || 0,
+            status: (existing.status as any) || 'ON_TIME',
+            telemetry_type: 'REAL_TIME',
+            provenance: 'REAL_TIME',
+            data_source: packet.data_source || 'TRACCAR_GPS_FEED',
+            freshness_label: 'Updated just now',
+          }
+          return {
+            ...prev,
+            [packet.vehicle_id]: updated,
+          }
+        })
+      },
+      (initialVehicles) => {
+        if (initialVehicles && initialVehicles.length > 0) {
+          setLiveVehiclesMap((prev) => {
+            const next = { ...prev }
+            initialVehicles.forEach((v) => {
+              next[v.vehicle_id] = { ...v, ...(next[v.vehicle_id] || {}) }
+            })
+            return next
+          })
+        }
+      }
+    )
+
+    return () => {
+      unsubscribe()
+    }
+  }, [])
 
   // Collect all coordinates for bounds fitting
   const allCoords: [number, number][] = route?.polyline || [
     [23.0762, 72.5855],
-    [23.1600, 72.6840]
+    [23.1600, 72.6840],
   ]
 
   const originCoord: [number, number] | null =
@@ -153,6 +184,8 @@ export const TransitMap: React.FC<TransitMapProps> = ({
       ? route.steps[route.steps.length - 1].coordinates[route.steps[route.steps.length - 1].coordinates.length - 1]
       : null
 
+  const activeVehiclesList = Object.values(liveVehiclesMap)
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-sm flex flex-col h-full min-h-[420px] relative">
       {/* Map Header Overlay */}
@@ -160,6 +193,8 @@ export const TransitMap: React.FC<TransitMapProps> = ({
         <Navigation className="w-3.5 h-3.5 text-indigo-600" />
         <span>Ahmedabad • Gandhinagar • GIFT City Transit GIS</span>
       </div>
+
+
 
       {/* Legend Overlay with Minimize / Expand option */}
       <div className="absolute bottom-3 left-3 z-[400] bg-white/95 backdrop-blur rounded-xl border border-slate-200 shadow-md text-[11px] overflow-hidden transition-all duration-200 max-w-[240px]">
@@ -201,6 +236,10 @@ export const TransitMap: React.FC<TransitMapProps> = ({
               <span className="font-medium text-slate-700">Metro Phase 1 & 2 / GIFT</span>
             </div>
             <div className="flex items-center gap-2">
+              <span className="w-3 h-1 bg-emerald-600 rounded flex-shrink-0 shadow-sm shadow-emerald-400"></span>
+              <span className="font-bold text-emerald-800">Gandhinagar Electric Bus (GGTSL 🚌⚡)</span>
+            </div>
+            <div className="flex items-center gap-2">
               <span className="w-3 h-1 bg-purple-600 rounded flex-shrink-0"></span>
               <span className="font-medium text-slate-700">Western Railway Suburban</span>
             </div>
@@ -210,10 +249,10 @@ export const TransitMap: React.FC<TransitMapProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-1 bg-teal-600 rounded flex-shrink-0"></span>
-              <span className="font-medium text-slate-700">GIFT Shuttle / Gandhinagar Bus</span>
+              <span className="font-medium text-slate-700">GIFT Shuttle / Regional Bus</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-3 h-1 bg-emerald-600 rounded flex-shrink-0"></span>
+              <span className="w-3 h-1 bg-green-700 rounded flex-shrink-0"></span>
               <span className="font-medium text-slate-700">AMTS City Bus</span>
             </div>
             <div className="flex items-center gap-2">
@@ -246,6 +285,8 @@ export const TransitMap: React.FC<TransitMapProps> = ({
             lineColor = step.route_color
           } else if (step.mode === 'METRO') {
             lineColor = '#DC2626'
+          } else if (step.mode === 'GANDHINAGAR_ELECTRIC_BUS' || step.mode?.includes('ELECTRIC')) {
+            lineColor = '#059669'
           } else if (step.mode === 'BRTS') {
             lineColor = '#F97316'
           } else if (step.mode === 'AMTS') {
@@ -326,37 +367,13 @@ export const TransitMap: React.FC<TransitMapProps> = ({
           return null
         })}
 
-        {/* Live Vehicles on Map */}
-        {liveVehicles.map((v) => (
-          <Marker
+        {/* Animated Moving Vehicles on Map via MovingVehicleMarker */}
+        {activeVehiclesList.map((v) => (
+          <MovingVehicleMarker
             key={v.vehicle_id}
-            position={[v.latitude, v.longitude]}
-            icon={createVehicleIcon(v.mode, v.vehicle_id, v.status)}
-            eventHandlers={{
-              click: () => onSelectVehicle && onSelectVehicle(v.vehicle_id),
-            }}
-          >
-            <Popup>
-              <div className="p-1 text-xs space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                  <strong className="text-slate-900">{v.vehicle_id}</strong>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
-                    {v.mode}
-                  </span>
-                </div>
-                <div className="text-slate-600">Route: {v.route_number} ({v.route_name})</div>
-                <div className="text-slate-600">Speed: {v.speed_kmh} km/h • Loc: {v.current_location_name}</div>
-                {v.next_stop_name && (
-                  <div className="text-slate-700">
-                    Next Stop: <strong>{v.next_stop_name}</strong> (~{v.eta_next_stop_mins}m)
-                  </div>
-                )}
-                <div className="text-[10px] text-slate-400 pt-1 border-t">
-                  {v.freshness_label} • {v.data_source}
-                </div>
-              </div>
-            </Popup>
-          </Marker>
+            vehicle={v}
+            onClick={() => onSelectVehicle && onSelectVehicle(v.vehicle_id)}
+          />
         ))}
       </MapContainer>
     </div>

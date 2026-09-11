@@ -1,4 +1,4 @@
-export type TransportMode = 'METRO' | 'BRTS' | 'AMTS' | 'RAIL' | 'BUS' | 'WALK'
+export type TransportMode = 'METRO' | 'BRTS' | 'AMTS' | 'RAIL' | 'BUS' | 'WALK' | 'GANDHINAGAR_ELECTRIC_BUS'
 
 export type RouteCategoryBadge =
   | 'FASTEST'
@@ -7,6 +7,9 @@ export type RouteCategoryBadge =
   | 'FEWEST TRANSFERS'
   | 'MOST RELIABLE'
   | 'MINIMUM WAIT'
+  | '⏱ MINIMIZE WAITING'
+  | 'ELECTRIC EXPRESS'
+  | 'ZERO EMISSION'
   | 'BRTS BUSWAY'
   | 'SUBURBAN RAIL'
   | 'CITY FEEDER'
@@ -102,6 +105,8 @@ export interface JourneyStep {
   duration_mins: number
   waiting_mins?: number
   distance_km: number
+  fare?: number
+  fare_currency?: string
   departure_time: string
   arrival_time: string
   coordinates: [number, number][]
@@ -130,6 +135,7 @@ export interface JourneyRouteOption {
   fare_currency: string
   fare_breakdown: {
     mode: string
+    mode_display?: string
     route_number: string
     distance_km: number
     fare: number
@@ -212,28 +218,34 @@ export interface LiveVehicle {
   vehicle_id: string
   registration: string
   mode: TransportMode
+  operator?: string
+  is_electric?: boolean
+  battery_soc_pct?: number
+  charging_status?: 'DISCHARGING' | 'CHARGING' | 'FAST_CHARGING' | 'IDLE' | 'STANDBY'
   agency_code: string
   agency_name: string
   route_id?: string
   route_number: string
-  route_name: string
-  route_color: string
+  route_name?: string
+  route_color?: string
   latitude: number
   longitude: number
   speed_kmh: number
-  heading: number
-  current_location_name: string
+  heading?: number
+  current_location_name?: string
   next_stop_id?: string
   next_stop_name?: string
-  eta_next_stop_seconds: number
-  eta_next_stop_mins: number
-  delay_minutes: number
-  status: 'ON_TIME' | 'SLIGHT_DELAY' | 'DELAYED' | 'AHEAD' | 'DISRUPTED'
-  is_live: boolean
-  data_source: string
-  last_updated: string
-  freshness_seconds: number
-  freshness_label: string
+  eta_next_stop_seconds?: number
+  eta_next_stop_mins?: number
+  delay_minutes?: number
+  status?: 'ON_TIME' | 'SLIGHT_DELAY' | 'DELAYED' | 'AHEAD' | 'DISRUPTED'
+  is_live?: boolean
+  data_source?: string
+  telemetry_type?: string
+  provenance?: string
+  last_updated?: string
+  freshness_seconds?: number
+  freshness_label?: string
 }
 
 export interface ServiceAlertItem {
@@ -392,4 +404,126 @@ export interface AdminNetworkStatus {
     live_gps_pct: number
   }
 }
+
+export interface ElectricBusRoute {
+  route_id: string
+  route_number: string
+  route_name: string
+  mode: 'GANDHINAGAR_ELECTRIC_BUS'
+  mode_name: string
+  badge_icon: string
+  operator: string
+  operator_code: string
+  operator_full_name: string
+  origin: string
+  destination: string
+  color: string
+  text_color: string
+  is_electrified: boolean
+  electrification_level: string
+  ac_available: boolean
+  low_floor: boolean
+  wheelchair_accessible: boolean
+  peak_frequency_minutes: number
+  off_peak_frequency_minutes: number
+  operating_hours: string
+  stops_count: number
+  stops?: {
+    stop_id: string
+    name: string
+    gujarati_name?: string
+    latitude: number
+    longitude: number
+    sequence: number
+    is_major_hub: boolean
+    distance_from_start_km: number
+  }[]
+  fare_min: number
+  fare_max: number
+}
+
+export interface ElectricBusStop {
+  stop_id: string
+  name: string
+  gujarati_name?: string
+  latitude: number
+  longitude: number
+  city_region: string
+  is_major_interchange: boolean
+  wheelchair_accessible: boolean
+  ev_charging_facility: boolean
+  routes_count: number
+  routes: {
+    route_id: string
+    route_number: string
+    route_name: string
+    mode: string
+    operator: string
+    color: string
+  }[]
+}
+
+export interface ElectricBusVehicle {
+  vehicle_id: string
+  registration?: string
+  route_id?: string
+  route_number: string
+  route_name: string
+  destination: string
+  operator: string
+  agency: string
+  latitude: number
+  longitude: number
+  speed_kmh: number
+  heading?: number
+  is_electric: boolean
+  battery_soc_pct?: number
+  battery_status?: string
+  charging_status?: 'DISCHARGING' | 'CHARGING' | 'FAST_CHARGING' | 'IDLE'
+  is_ac: boolean
+  is_low_floor: boolean
+  wheelchair_accessible: boolean
+  fleet_number?: string
+  registration_number?: string
+  status: 'ON_TIME' | 'SLIGHT_DELAY' | 'DELAYED' | 'AHEAD' | 'DISRUPTED'
+  delay_minutes: number
+  provenance: 'REAL_TIME' | 'ESTIMATED' | 'SCHEDULED' | 'DEMO DATA'
+  last_updated?: string
+}
+
+export interface ElectricBusFleetMetrics {
+  fleet_total: number
+  fleet_deployed: number
+  fleet_active: number
+  active_routes_count: number
+  electrified_stops_count: number
+  ev_depots_count: number
+  ev_depot_locations: string[]
+}
+
+export interface ElectricBusStats {
+  network_name: string
+  program: string
+  operator: string
+  partner_agency: string
+  fleet_metrics: ElectricBusFleetMetrics
+  environmental_impact: {
+    clean_km_today: number
+    co2_saved_kg_today: number
+    diesel_saved_liters_today: number
+    tree_equivalent_co2_offset: number
+    zero_tailpipe_emissions: boolean
+  }
+  service_quality: {
+    fleet_electrification_rate: string
+    air_conditioned_pct: number
+    low_floor_accessible_pct: number
+    average_battery_soc_pct: number
+    on_time_performance_pct: number
+    average_peak_headway_mins: number
+  }
+  provenance: string
+  last_updated: string
+}
+
 

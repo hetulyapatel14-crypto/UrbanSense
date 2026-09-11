@@ -63,11 +63,11 @@ class MultimodalRoutingEngine:
         else:
             base_dep_time = now
 
-        allowed_modes = modes or ['METRO', 'BRTS', 'AMTS', 'RAIL', 'BUS', 'WALK']
+        allowed_modes = modes or ['METRO', 'BRTS', 'AMTS', 'GANDHINAGAR_ELECTRIC_BUS', 'RAIL', 'BUS', 'WALK']
 
         # Find nearby candidate stops (expanded radius for cross-city hubs)
-        origin_stops = GeocodingService.find_nearby_stops(start_lat, start_lng, radius_km=3.5, limit=10)
-        dest_stops = GeocodingService.find_nearby_stops(dest_lat, dest_lng, radius_km=3.5, limit=10)
+        origin_stops = GeocodingService.find_nearby_stops(start_lat, start_lng, radius_km=4.5, limit=12)
+        dest_stops = GeocodingService.find_nearby_stops(dest_lat, dest_lng, radius_km=4.5, limit=12)
 
         if wheelchair_accessible:
             origin_stops = [s for s in origin_stops if s.get('wheelchair_accessible', True)]
@@ -297,7 +297,7 @@ class MultimodalRoutingEngine:
         is_live = live_vp.is_live if live_vp else False
 
         stops_count = abs(d_rs.sequence - o_rs.sequence)
-        speed_factor = 2.0 if route.mode == 'METRO' else (2.5 if route.mode == 'BRTS' else (1.8 if route.mode == 'RAIL' else 3.0))
+        speed_factor = 2.0 if route.mode == 'METRO' else (2.5 if route.mode == 'BRTS' else (2.0 if route.mode == 'GANDHINAGAR_ELECTRIC_BUS' else (1.8 if route.mode == 'RAIL' else 3.0)))
         in_transit_mins = max(2.0, stops_count * speed_factor)
         transit_dist_km = max(0.5, abs(d_rs.distance_from_start_km - o_rs.distance_from_start_km))
 
@@ -335,6 +335,7 @@ class MultimodalRoutingEngine:
         transit_arr = cur_t + timedelta(minutes=in_transit_mins + delay_mins)
         coords = cls._get_route_coordinates(route, o_rs.sequence, d_rs.sequence)
 
+        mode_display = 'Gandhinagar Electric Bus' if route.mode == 'GANDHINAGAR_ELECTRIC_BUS' else route.mode
         steps.append({
             'step_type': 'TRANSIT',
             'mode': route.mode,
@@ -344,8 +345,8 @@ class MultimodalRoutingEngine:
             'route_number': route.route_number,
             'route_name': route.route_name,
             'route_color': route.color,
-            'title': f"Board {route.mode} {route.route_number}",
-            'instructions': f"Take {route.mode} {route.route_number} from {o_stop['name']} toward {d_stop['name']} ({stops_count} stops)",
+            'title': f"Board {mode_display} {route.route_number}",
+            'instructions': f"Take {mode_display} {route.route_number} from {o_stop['name']} toward {d_stop['name']} ({stops_count} stops)",
             'from_name': o_stop['name'],
             'from_stop_id': o_stop['stop_id'],
             'to_name': d_stop['name'],
@@ -355,6 +356,8 @@ class MultimodalRoutingEngine:
             'duration_mins': in_transit_mins,
             'waiting_mins': wait_mins,
             'distance_km': round(transit_dist_km, 1),
+            'fare': int(FareEngine.calculate_leg_fare(route.mode, transit_dist_km)),
+            'fare_currency': '₹',
             'departure_time': cur_t.strftime('%I:%M %p'),
             'arrival_time': transit_arr.strftime('%I:%M %p'),
             'coordinates': coords,
@@ -363,8 +366,15 @@ class MultimodalRoutingEngine:
             'vehicle': {
                 'vehicle_id': live_vp.vehicle.vehicle_id,
                 'registration': live_vp.vehicle.registration,
+                'fleet_number': live_vp.vehicle.fleet_number,
+                'operator': live_vp.vehicle.operator or live_vp.vehicle.agency.name,
+                'vehicle_type': live_vp.vehicle.vehicle_type,
+                'is_electric': live_vp.vehicle.is_electric,
+                'battery_status': live_vp.vehicle.battery_status,
+                'charging_status': live_vp.vehicle.charging_status,
                 'speed_kmh': live_vp.speed_kmh,
                 'status': live_vp.status,
+                'telemetry_type': live_vp.telemetry_type,
                 'delay_minutes': delay_mins,
                 'is_live': is_live,
                 'data_source': live_vp.data_source,
@@ -393,17 +403,19 @@ class MultimodalRoutingEngine:
 
         # Build Why Recommended bullet points
         why_points = [
-            f"Direct single-ride {route.mode} connection with 0 transfers",
+            f"Direct single-ride {mode_display} connection with 0 transfers",
             f"Next vehicle departing in ~{wait_mins} min",
             f"High punctuality with {int(route.reliability_score * 100)}% reliability score",
         ]
+        if route.is_electric:
+            why_points.append("100% Zero-Emission PM-eBus Sewa AC Electric Bus")
         if route.mode in ['METRO', 'BRTS', 'RAIL']:
             why_points.append("Dedicated corridor bypassing arterial road traffic")
 
         return {
             'route_key': f"{route.route_id}_direct_{o_stop['stop_id']}_{d_stop['stop_id']}",
             'type': f"DIRECT_{route.mode}",
-            'summary_title': f"Direct {route.mode} ({route.route_number})",
+            'summary_title': f"Direct {mode_display} ({route.route_number})",
             'modes': ['WALK', route.mode],
             'primary_mode': route.mode,
             'duration_minutes': int(total_duration),
@@ -444,7 +456,7 @@ class MultimodalRoutingEngine:
         wait1_mins = max(2, math.ceil(hw1 / 2.0))
 
         stops1_count = abs(t_from_rs.sequence - o_rs.sequence)
-        speed1 = 2.0 if r1.mode == 'METRO' else (2.5 if r1.mode == 'BRTS' else (1.8 if r1.mode == 'RAIL' else 3.0))
+        speed1 = 2.0 if r1.mode == 'METRO' else (2.5 if r1.mode == 'BRTS' else (2.0 if r1.mode == 'GANDHINAGAR_ELECTRIC_BUS' else (1.8 if r1.mode == 'RAIL' else 3.0)))
         in_transit1_mins = max(2.0, stops1_count * speed1)
         dist1_km = max(0.5, abs(t_from_rs.distance_from_start_km - o_rs.distance_from_start_km))
 
@@ -453,13 +465,15 @@ class MultimodalRoutingEngine:
         hw2 = r2.headway_peak_mins if (7 <= dep_time.hour <= 11 or 17 <= dep_time.hour <= 21) else r2.headway_offpeak_mins
         wait2_mins = max(2, math.ceil(hw2 / 2.0))
 
-        # Transfer intelligence calculation
-        transfer_window_mins = max(4.0, math.ceil(transfer_walk_mins + transfer.transfer_buffer_mins + wait2_mins))
-        is_tight = transfer_walk_mins >= (transfer_window_mins - 1.5)
+        # Transfer intelligence calculation & Transfer Risk
+        transfer_window_mins = max(3.0, math.ceil(transfer_walk_mins + transfer.transfer_buffer_mins + wait2_mins))
+        available_connection_mins = wait2_mins + transfer_walk_mins
+        is_tight = transfer_walk_mins >= (available_connection_mins - 1.0)
+        transfer_risk = 'HIGH_RISK' if is_tight else ('MODERATE' if transfer_walk_mins >= (available_connection_mins - 2.5) else 'SAFE')
 
         # Leg 2
         stops2_count = abs(d_rs.sequence - t_to_rs.sequence)
-        speed2 = 2.0 if r2.mode == 'METRO' else (2.5 if r2.mode == 'BRTS' else (1.8 if r2.mode == 'RAIL' else 3.0))
+        speed2 = 2.0 if r2.mode == 'METRO' else (2.5 if r2.mode == 'BRTS' else (2.0 if r2.mode == 'GANDHINAGAR_ELECTRIC_BUS' else (1.8 if r2.mode == 'RAIL' else 3.0)))
         in_transit2_mins = max(2.0, stops2_count * speed2)
         dist2_km = max(0.5, abs(d_rs.distance_from_start_km - t_to_rs.distance_from_start_km))
 
@@ -497,6 +511,7 @@ class MultimodalRoutingEngine:
         # 2. First Transit Leg
         t1_arr = cur_t + timedelta(minutes=in_transit1_mins)
         coords1 = cls._get_route_coordinates(r1, o_rs.sequence, t_from_rs.sequence)
+        m1_display = 'Gandhinagar Electric Bus' if r1.mode == 'GANDHINAGAR_ELECTRIC_BUS' else r1.mode
         steps.append({
             'step_type': 'TRANSIT',
             'mode': r1.mode,
@@ -506,8 +521,8 @@ class MultimodalRoutingEngine:
             'route_number': r1.route_number,
             'route_name': r1.route_name,
             'route_color': r1.color,
-            'title': f"Board {r1.mode} {r1.route_number}",
-            'instructions': f"Take {r1.mode} {r1.route_number} to {transfer.from_stop.name} ({stops1_count} stops)",
+            'title': f"Board {m1_display} {r1.route_number}",
+            'instructions': f"Take {m1_display} {r1.route_number} to {transfer.from_stop.name} ({stops1_count} stops)",
             'from_name': o_stop['name'],
             'from_stop_id': o_stop['stop_id'],
             'to_name': transfer.from_stop.name,
@@ -517,6 +532,8 @@ class MultimodalRoutingEngine:
             'duration_mins': in_transit1_mins,
             'waiting_mins': wait1_mins,
             'distance_km': dist1_km,
+            'fare': int(FareEngine.calculate_leg_fare(r1.mode, dist1_km)),
+            'fare_currency': '₹',
             'departure_time': cur_t.strftime('%I:%M %p'),
             'arrival_time': t1_arr.strftime('%I:%M %p'),
             'coordinates': coords1,
@@ -526,10 +543,17 @@ class MultimodalRoutingEngine:
 
         # 3. Transfer Step
         t_arr = cur_t + timedelta(minutes=transfer_walk_mins)
+        b2_time = t_arr + timedelta(minutes=wait2_mins)
+        safe_dep = b2_time + timedelta(minutes=hw2)
+        tight_warning = (
+            f"🔴 HIGH RISK TRANSFER: Walking requires ~{int(transfer_walk_mins)} min with only {int(available_connection_mins)} min window before next departure. If delayed, recommended safe departure is {safe_dep.strftime('%I:%M %p')} (Route {r2.route_number})."
+            if is_tight else None
+        )
+
         steps.append({
             'step_type': 'TRANSFER',
             'mode': 'WALK',
-            'title': f"Transfer at {transfer.from_stop.name}",
+            'title': f"Transfer to {r2.route_number} at {transfer.from_stop.name}",
             'instructions': transfer.instructions or f"Transfer from {transfer.from_stop.name} to {transfer.to_stop.name} ({int(transfer.walking_distance_m)}m walk)",
             'from_name': transfer.from_stop.name,
             'to_name': transfer.to_stop.name,
@@ -546,14 +570,16 @@ class MultimodalRoutingEngine:
             'transfer_window_mins': int(transfer_window_mins),
             'transfer_message': f"YOU HAVE {int(transfer_window_mins)} MINUTES TO TRANSFER",
             'is_tight': is_tight,
-            'tight_transfer_warning': f"Tight transfer: Walking requires ~{int(transfer_walk_mins)} min, window is {int(transfer_window_mins)} min. If delayed, consider the next service." if is_tight else None,
+            'transfer_risk': transfer_risk,
+            'tight_transfer_warning': tight_warning,
+            'protection_status': 'TIGHT' if is_tight else 'GUARANTEED',
         })
-        cur_t = t_arr + timedelta(minutes=wait2_mins)
+        cur_t = b2_time
 
         # 4. Second Transit Leg
-        b2_time = cur_t
         a2_time = b2_time + timedelta(minutes=in_transit2_mins)
         coords2 = cls._get_route_coordinates(r2, t_to_rs.sequence, d_rs.sequence)
+        m2_display = 'Gandhinagar Electric Bus' if r2.mode == 'GANDHINAGAR_ELECTRIC_BUS' else r2.mode
         steps.append({
             'step_type': 'TRANSIT',
             'mode': r2.mode,
@@ -563,8 +589,8 @@ class MultimodalRoutingEngine:
             'route_number': r2.route_number,
             'route_name': r2.route_name,
             'route_color': r2.color,
-            'title': f"Board {r2.mode} {r2.route_number}",
-            'instructions': f"Take {r2.mode} {r2.route_number} to {d_stop['name']} ({stops2_count} stops)",
+            'title': f"Board {m2_display} {r2.route_number}",
+            'instructions': f"Take {m2_display} {r2.route_number} to {d_stop['name']} ({stops2_count} stops)",
             'from_name': transfer.to_stop.name,
             'from_stop_id': transfer.to_stop.stop_id,
             'to_name': d_stop['name'],
@@ -574,6 +600,8 @@ class MultimodalRoutingEngine:
             'duration_mins': in_transit2_mins,
             'waiting_mins': wait2_mins,
             'distance_km': dist2_km,
+            'fare': int(FareEngine.calculate_leg_fare(r2.mode, dist2_km)),
+            'fare_currency': '₹',
             'departure_time': b2_time.strftime('%I:%M %p'),
             'arrival_time': a2_time.strftime('%I:%M %p'),
             'coordinates': coords2,
@@ -607,16 +635,21 @@ class MultimodalRoutingEngine:
 
         avg_reliability = round((r1.reliability_score + r2.reliability_score) / 2.0, 2)
 
+        m1_short = 'Electric Bus' if r1.mode == 'GANDHINAGAR_ELECTRIC_BUS' else r1.mode
+        m2_short = 'Electric Bus' if r2.mode == 'GANDHINAGAR_ELECTRIC_BUS' else r2.mode
+
         why_points = [
-            f"Fast multimodal connection combining {r1.mode} and {r2.mode}",
-            f"Seamless interchange at {transfer.from_stop.name}",
+            f"Seamless multimodal interchange combining {m1_short} and {m2_short}",
+            f"Interchange at {transfer.from_stop.name}",
             f"Total transfer window: {int(transfer_window_mins)} min",
         ]
+        if r1.is_electric or r2.is_electric:
+            why_points.append("Includes zero-emission Gandhinagar PM-eBus Sewa electric connection")
 
         return {
             'route_key': f"{r1.route_id}_{r2.route_id}_transfer",
             'type': f"MULTIMODAL_{r1.mode}_{r2.mode}",
-            'summary_title': f"{r1.mode} + {r2.mode}",
+            'summary_title': f"{m1_short} + {m2_short}",
             'modes': comb_modes,
             'primary_mode': r1.mode,
             'duration_minutes': int(total_duration),
@@ -800,25 +833,31 @@ class MultimodalRoutingEngine:
         fastest_r = min(filtered_routes, key=lambda x: x['duration_minutes'])
         assigned_badges[id(fastest_r)] = ('FASTEST', 'bg-amber-500 text-white')
 
-        # 2. Cheapest option (assign to different route if available)
+        # 2. Minimum Waiting option (minimize user waiting time)
+        rem_wait = [r for r in filtered_routes if id(r) not in assigned_badges]
+        if rem_wait:
+            min_wait_r = min(rem_wait, key=lambda x: (x['waiting_minutes'], x['duration_minutes']))
+            assigned_badges[id(min_wait_r)] = ('MINIMUM WAIT', 'bg-teal-600 text-white')
+
+        # 3. Cheapest option (assign to different route if available)
         rem_cheapest = [r for r in filtered_routes if id(r) not in assigned_badges]
         if rem_cheapest:
             cheapest_r = min(rem_cheapest, key=lambda x: (x['fare'], x['duration_minutes']))
             assigned_badges[id(cheapest_r)] = ('CHEAPEST', 'bg-emerald-600 text-white')
 
-        # 3. Least Walking option (assign to different route if available)
+        # 4. Least Walking option (assign to different route if available)
         rem_walk = [r for r in filtered_routes if id(r) not in assigned_badges]
         if rem_walk:
             least_walk_r = min(rem_walk, key=lambda x: (x['walking_minutes'], x['duration_minutes']))
             assigned_badges[id(least_walk_r)] = ('LEAST WALKING', 'bg-blue-600 text-white')
 
-        # 4. Fewest Transfers option (assign to different route if available)
+        # 5. Fewest Transfers option (assign to different route if available)
         rem_trans = [r for r in filtered_routes if id(r) not in assigned_badges]
         if rem_trans:
             fewest_trans_r = min(rem_trans, key=lambda x: (x['transfers'], x['duration_minutes']))
             assigned_badges[id(fewest_trans_r)] = ('FEWEST TRANSFERS', 'bg-purple-600 text-white')
 
-        # 5. Most Reliable option (assign to different route if available)
+        # 6. Most Reliable option (assign to different route if available)
         rem_rel = [r for r in filtered_routes if id(r) not in assigned_badges]
         if rem_rel:
             most_rel_r = max(rem_rel, key=lambda x: (x['reliability_score'], -x['duration_minutes']))
@@ -832,7 +871,9 @@ class MultimodalRoutingEngine:
                 badge, color = assigned_badges[id(r)]
             else:
                 modes = r_copy.get('modes', [])
-                if 'BRTS' in modes:
+                if 'GANDHINAGAR_ELECTRIC_BUS' in modes:
+                    badge, color = 'ELECTRIC BUS', 'bg-emerald-600 text-white'
+                elif 'BRTS' in modes:
                     badge, color = 'BRTS BUSWAY', 'bg-orange-600 text-white'
                 elif 'RAIL' in modes:
                     badge, color = 'SUBURBAN RAIL', 'bg-purple-700 text-white'
@@ -861,7 +902,7 @@ class MultimodalRoutingEngine:
             output.sort(key=lambda x: (x['transfers'], x['duration_minutes']))
         elif user_pref == 'most_reliable':
             output.sort(key=lambda x: (-x['reliability_score'], x['duration_minutes']))
-        elif user_pref == 'minimum_wait':
+        elif user_pref == 'minimum_wait' or user_pref == 'minimize_waiting':
             output.sort(key=lambda x: (x['waiting_minutes'], x['duration_minutes']))
         else: # fastest default
             output.sort(key=lambda x: x['duration_minutes'])

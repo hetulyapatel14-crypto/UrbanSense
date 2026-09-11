@@ -2,14 +2,16 @@ import time
 from django.utils import timezone
 from ..models import (
     TransportAgency, TransportMode, Stop, Route, RouteStop,
-    Transfer, Vehicle, VehiclePosition, FareRule, ServiceAlert,
-    DataSource, DataSyncLog, PlaceLandmark
+    Trip, TripStopTime, Transfer, Vehicle, VehiclePosition,
+    FareRule, ServiceAlert, DataSource, DataSyncLog, PlaceLandmark
 )
 from ..providers.metro_provider import MetroProvider
 from ..providers.brts_provider import BRTSProvider
 from ..providers.amts_provider import AMTSProvider
 from ..providers.rail_provider import RailProvider
 from ..providers.gandhinagar_bus_provider import GandhinagarBusProvider
+from ..providers.gandhinagar_electric_bus_provider import GandhinagarElectricBusProvider, DemoGandhinagarElectricBusProvider
+from ..providers.gift_city_bus_provider import GiftCityBusProvider
 
 class SyncService:
     """Ingests and synchronizes all Ahmedabad, Gandhinagar & GIFT City transit providers."""
@@ -23,6 +25,7 @@ class SyncService:
             'stops': 0,
             'routes': 0,
             'route_stops': 0,
+            'trips': 0,
             'transfers': 0,
             'fare_rules': 0,
             'vehicles': 0,
@@ -35,8 +38,9 @@ class SyncService:
             ('METRO', 'Ahmedabad/Gandhinagar Metro', 'train', '#2563EB', 38.0, 2),
             ('BRTS', 'Janmarg BRTS', 'bus', '#F97316', 28.0, 1),
             ('AMTS', 'AMTS City Bus', 'bus', '#059669', 20.0, 2),
+            ('GANDHINAGAR_ELECTRIC_BUS', 'Gandhinagar Electric Bus (GGTSL)', 'bus', '#059669', 32.0, 2),
             ('RAIL', 'Indian Railways Intercity', 'train', '#7C3AED', 45.0, 3),
-            ('BUS', 'Gandhinagar / GIFT Shuttle / GSRTC', 'bus', '#0D9488', 32.0, 2),
+            ('BUS', 'GIFT Shuttle / Regional Bus / GSRTC', 'bus', '#0D9488', 30.0, 2),
             ('WALK', 'Pedestrian Walk', 'footprints', '#64748B', 4.5, 0),
         ]
         for code, name, icon, color, speed, boarding in modes_data:
@@ -57,6 +61,8 @@ class SyncService:
             ('METRO', MetroProvider()),
             ('BRTS', BRTSProvider()),
             ('AMTS', AMTSProvider()),
+            ('GGTSL', GandhinagarElectricBusProvider()),
+            ('GIFT_TRANSIT', GiftCityBusProvider()),
             ('RAIL', RailProvider()),
             ('GND_TRANSIT', GandhinagarBusProvider()),
         ]
@@ -77,7 +83,11 @@ class SyncService:
             )
             stats['agencies'] += 1
 
-            # Data Source Tracking
+            # Data Source Tracking with PM-eBus Sewa / Fleet Dynamics
+            fleet_total = agency_info.get('fleet_total', 0)
+            fleet_deployed = agency_info.get('fleet_deployed', 0)
+            fleet_active = agency_info.get('fleet_active', 0)
+
             ds, _ = DataSource.objects.update_or_create(
                 source_name=f"{agency.name} Feed",
                 defaults={
@@ -86,6 +96,10 @@ class SyncService:
                     'last_sync': timezone.now(),
                     'is_live_telemetry': False, # Demo simulated until official token
                     'freshness_seconds': 15,
+                    'fleet_total': fleet_total,
+                    'fleet_deployed': fleet_deployed,
+                    'fleet_active': fleet_active,
+                    'last_updated_feed': timezone.now(),
                 }
             )
 
@@ -116,7 +130,7 @@ class SyncService:
 
             # Routes
             for r_data in provider.get_routes():
-                Route.objects.update_or_create(
+                route, _ = Route.objects.update_or_create(
                     route_id=r_data['route_id'],
                     defaults={
                         'route_number': r_data['route_number'],
@@ -125,6 +139,7 @@ class SyncService:
                         'mode': r_data['mode'],
                         'color': r_data.get('color', '#2563EB'),
                         'text_color': r_data.get('text_color', '#FFFFFF'),
+                        'is_electric': r_data.get('is_electric', False),
                         'headway_peak_mins': r_data.get('headway_peak_mins', 6),
                         'headway_offpeak_mins': r_data.get('headway_offpeak_mins', 12),
                         'first_trip_time': r_data.get('first_trip_time', '06:00'),
@@ -136,21 +151,47 @@ class SyncService:
                 )
                 stats['routes'] += 1
 
+                # Generate scheduled trips for this route across operating hours
+                if not Trip.objects.filter(route=route).exists():
+                    try:
+                        f_hour = int(r_data.get('first_trip_time', '06:00').split(':')[0])
+                        l_hour = int(r_data.get('last_trip_time', '22:00').split(':')[0])
+                        headway = r_data.get('headway_peak_mins', 10)
+                        trip_idx = 1
+                        for hr in range(f_hour, l_hour + 1):
+                            for mn in range(0, 60, max(headway, 10)):
+                                dep_str = f"{hr:02d}:{mn:02d}"
+                                arr_str = f"{(hr + 1) % 24:02d}:{(mn + 25) % 60:02d}"
+                                Trip.objects.create(
+                                    trip_id=f"TRIP-{route.route_id}-{trip_idx}",
+                                    route=route,
+                                    service_id='DAILY',
+                                    headsign=route.route_name.split('↔')[-1].strip(),
+                                    departure_time_start=dep_str,
+                                    arrival_time_end=arr_str,
+                                    is_active=True,
+                                )
+                                trip_idx += 1
+                                stats['trips'] += 1
+                    except Exception:
+                        pass
+
             # Route Stops
             for rs_data in provider.get_route_stops():
-                route = Route.objects.get(route_id=rs_data['route_id'])
-                stop = Stop.objects.get(stop_id=rs_data['stop_id'])
-                RouteStop.objects.update_or_create(
-                    route=route,
-                    sequence=rs_data['sequence'],
-                    defaults={
-                        'stop': stop,
-                        'distance_from_start_km': rs_data.get('distance_from_start_km', 0.0),
-                        'travel_time_mins': rs_data.get('travel_time_mins', 2.0),
-                        'is_major_stop': rs_data.get('is_major_stop', False),
-                    }
-                )
-                stats['route_stops'] += 1
+                route = Route.objects.filter(route_id=rs_data['route_id']).first()
+                stop = Stop.objects.filter(stop_id=rs_data['stop_id']).first()
+                if route and stop:
+                    RouteStop.objects.update_or_create(
+                        route=route,
+                        sequence=rs_data['sequence'],
+                        defaults={
+                            'stop': stop,
+                            'distance_from_start_km': rs_data.get('distance_from_start_km', 0.0),
+                            'travel_time_mins': rs_data.get('travel_time_mins', 2.0),
+                            'is_major_stop': rs_data.get('is_major_stop', False),
+                        }
+                    )
+                    stats['route_stops'] += 1
 
             # Transfers
             for t_data in provider.get_transfers():
@@ -198,42 +239,75 @@ class SyncService:
                     vehicle_id=v_data['vehicle_id'],
                     defaults={
                         'registration': v_data.get('registration', ''),
+                        'registration_number': v_data.get('registration_number', ''),
+                        'fleet_number': v_data.get('fleet_number', ''),
                         'agency': agency,
+                        'operator': v_data.get('operator', agency.name),
                         'mode': v_data['mode'],
+                        'vehicle_type': v_data.get('vehicle_type', '9M_ELECTRIC_AC' if v_data.get('is_electric') else 'AMTS_BUS'),
                         'current_route': route,
-                        'capacity': v_data.get('capacity', 60),
+                        'capacity': v_data.get('capacity', 45),
+                        'vehicle_capacity': v_data.get('vehicle_capacity', 45),
                         'is_electric': v_data.get('is_electric', True),
+                        'battery_status': v_data.get('battery_status', 85 if v_data.get('is_electric') else None),
+                        'charging_status': v_data.get('charging_status', 'DISCHARGING'),
+                        'air_conditioned': v_data.get('air_conditioned', True),
+                        'accessible': v_data.get('accessible', True),
+                        'is_wheelchair_accessible': v_data.get('is_wheelchair_accessible', True),
                         'is_active': True,
                     }
                 )
                 stats['vehicles'] += 1
 
+                # Calculate default coordinates near stop or route
+                v_lat = v_data.get('latitude')
+                v_lng = v_data.get('longitude')
                 next_s = Stop.objects.filter(stop_id=v_data.get('next_stop_id')).first()
+
+                if v_lat is None or v_lng is None:
+                    if next_s:
+                        v_lat = next_s.latitude + 0.002
+                        v_lng = next_s.longitude + 0.002
+                    elif route and route.route_stops.exists():
+                        first_rs = route.route_stops.first()
+                        v_lat = first_rs.stop.latitude
+                        v_lng = first_rs.stop.longitude
+                    else:
+                        v_lat = 23.2285
+                        v_lng = 72.6610
+
                 VehiclePosition.objects.update_or_create(
                     vehicle=vehicle,
                     defaults={
-                        'latitude': v_data['latitude'],
-                        'longitude': v_data['longitude'],
-                        'speed_kmh': v_data.get('speed_kmh', 25.0),
+                        'latitude': v_lat,
+                        'longitude': v_lng,
+                        'speed_kmh': v_data.get('speed_kmh', 32.0 if vehicle.is_electric else 25.0),
                         'heading': v_data.get('heading', 45.0),
-                        'current_location_name': v_data.get('current_location_name', 'Ahmedabad-Gandhinagar Transit Corridor'),
+                        'current_location_name': v_data.get('current_location_name', 'Gandhinagar-GIFT EV Concourse' if vehicle.is_electric else 'Ahmedabad Transit Corridor'),
                         'next_stop': next_s,
                         'eta_next_stop_seconds': v_data.get('eta_next_stop_seconds', 180),
                         'delay_minutes': v_data.get('delay_minutes', 0),
                         'status': v_data.get('status', 'ON_TIME'),
-                        'is_live': False, # Explicit demo telemetry
-                        'data_source': 'DEMO_SIMULATION',
+                        'telemetry_type': 'ESTIMATED' if vehicle.is_electric else 'SCHEDULED',
+                        'is_live': False, # Demo simulation
+                        'data_source': 'DEMO_SIMULATION (GGTSL / PM-eBus Sewa Mock)' if vehicle.is_electric else 'DEMO_SIMULATION',
                         'last_updated': timezone.now(),
                     }
                 )
 
             # Service Alerts
             for a_data in provider.get_service_alerts():
+                a_route = Route.objects.filter(route_id=a_data.get('route_id')).first()
+                a_stop = Stop.objects.filter(stop_id=a_data.get('affected_stop_id')).first()
                 ServiceAlert.objects.update_or_create(
                     title=a_data['title'],
                     agency=agency,
                     defaults={
+                        'route': a_route,
+                        'affected_stop': a_stop,
                         'description': a_data['description'],
+                        'alert_type': a_data.get('alert_type', 'GENERAL_NOTICE'),
+                        'alternative_advice': a_data.get('alternative_advice', ''),
                         'severity': a_data.get('severity', 'INFO'),
                         'status': a_data.get('status', 'ACTIVE'),
                         'delay_impact_mins': a_data.get('delay_impact_mins', 0),
@@ -249,6 +323,7 @@ class SyncService:
             DataSyncLog.objects.create(
                 source=ds,
                 status='SUCCESS',
+                records_processed=ds.records_count,
                 records_updated=ds.records_count,
                 duration_ms=int((time.time() - start_time) * 1000),
                 details=f"Synchronized {agency.name} complete network."
@@ -275,6 +350,8 @@ class SyncService:
             ('Bopal Approach & SP Ring Road', 'બોપલ એપ્રોચ', 'AHMEDABAD', 'RESIDENTIAL', 'SP Ring Road, Bopal, Ahmedabad', 23.0310, 72.4850, ['Bopal', 'South Bopal', 'Bopal Cross Road', 'Bopal Ring Road']),
             ('Gota Cross Road (SG Highway)', 'ગોટા ચાર રસ્તા', 'AHMEDABAD', 'COMMERCIAL', 'SG Highway, Gota, Ahmedabad', 23.0980, 72.5350, ['Gota', 'Gota SG Highway', 'Gota Cross Road', 'Vandematram']),
             ('Tapovan Circle (Visat Highway)', 'તપોવન સર્કલ', 'AHMEDABAD', 'COMMERCIAL', 'Visat-Gandhinagar Highway, Ahmedabad', 23.1290, 72.5950, ['Tapovan', 'Visat Circle', 'Tapovan Hub', 'Tapovan Circle']),
+            ('Vishwakarma Government Engineering College (VGEC)', 'વિશ્વકર્મા સરકારી એન્જિનિયરિંગ કોલેજ (VGEC)', 'AHMEDABAD', 'EDUCATION', 'Opp. Sangath Mall, Visat-Gandhinagar Highway, Chandkheda, Ahmedabad', 23.1090, 72.5950, ['VGEC', 'Vishwakarma College', 'Vishwakarma Government Engineering College', 'Vishwakrma College', 'VGEC Chandkheda', 'GTU Chandkheda', 'Vishwakarma', 'vishwakarma government engineering college', 'Vishwakarma Engineering College']),
+            ('Vishwakarma College Metro Station', 'વિશ્વકર્મા કોલેજ મેટ્રો સ્ટેશન', 'AHMEDABAD', 'METRO_STATION', 'Visat-Gandhinagar Highway, Chandkheda, Ahmedabad', 23.1090, 72.5950, ['Vishwakarma Metro', 'Vishwakarma College Metro', 'Vishwakrma College Metro Station', 'VKCL', 'VGEC Metro', 'Chandkheda Metro', 'Vishwakarma Station', 'Vishwakrma Metro']),
             ('Chandkheda', 'ચાંદખેડા', 'AHMEDABAD', 'RESIDENTIAL', 'Chandkheda, Ahmedabad', 23.1150, 72.5890, ['Chandkheda Road', 'IOC Road']),
             ('Shivranjani Cross Road BRTS', 'શિવરંજની ક્રોસ રોડ', 'AHMEDABAD', 'BRTS_HUB', 'Shivranjani, Satellite, Ahmedabad', 23.0245, 72.5312, ['Shivranjani', 'Shivranjani BRTS', 'Satellite']),
             ('Maninagar Railway Station & Hub', 'મણિનગર રેલવે સ્ટેશન', 'AHMEDABAD', 'RAILWAY_STATION', 'Maninagar, Ahmedabad', 22.9975, 72.6020, ['Maninagar Station', 'Maninagar', 'Maninagar South']),
@@ -299,22 +376,24 @@ class SyncService:
             # --- Gandhinagar Landmarks ---
             ('Gandhinagar Capital Railway Station', 'ગાંધીનગર કેપિટલ રેલવે સ્ટેશન', 'GANDHINAGAR', 'RAILWAY_STATION', 'Sector 14, Gandhinagar', 23.2480, 72.6490, ['Gandhinagar Station', 'GNC', 'Gandhinagar Capital', 'The Leela Gandhinagar']),
             ('Gandhinagar City Center', 'ગાંધીનગર સિટી સેન્ટર', 'GANDHINAGAR', 'GOVERNMENT', 'Sector 10, Gandhinagar Capital City', 23.2200, 72.6500, ['Gandhinagar City', 'Capital City', 'Gandhinagar']),
-            ('Mahatma Mandir Convention Centre', 'મહાત્મા મંદિર કન્વેન્શન સેન્ટર', 'GANDHINAGAR', 'COMMERCIAL', 'Sector 13C, Gandhinagar', 23.2500, 72.6520, ['Mahatma Mandir', 'Mahatma Mandir Convention', 'Mahatma Mandir Metro']),
-            ('Infocity IT Park (Gandhinagar)', 'ઇન્ફોસિટી આઇટી પાર્ક (ગાંધીનગર)', 'GANDHINAGAR', 'COMMERCIAL', 'Infocity Complex, Sector 0, Gandhinagar', 23.2280, 72.6600, ['Infocity', 'Infocity Gandhinagar', 'Infocity IT Park', 'Infocity Hub']),
+            ('Mahatma Mandir Convention Centre', 'મહાત્મા મંદિર કન્વેન્શન સેન્ટર', 'GANDHINAGAR', 'COMMERCIAL', 'Sector 13C, Gandhinagar', 23.2590, 72.6520, ['Mahatma Mandir', 'Mahatma Mandir Convention', 'Mahatma Mandir Metro']),
+            ('Infocity Metro Station & IT Hub', 'ઇન્ફોસિટી મેટ્રો અને આઇટી પાર્ક', 'GANDHINAGAR', 'METRO_STATION', 'Infocity Complex, GH-0, Gandhinagar', 23.1965, 72.6288, ['Infocity', 'Infocity Gandhinagar', 'Infocity IT Park', 'Infocity Metro', 'Infocity Hub']),
+            ('Dholakuva Circle & Metro Station', 'ધોળકુવા સર્કલ મેટ્રો સ્ટેશન', 'GANDHINAGAR', 'METRO_STATION', 'Dholakuva Circle, Gandhinagar', 23.2087, 72.6253, ['Dholakuva', 'Dholakuva Circle', 'Dholakuva Metro']),
             ('Akshardham Temple (Sector 20)', 'અક્ષરધામ મંદિર (સેક્ટર ૨૦)', 'GANDHINAGAR', 'TOURIST', 'Sector 20, J Road, Gandhinagar', 23.2300, 72.6730, ['Akshardham', 'Swaminarayan Akshardham', 'Akshardham Gandhinagar', 'Akshardham Temple']),
-            ('Gujarat New Sachivalaya (Secretariat)', 'ગુજરાત નવું સચિવાલય', 'GANDHINAGAR', 'GOVERNMENT', 'Sector 10, Gandhinagar', 23.2420, 72.6580, ['Sachivalaya', 'Secretariat', 'Swarnim Sankul', 'Vidhan Sabha', 'New Sachivalaya']),
+            ('Gujarat New Sachivalaya (Secretariat)', 'ગુજરાત નવું સચિવાલય', 'GANDHINAGAR', 'GOVERNMENT', 'Sector 10, Gandhinagar', 23.2320, 72.6480, ['Sachivalaya', 'Secretariat', 'Swarnim Sankul', 'Vidhan Sabha', 'New Sachivalaya']),
             ('Pathikashram Central Bus Station (GSRTC)', 'પથિકાશ્રમ સેન્ટ્રલ બસ સ્ટેશન', 'GANDHINAGAR', 'BRTS_HUB', 'Sector 11, Gandhinagar', 23.2200, 72.6480, ['Pathikashram', 'Gandhinagar Bus Stand', 'GSRTC Gandhinagar', 'Pathikashram Bus']),
-            ('GNLU (Gujarat National Law University)', 'જીએનએલયુ (ઇન્ટરચેન્જ)', 'GANDHINAGAR', 'EDUCATION', 'Attalika Avenue, Knowledge Corridor, Koba', 23.1900, 72.6320, ['GNLU', 'GNLU Metro Interchange', 'GNLU Gandhinagar']),
-            ('Pandit Deendayal Energy University (PDEU)', 'પંડિત દીનદયાળ એનર્જી યુનિવર્સિટી (પીડીઇયુ)', 'GANDHINAGAR', 'EDUCATION', 'Knowledge Corridor, Raisan, Gandhinagar', 23.1940, 72.6600, ['PDPU', 'PDEU', 'Pandit Deendayal Energy University', 'PDPU Metro']),
+            ('GNLU (Gujarat National Law University)', 'જીએનએલયુ (ઇન્ટરચેન્જ)', 'GANDHINAGAR', 'METRO_STATION', 'Attalika Avenue, Knowledge Corridor, Bhaijipura / Koba', 23.1540, 72.6500, ['GNLU', 'GNLU Metro Interchange', 'GNLU Gandhinagar', 'GNLU Metro']),
+            ('Pandit Deendayal Energy University (PDEU)', 'પંડિત દીનદયાળ એનર્જી યુનિવર્સિટી (પીડીઇયુ)', 'GANDHINAGAR', 'EDUCATION', 'Knowledge Corridor, Raisan, Gandhinagar', 23.1610, 72.6650, ['PDPU', 'PDEU', 'Pandit Deendayal Energy University', 'PDPU Metro']),
             ('DA-IICT (Dhirubhai Ambani Institute)', 'ડીએ-આઇઆઇસીટી ગાંધીનગર', 'GANDHINAGAR', 'EDUCATION', 'Near Indroda Circle, Gandhinagar', 23.1880, 72.6280, ['DAIICT', 'DA-IICT', 'Dhirubhai Ambani Institute']),
             ('IIT Gandhinagar (Palaj Campus)', 'આઈઆઈટી ગાંધીનગર', 'GANDHINAGAR', 'EDUCATION', 'Palaj, Gandhinagar', 23.2130, 72.6840, ['IITGN', 'IIT Gandhinagar', 'Palaj Campus']),
-            ('NIFT Gandhinagar', 'નિફ્ટ ગાંધીનગર', 'GANDHINAGAR', 'EDUCATION', 'GH-0 Road, Infocity, Gandhinagar', 23.2250, 72.6580, ['NIFT', 'NIFT Gandhinagar']),
+            ('NIFT Gandhinagar', 'નિફ્ટ ગાંધીનગર', 'GANDHINAGAR', 'EDUCATION', 'GH-0 Road, Infocity, Gandhinagar', 23.1980, 72.6290, ['NIFT', 'NIFT Gandhinagar']),
             ('National Forensic Sciences University (NFSU)', 'નેશનલ ફોરેન્સિક સાયન્સિસ યુનિવર્સિટી', 'GANDHINAGAR', 'EDUCATION', 'Sector 9, Gandhinagar', 23.2180, 72.6410, ['NFSU', 'GFSU', 'Forensic University']),
             ('Indroda Dinosaur & Nature Fossil Park', 'ઇન્દ્રોડા નેચર પાર્ક', 'GANDHINAGAR', 'TOURIST', 'Indroda, Gandhinagar', 23.1950, 72.6720, ['Indroda Park', 'Zoo Gandhinagar', 'Dinosaur Park Gandhinagar']),
             ('Gandhinagar Sector 21 Shopping Centre', 'સેક્ટર ૨૧ શોપિંગ સેન્ટર', 'GANDHINAGAR', 'COMMERCIAL', 'Sector 21, Gandhinagar', 23.2380, 72.6420, ['Sector 21', 'Sec 21', 'Sector 21 Market', 'Sector 21 Shopping Center']),
-            ('Kudasan Commercial Hub', 'કુડાસણ કોમર્શિયલ હબ', 'GANDHINAGAR', 'COMMERCIAL', 'Kudasan Cross Road, Gandhinagar', 23.1850, 72.6380, ['Kudasan', 'Kudasan Cross Road']),
-            ('Koba Circle Transit Junction', 'કોબા સર્કલ', 'GANDHINAGAR', 'COMMERCIAL', 'Koba, Airport-Gandhinagar Highway', 23.1550, 72.5900, ['Koba', 'Koba Circle', 'Koba Highway']),
-            ('Raysan Metro Station', 'રાયસણ મેટ્રો', 'GANDHINAGAR', 'METRO_STATION', 'Raysan, Gandhinagar', 23.1990, 72.6450, ['Raysan', 'Raysan Metro']),
+            ('Kudasan Commercial Hub', 'કુડાસણ કોમર્શિયલ હબ', 'GANDHINAGAR', 'COMMERCIAL', 'Kudasan Cross Road, Gandhinagar', 23.1780, 72.6320, ['Kudasan', 'Kudasan Cross Road']),
+            ('Koba Circle Transit Junction', 'કોબા સર્કલ', 'GANDHINAGAR', 'COMMERCIAL', 'Koba, Airport-Gandhinagar Highway', 23.1550, 72.6100, ['Koba', 'Koba Circle', 'Koba Highway']),
+            ('Raysan Metro Station', 'રાયસણ મેટ્રો', 'GANDHINAGAR', 'METRO_STATION', 'Raysan, Gandhinagar', 23.1700, 72.6410, ['Raysan', 'Raysan Metro']),
+            ('Randesan Metro Station', 'રાંદેસણ મેટ્રો', 'GANDHINAGAR', 'METRO_STATION', 'Randesan, Gandhinagar', 23.1810, 72.6360, ['Randesan', 'Randesan Metro']),
             ('Sargasan Cross Road', 'સરગાસણ ચાર રસ્તા', 'GANDHINAGAR', 'COMMERCIAL', 'Sargasan, SG Highway, Gandhinagar', 23.2050, 72.6180, ['Sargasan', 'Sargasan Cross Road']),
         ]
 

@@ -171,7 +171,7 @@ export const LiveVehicleTrackerCard: React.FC<LiveVehicleTrackerCardProps> = ({
             </div>
 
             {/* Delay Badge */}
-            {currentVehicle.delay_minutes > 0 ? (
+            {(currentVehicle.delay_minutes ?? 0) > 0 ? (
               <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[11px] font-bold flex items-center gap-1 shrink-0">
                 <AlertTriangle className="w-3 h-3" />
                 +{currentVehicle.delay_minutes}m delay

@@ -204,24 +204,77 @@ class NearbyStopsView(APIView):
         parameters=[
             OpenApiParameter(name='lat', description='Latitude', required=True, type=OpenApiTypes.FLOAT),
             OpenApiParameter(name='lng', description='Longitude', required=True, type=OpenApiTypes.FLOAT),
-            OpenApiParameter(name='radius', description='Search radius in km (default 2.5)', required=False, type=OpenApiTypes.FLOAT),
-            OpenApiParameter(name='mode', description='Filter mode: METRO, BRTS, AMTS, RAIL, BUS', required=False, type=OpenApiTypes.STR),
+            OpenApiParameter(name='radius', description='Search radius in km (default 3.0)', required=False, type=OpenApiTypes.FLOAT),
+            OpenApiParameter(name='mode', description='Filter mode: METRO, BRTS, AMTS, GANDHINAGAR_ELECTRIC_BUS, RAIL, BUS', required=False, type=OpenApiTypes.STR),
         ]
     )
     def get(self, request):
         lat = float(request.query_params.get('lat', 23.0300))
         lng = float(request.query_params.get('lng', 72.5800))
-        radius = float(request.query_params.get('radius', 2.5))
+        radius = float(request.query_params.get('radius', 3.0))
         mode = request.query_params.get('mode')
 
-        stops = GeocodingService.find_nearby_stops(lat, lng, radius_km=radius, mode=mode, limit=15)
+        stops = GeocodingService.find_nearby_stops(lat, lng, radius_km=radius, mode=mode, limit=20)
         return Response({
             'count': len(stops),
             'radius_km': radius,
             'origin': {'latitude': lat, 'longitude': lng},
             'stops': stops,
-            'nearby_stops': stops
+            'nearby_stops': stops,
+            'nearest': stops
         })
+
+
+class LocationDebugNearestView(APIView):
+    permission_classes = [permissions.AllowAny]
+    """
+    GPS Diagnostics & Nearest Stop Debug Endpoint:
+    Inspects exact spatial candidate distance calculations for given user GPS coordinates.
+    """
+    def get(self, request):
+        lat_str = request.query_params.get('latitude') or request.query_params.get('lat')
+        lng_str = request.query_params.get('longitude') or request.query_params.get('lng') or request.query_params.get('lon')
+        transport_type = request.query_params.get('transportType') or request.query_params.get('transport_type') or request.query_params.get('mode') or 'METRO_STATION'
+        radius = float(request.query_params.get('radius', 12.0)) # Broad radius to inspect all ranked candidates
+
+        if lat_str is None or lng_str is None:
+            return Response({'error': 'latitude and longitude parameters are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            lat = float(lat_str)
+            lng = float(lng_str)
+        except ValueError:
+            return Response({'error': 'Invalid float for latitude/longitude'}, status=status.HTTP_400_BAD_REQUEST)
+
+        candidates = GeocodingService.find_nearby_stops(lat, lng, radius_km=radius, mode=transport_type, limit=15)
+
+        results = []
+        for c in candidates:
+            results.append({
+                'id': c.get('id') or c.get('stop_id'),
+                'name': c.get('name'),
+                'type': c.get('type') or c.get('category'),
+                'mode': c.get('mode'),
+                'distanceMeters': c.get('distanceMeters') or c.get('distance_m'),
+                'walkingDistanceMeters': c.get('walkingDistanceMeters') or c.get('walking_distance_m'),
+                'walkingMinutes': c.get('walkingMinutes') or c.get('walking_time_mins'),
+                'latitude': c.get('latitude'),
+                'longitude': c.get('longitude'),
+                'isInterchange': c.get('is_interchange', False),
+            })
+
+        return Response({
+            'userLocation': {
+                'latitude': lat,
+                'longitude': lng,
+                'timestamp': timezone.now().isoformat(),
+            },
+            'transportType': transport_type,
+            'totalCandidates': len(results),
+            'selectedNearest': results[0] if results else None,
+            'results': results,
+            'nearest': results,
+        }, status=status.HTTP_200_OK)
 
 
 class StationDeparturesView(APIView):

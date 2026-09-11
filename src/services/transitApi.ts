@@ -7,8 +7,28 @@ import {
   ServiceAlertItem,
   TransitStatusData,
   LocationSearchResult,
-  TransportMode
+  TransportMode,
+  ElectricBusRoute,
+  ElectricBusStop,
+  ElectricBusVehicle,
+  ElectricBusStats
 } from '../types/transit'
+
+export interface NearestStationCandidate {
+  id: string
+  name: string
+  name_gu?: string
+  type: string
+  category?: string
+  mode: TransportMode
+  distanceMeters: number
+  walkingDistanceMeters: number
+  walkingMinutes: number
+  latitude: number
+  longitude: number
+  isInterchange?: boolean
+  platformInfo?: string
+}
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000/api'
 
@@ -57,17 +77,22 @@ function haversineDistanceMeters(lat1: number, lon1: number, lat2: number, lon2:
 
 // Complete Ahmedabad & Gandhinagar Metro Lines definition with ordered stops
 export const METRO_RED_LINE_STOPS: TransitStop[] = [
-  { stop_id: 'METRO-GND-07', name: 'Mahatma Mandir Metro', name_gu: 'મહાત્મા મંદિર મેટ્રો', mode: 'METRO', latitude: 23.2500, longitude: 72.6520, is_interchange: true, wheelchair_accessible: true, platform_info: 'Terminal Platform 1 & 2' },
-  { stop_id: 'METRO-GND-09', name: 'Sector 24 Metro', name_gu: 'સેક્ટર ૨૪ મેટ્રો', mode: 'METRO', latitude: 23.2480, longitude: 72.6530, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
+  { stop_id: 'METRO-GND-07', name: 'Mahatma Mandir Metro (Gandhinagar Capital)', name_gu: 'મહાત્મા મંદિર મેટ્રો', mode: 'METRO', latitude: 23.2590, longitude: 72.6520, is_interchange: true, wheelchair_accessible: true, platform_info: 'Terminal Platform 1 & 2 (250m to Capital Railway Station)' },
+  { stop_id: 'METRO-GND-09', name: 'Sector 24 Metro', name_gu: 'સેક્ટર ૨૪ મેટ્રો', mode: 'METRO', latitude: 23.2550, longitude: 72.6590, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
   { stop_id: 'METRO-GND-08', name: 'Sector 16 Metro', name_gu: 'સેક્ટર ૧૬ મેટ્રો', mode: 'METRO', latitude: 23.2450, longitude: 72.6550, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
-  { stop_id: 'METRO-GND-06', name: 'Sector 10A / Sachivalaya', name_gu: 'સેક્ટર ૧૦A / સચિવાલય', mode: 'METRO', latitude: 23.2420, longitude: 72.6580, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
-  { stop_id: 'METRO-GND-05', name: 'Sector 1 Metro', name_gu: 'સેક્ટર ૧ મેટ્રો', mode: 'METRO', latitude: 23.2350, longitude: 72.6590, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
-  { stop_id: 'METRO-GND-04', name: 'Infocity Metro (Gandhinagar)', name_gu: 'ઇન્ફોસિટી મેટ્રો', mode: 'METRO', latitude: 23.2280, longitude: 72.6600, is_interchange: true, wheelchair_accessible: true, platform_info: 'Platform 1 & 2 (Infocity IT Park Hub)' },
-  { stop_id: 'METRO-INT-02', name: 'GNLU (Gujarat National Law University)', name_gu: 'જીએનએલયુ (ઇન્ટરચેન્જ)', mode: 'METRO', latitude: 23.1900, longitude: 72.6320, is_interchange: true, wheelchair_accessible: true, platform_info: 'Red Line & GIFT Branch Interchange' },
-  { stop_id: 'METRO-GND-03', name: 'Raysan Metro', name_gu: 'રાયસણ મેટ્રો', mode: 'METRO', latitude: 23.1990, longitude: 72.6450, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
-  { stop_id: 'METRO-NS-20', name: 'Koba Circle', name_gu: 'કોબા સર્કલ', mode: 'METRO', latitude: 23.1550, longitude: 72.5900, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
+  { stop_id: 'METRO-GND-06', name: 'Sector 10A / Sachivalaya', name_gu: 'સેક્ટર ૧૦A / સચિવાલય', mode: 'METRO', latitude: 23.2320, longitude: 72.6480, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2 (Gujarat Sachivalaya & Vidhan Sabha Link)' },
+  { stop_id: 'METRO-GND-05', name: 'Sector 1 Metro', name_gu: 'સેક્ટર ૧ મેટ્રો', mode: 'METRO', latitude: 23.2150, longitude: 72.6390, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
+  { stop_id: 'METRO-GND-04', name: 'Infocity Metro (Gandhinagar)', name_gu: 'ઇન્ફોસિટી મેટ્રો', mode: 'METRO', latitude: 23.1965, longitude: 72.6288, is_interchange: true, wheelchair_accessible: true, platform_info: 'Platform 1 & 2 (Infocity IT Park Hub)' },
+  { stop_id: 'METRO-GND-03', name: 'Dholakuva Circle Metro', name_gu: 'ધોળાકુવા સર્કલ મેટ્રો', mode: 'METRO', latitude: 23.1970, longitude: 72.6320, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2 (Dholakuva Entry)' },
+  { stop_id: 'METRO-GND-02', name: 'Randesan Metro', name_gu: 'રાંદેસણ મેટ્રો', mode: 'METRO', latitude: 23.1870, longitude: 72.6370, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
+  { stop_id: 'METRO-GND-01', name: 'Raysan Metro', name_gu: 'રાયસણ મેટ્રો', mode: 'METRO', latitude: 23.1750, longitude: 72.6410, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
+  { stop_id: 'METRO-INT-02', name: 'GNLU (Gujarat National Law University)', name_gu: 'જીએનએલયુ (ઇન્ટરચેન્જ)', mode: 'METRO', latitude: 23.1540, longitude: 72.6500, is_interchange: true, wheelchair_accessible: true, platform_info: 'Red Line & GIFT Branch Interchange' },
+  { stop_id: 'METRO-NS-22', name: 'Koba Gam', name_gu: 'કોબા ગામ', mode: 'METRO', latitude: 23.1720, longitude: 72.6300, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
+  { stop_id: 'METRO-NS-21', name: 'Juna Koba', name_gu: 'જુના કોબા', mode: 'METRO', latitude: 23.1650, longitude: 72.6200, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
+  { stop_id: 'METRO-NS-20', name: 'Koba Circle', name_gu: 'કોબા સર્કલ', mode: 'METRO', latitude: 23.1550, longitude: 72.6100, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
   { stop_id: 'METRO-NS-18', name: 'Tapovan Circle', name_gu: 'તપોવન સર્કલ', mode: 'METRO', latitude: 23.1290, longitude: 72.5950, is_interchange: true, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
-  { stop_id: 'METRO-NS-17', name: 'Koteshwar Road', name_gu: 'કોટેશ્વર રોડ', mode: 'METRO', latitude: 23.1070, longitude: 72.5980, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
+  { stop_id: 'METRO-NS-17', name: 'Vishwakarma College Metro Station', name_gu: 'વિશ્વકર્મા કોલેજ મેટ્રો સ્ટેશન', mode: 'METRO', latitude: 23.1090, longitude: 72.5950, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2 (Opp. VGEC Chandkheda)' },
+  { stop_id: 'METRO-NS-16', name: 'Koteshwar Road', name_gu: 'કોટેશ્વર રોડ', mode: 'METRO', latitude: 23.1070, longitude: 72.5980, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
   { stop_id: 'METRO-NS-01', name: 'Motera Stadium Metro', name_gu: 'મોટેરા સ્ટેડિયમ મેટ્રો', mode: 'METRO', latitude: 23.0915, longitude: 72.5975, is_interchange: true, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
   { stop_id: 'METRO-NS-02', name: 'Sabarmati Railway Station Metro', name_gu: 'સાબરમતી રેલ્વે સ્ટેશન મેટ્રો', mode: 'METRO', latitude: 23.0762, longitude: 72.5855, is_interchange: true, wheelchair_accessible: true, platform_info: 'Platform 1 (Toward APMC) / 2 (Toward Gandhinagar)' },
   { stop_id: 'METRO-NS-03', name: 'AEC (Ahmedabad Electricity Co.)', name_gu: 'એઇસી', mode: 'METRO', latitude: 23.0695, longitude: 72.5810, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
@@ -100,8 +125,8 @@ export const METRO_BLUE_LINE_STOPS: TransitStop[] = [
 ]
 
 export const METRO_GIFT_LINE_STOPS: TransitStop[] = [
-  { stop_id: 'METRO-INT-02', name: 'GNLU (Gujarat National Law University)', name_gu: 'જીએનએલયુ (ઇન્ટરચેન્જ)', mode: 'METRO', latitude: 23.1900, longitude: 72.6320, is_interchange: true, wheelchair_accessible: true, platform_info: 'Platform 3' },
-  { stop_id: 'METRO-GIFT-01', name: 'PDEU / PDPU Metro', name_gu: 'પીડીઇયુ / પીડીપીયુ', mode: 'METRO', latitude: 23.1940, longitude: 72.6600, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
+  { stop_id: 'METRO-INT-02', name: 'GNLU (Gujarat National Law University)', name_gu: 'જીએનએલયુ (ઇન્ટરચેન્જ)', mode: 'METRO', latitude: 23.1540, longitude: 72.6500, is_interchange: true, wheelchair_accessible: true, platform_info: 'Platform 3' },
+  { stop_id: 'METRO-GIFT-01', name: 'PDEU / PDPU Metro', name_gu: 'પીડીઇયુ / પીડીપીયુ', mode: 'METRO', latitude: 23.1610, longitude: 72.6650, is_interchange: false, wheelchair_accessible: true, platform_info: 'Platform 1 & 2' },
   { stop_id: 'METRO-GIFT-02', name: 'GIFT City Metro Station', name_gu: 'ગિફ્ટ સિટી મેટ્રો સ્ટેશન', mode: 'METRO', latitude: 23.1600, longitude: 72.6840, is_interchange: true, wheelchair_accessible: true, platform_info: 'FinTech Hub Platform 1 & 2' },
 ]
 
@@ -403,6 +428,9 @@ function resolveTransitLocation(nameOrQuery: string, lat?: number, lng?: number)
     { key: 'sachivalaya', stopId: 'METRO-GND-06' },
     { key: 'sector 1', stopId: 'METRO-GND-05' },
     { key: 'infocity', stopId: 'METRO-GND-04' },
+    { key: 'dholakuva', stopId: 'METRO-GND-03' },
+    { key: 'randesan', stopId: 'METRO-GND-02' },
+    { key: 'raysan', stopId: 'METRO-GND-01' },
     { key: 'gnlu', stopId: 'METRO-INT-02' },
     { key: 'gift', stopId: 'METRO-GIFT-02' },
     { key: 'koba', stopId: 'METRO-NS-20' },
@@ -1362,6 +1390,96 @@ export const transitApi = {
     return candidateStops.slice(0, 8)
   },
 
+  /**
+   * Authoritative Nearest Stations & Stops Query with Category Isolation and Debug Logging
+   */
+  async getNearestStations(
+    lat: number,
+    lng: number,
+    mode?: string,
+    limit: number = 8
+  ): Promise<{
+    userLocation: { latitude: number; longitude: number }
+    selectedNearest: NearestStationCandidate | null
+    results: NearestStationCandidate[]
+  }> {
+    // Log GPS input in development console
+    if ((import.meta as any).env?.DEV) {
+      console.log(
+        `%c[UrbanSense GPS Query] User GPS: lat=${lat}, lng=${lng}, filterMode=${mode || 'ALL'}`,
+        'color: #059669; font-weight: bold'
+      )
+    }
+
+    try {
+      const query = new URLSearchParams()
+      query.set('latitude', lat.toString())
+      query.set('longitude', lng.toString())
+      if (mode) query.set('transportType', mode)
+      query.set('radius', '15.0')
+
+      const res = await transitFetch<any>(`/location/debug/nearest/?${query.toString()}`)
+      if (res && res.results && res.results.length > 0) {
+        if ((import.meta as any).env?.DEV) {
+          console.log(
+            `%c[UrbanSense Nearest Station] Closest: ${res.results[0].name} (${res.results[0].distanceMeters}m straight-line, ${res.results[0].walkingMinutes} mins walk)`,
+            'color: #2563eb; font-weight: bold'
+          )
+        }
+        return {
+          userLocation: res.userLocation || { latitude: lat, longitude: lng },
+          selectedNearest: res.results[0],
+          results: res.results.slice(0, limit)
+        }
+      }
+    } catch (e) {
+      console.warn('Backend debug nearest endpoint unavailable, using local calculation', e)
+    }
+
+    // Local Geospatial Calculation fallback
+    let candidateStops = ALL_TRANSIT_STOPS.map((s) => {
+      const distM = haversineDistanceMeters(lat, lng, s.latitude, s.longitude)
+      const walkingDistM = Math.max(distM, Math.round(distM * 1.25))
+      const walkMins = Math.max(1, Math.ceil(walkingDistM / 75))
+      return {
+        id: s.stop_id,
+        name: s.name,
+        name_gu: s.name_gu,
+        type: s.mode === 'METRO' ? 'METRO_STATION' : `${s.mode}_STOP`,
+        category: s.mode === 'METRO' ? 'METRO_STATION' : `${s.mode}_STOP`,
+        mode: s.mode,
+        distanceMeters: distM,
+        walkingDistanceMeters: walkingDistM,
+        walkingMinutes: walkMins,
+        latitude: s.latitude,
+        longitude: s.longitude,
+        isInterchange: s.is_interchange,
+        platformInfo: s.platform_info,
+      } as NearestStationCandidate
+    })
+
+    if (mode) {
+      const canonical = mode.replace('_STATION', '').replace('_STOP', '')
+      candidateStops = candidateStops.filter((s) => s.mode === canonical || s.type === mode)
+    }
+
+    candidateStops.sort((a, b) => a.walkingDistanceMeters - b.walkingDistanceMeters)
+    const selected = candidateStops[0] || null
+
+    if ((import.meta as any).env?.DEV) {
+      console.log(
+        `%c[UrbanSense Local Nearest] Closest: ${selected?.name} (${selected?.distanceMeters}m, ${selected?.walkingMinutes} mins walk)`,
+        'color: #4f46e5; font-weight: bold'
+      )
+    }
+
+    return {
+      userLocation: { latitude: lat, longitude: lng },
+      selectedNearest: selected,
+      results: candidateStops.slice(0, limit),
+    }
+  },
+
   /** Station Departure Board */
   async getDepartures(stopId: string, limit: number = 8): Promise<StopDeparturesData | null> {
     const res = await transitFetch<StopDeparturesData>(`/transit/departures/?stop_id=${stopId}&limit=${limit}`)
@@ -1561,6 +1679,8 @@ export const transitApi = {
       { id: 'LM-AHM-16', name: 'Bopal Cross Road & SP Ring Road', category: 'Residential Hub', type: 'LANDMARK', address: 'SP Ring Road, Bopal, Ahmedabad', latitude: 23.0310, longitude: 72.4850, is_popular: true },
       { id: 'LM-AHM-17', name: 'Gota Cross Road (SG Highway)', category: 'SG Highway Junction', type: 'LANDMARK', address: 'SG Highway, Gota, Ahmedabad', latitude: 23.0980, longitude: 72.5350, is_popular: true },
       { id: 'LM-AHM-18', name: 'Tapovan Circle (Visat Highway)', category: 'Highway Transit Junction', type: 'LANDMARK', address: 'Visat-Gandhinagar Highway, Ahmedabad', latitude: 23.1290, longitude: 72.5950, is_popular: true },
+      { id: 'LM-AHM-26', name: 'Vishwakarma Government Engineering College (VGEC)', category: 'Premier Engineering College', type: 'EDUCATION', address: 'Opp. Sangath Mall, Visat-Gandhinagar Highway, Chandkheda, Ahmedabad', latitude: 23.1090, longitude: 72.5950, is_popular: true },
+      { id: 'LM-AHM-27', name: 'Vishwakarma College Metro Station', category: 'Metro Station', type: 'METRO_STATION', address: 'Visat-Gandhinagar Highway, Chandkheda, Ahmedabad', latitude: 23.1090, longitude: 72.5950, is_popular: true },
       { id: 'LM-AHM-19', name: 'Shivranjani Cross Road BRTS', category: 'BRTS Transit Hub', type: 'BRTS_STOP', address: 'Shivranjani, Satellite, Ahmedabad', latitude: 23.0245, longitude: 72.5312, is_popular: true },
       { id: 'LM-AHM-20', name: 'Maninagar Railway Station & Hub', category: 'Railway & Bus Hub', type: 'RAILWAY_STATION', address: 'Maninagar South, Ahmedabad', latitude: 22.9975, longitude: 72.6020, is_popular: true },
       { id: 'LM-AHM-21', name: 'Lal Darwaja Central Terminus', category: 'Historic City Bus Terminal', type: 'BUS_STOP', address: 'Lal Darwaja, Old City, Ahmedabad', latitude: 23.0250, longitude: 72.5820, is_popular: true },
@@ -1690,5 +1810,320 @@ export const transitApi = {
       active_alerts: 2,
       live_vehicles: FALLBACK_LIVE_VEHICLES
     }
+  },
+
+  /** Fetch Gandhinagar Electric Bus routes */
+  async getElectricBusRoutes(operator?: string, q?: string): Promise<ElectricBusRoute[]> {
+    const params = new URLSearchParams()
+    if (operator) params.append('operator', operator)
+    if (q) params.append('q', q)
+    const queryString = params.toString() ? `?${params.toString()}` : ''
+    const res = await transitFetch<{ routes: ElectricBusRoute[] }>(`/electric-bus/routes/${queryString}`)
+    if (res?.routes) return res.routes
+
+    // Fallback static data
+    return [
+      {
+        route_id: 'GNR-E-01',
+        route_number: 'E-1',
+        route_name: 'Mahatma Mandir ↔ Infocity ↔ GIFT City FinTech',
+        mode: 'GANDHINAGAR_ELECTRIC_BUS',
+        mode_name: 'Gandhinagar Electric Bus',
+        badge_icon: '🚌⚡',
+        operator: 'Gandhinagar Greenline (GGTSL)',
+        operator_code: 'GGTSL',
+        operator_full_name: 'Gandhinagar Greenline Transport Service Limited',
+        origin: 'Mahatma Mandir Convention Stand',
+        destination: 'GIFT City Main Terminal',
+        color: '#059669',
+        text_color: '#FFFFFF',
+        is_electrified: true,
+        electrification_level: '100% Battery Electric Vehicle (BEV)',
+        ac_available: true,
+        low_floor: true,
+        wheelchair_accessible: true,
+        peak_frequency_minutes: 10,
+        off_peak_frequency_minutes: 15,
+        operating_hours: '06:00 - 22:30',
+        stops_count: 8,
+        fare_min: 5,
+        fare_max: 20
+      },
+      {
+        route_id: 'GNR-E-02',
+        route_number: 'E-2',
+        route_name: 'Gandhinagar Capital Station ↔ Sector 21 ↔ GNLU Interchange',
+        mode: 'GANDHINAGAR_ELECTRIC_BUS',
+        mode_name: 'Gandhinagar Electric Bus',
+        badge_icon: '🚌⚡',
+        operator: 'Gandhinagar Greenline (GGTSL)',
+        operator_code: 'GGTSL',
+        operator_full_name: 'Gandhinagar Greenline Transport Service Limited',
+        origin: 'Gandhinagar Capital Railway Station',
+        destination: 'GNLU Interchange Hub',
+        color: '#0D9488',
+        text_color: '#FFFFFF',
+        is_electrified: true,
+        electrification_level: '100% Battery Electric Vehicle (BEV)',
+        ac_available: true,
+        low_floor: true,
+        wheelchair_accessible: true,
+        peak_frequency_minutes: 12,
+        off_peak_frequency_minutes: 20,
+        operating_hours: '06:15 - 22:00',
+        stops_count: 9,
+        fare_min: 5,
+        fare_max: 15
+      },
+      {
+        route_id: 'GNR-E-06',
+        route_number: 'E-6',
+        route_name: 'Tapovan Circle Transit Hub ↔ Koba Circle ↔ Sector 11 Pathikashram',
+        mode: 'GANDHINAGAR_ELECTRIC_BUS',
+        mode_name: 'Gandhinagar Electric Bus',
+        badge_icon: '🚌⚡',
+        operator: 'Gandhinagar Greenline (GGTSL)',
+        operator_code: 'GGTSL',
+        operator_full_name: 'Gandhinagar Greenline Transport Service Limited',
+        origin: 'Tapovan Circle Transit Hub',
+        destination: 'Pathikashram Central GSRTC Hub',
+        color: '#10B981',
+        text_color: '#FFFFFF',
+        is_electrified: true,
+        electrification_level: '100% Battery Electric Vehicle (BEV)',
+        ac_available: true,
+        low_floor: true,
+        wheelchair_accessible: true,
+        peak_frequency_minutes: 8,
+        off_peak_frequency_minutes: 15,
+        operating_hours: '05:45 - 23:00',
+        stops_count: 7,
+        fare_min: 10,
+        fare_max: 25
+      },
+      {
+        route_id: 'GIFT-AC-1',
+        route_number: 'GIFT-AC-1',
+        route_name: 'GIFT City Autonomous EV Shuttle (Circular Intra-Zone Loop)',
+        mode: 'GANDHINAGAR_ELECTRIC_BUS',
+        mode_name: 'Gandhinagar Electric Bus',
+        badge_icon: '🚌⚡',
+        operator: 'GIFT Transit Provider',
+        operator_code: 'GIFT_TRANSIT',
+        operator_full_name: 'GIFT City Smart EV Shuttle Provider',
+        origin: 'GIFT Metro Station Hub',
+        destination: 'GIFT SEZ & Tech Park (Loop)',
+        color: '#065F46',
+        text_color: '#FFFFFF',
+        is_electrified: true,
+        electrification_level: '100% Zero Emission Autonomous EV',
+        ac_available: true,
+        low_floor: true,
+        wheelchair_accessible: true,
+        peak_frequency_minutes: 5,
+        off_peak_frequency_minutes: 10,
+        operating_hours: '06:00 - 23:30',
+        stops_count: 5,
+        fare_min: 0,
+        fare_max: 10
+      }
+    ]
+  },
+
+  /** Fetch Gandhinagar Electric Bus stops */
+  async getElectricBusStops(q?: string, sector?: string): Promise<ElectricBusStop[]> {
+    const params = new URLSearchParams()
+    if (q) params.append('q', q)
+    if (sector) params.append('sector', sector)
+    const queryString = params.toString() ? `?${params.toString()}` : ''
+    const res = await transitFetch<{ stops: ElectricBusStop[] }>(`/electric-bus/stops/${queryString}`)
+    if (res?.stops) return res.stops
+    return []
+  },
+
+  /** Fetch Live Electric Bus Departures */
+  async getElectricBusDepartures(stopId?: string, stopName?: string): Promise<any> {
+    const params = new URLSearchParams()
+    if (stopId) params.append('stop_id', stopId)
+    if (stopName) params.append('stop_name', stopName)
+    const queryString = params.toString() ? `?${params.toString()}` : ''
+    const res = await transitFetch<any>(`/electric-bus/departures/${queryString}`)
+    if (res) return res
+    return { departures: [] }
+  },
+
+  /** Fetch Live Electric Bus Telemetry Vehicles */
+  async getElectricBusVehicles(operator?: string, route?: string): Promise<{ count: number, fleet_summary: any, provenance: string, vehicles: ElectricBusVehicle[] }> {
+    const params = new URLSearchParams()
+    if (operator) params.append('operator', operator)
+    if (route) params.append('route', route)
+    const queryString = params.toString() ? `?${params.toString()}` : ''
+    const res = await transitFetch<any>(`/electric-bus/vehicles/${queryString}`)
+    if (res) return res
+
+    return {
+      count: 4,
+      fleet_summary: {
+        fleet_total: 85,
+        fleet_deployed: 68,
+        fleet_active: 54,
+        depot_charging: 14,
+        standby_spare: 17
+      },
+      provenance: 'DEMO DATA',
+      vehicles: [
+        {
+          vehicle_id: 'GGTSL-EV-101',
+          registration: 'GJ-18-EV-1001',
+          route_id: 'GNR-E-01',
+          route_number: 'E-1',
+          route_name: 'Mahatma Mandir ↔ Infocity ↔ GIFT City',
+          destination: 'GIFT City Main Terminal',
+          operator: 'GGTSL',
+          agency: 'Gandhinagar Greenline Transport',
+          latitude: 23.2350,
+          longitude: 72.6580,
+          speed_kmh: 34,
+          is_electric: true,
+          battery_soc_pct: 82,
+          battery_status: '82% SOC (Normal)',
+          charging_status: 'DISCHARGING',
+          is_ac: true,
+          is_low_floor: true,
+          wheelchair_accessible: true,
+          fleet_number: 'GGTSL-E-01',
+          registration_number: 'GJ-18-EV-1001',
+          status: 'ON_TIME',
+          delay_minutes: 0,
+          provenance: 'DEMO DATA'
+        },
+        {
+          vehicle_id: 'GGTSL-EV-102',
+          registration: 'GJ-18-EV-1002',
+          route_id: 'GNR-E-02',
+          route_number: 'E-2',
+          route_name: 'Gandhinagar Capital ↔ GNLU Interchange',
+          destination: 'GNLU Interchange Hub',
+          operator: 'GGTSL',
+          agency: 'Gandhinagar Greenline Transport',
+          latitude: 23.2100,
+          longitude: 72.6400,
+          speed_kmh: 28,
+          is_electric: true,
+          battery_soc_pct: 71,
+          battery_status: '71% SOC (Good)',
+          charging_status: 'DISCHARGING',
+          is_ac: true,
+          is_low_floor: true,
+          wheelchair_accessible: true,
+          fleet_number: 'GGTSL-E-02',
+          registration_number: 'GJ-18-EV-1002',
+          status: 'ON_TIME',
+          delay_minutes: 0,
+          provenance: 'DEMO DATA'
+        },
+        {
+          vehicle_id: 'GGTSL-EV-103',
+          registration: 'GJ-18-EV-1003',
+          route_id: 'GNR-E-06',
+          route_number: 'E-6',
+          route_name: 'Tapovan Circle ↔ Pathikashram Hub',
+          destination: 'Pathikashram Central GSRTC',
+          operator: 'GGTSL',
+          agency: 'Gandhinagar Greenline Transport',
+          latitude: 23.1650,
+          longitude: 72.6100,
+          speed_kmh: 40,
+          is_electric: true,
+          battery_soc_pct: 64,
+          battery_status: '64% SOC (Normal)',
+          charging_status: 'DISCHARGING',
+          is_ac: true,
+          is_low_floor: true,
+          wheelchair_accessible: true,
+          fleet_number: 'GGTSL-E-06',
+          registration_number: 'GJ-18-EV-1003',
+          status: 'ON_TIME',
+          delay_minutes: 0,
+          provenance: 'DEMO DATA'
+        },
+        {
+          vehicle_id: 'GIFT-EV-01',
+          registration: 'GJ-18-GIFT-01',
+          route_id: 'GIFT-AC-1',
+          route_number: 'GIFT-AC-1',
+          route_name: 'GIFT City EV Shuttle Loop',
+          destination: 'GIFT Multi-Services SEZ',
+          operator: 'GIFT_TRANSIT',
+          agency: 'GIFT City Bus Provider',
+          latitude: 23.1610,
+          longitude: 72.6850,
+          speed_kmh: 22,
+          is_electric: true,
+          battery_soc_pct: 94,
+          battery_status: '94% SOC (Optimal)',
+          charging_status: 'DISCHARGING',
+          is_ac: true,
+          is_low_floor: true,
+          wheelchair_accessible: true,
+          fleet_number: 'GIFT-SHUTTLE-01',
+          registration_number: 'GJ-18-GIFT-01',
+          status: 'ON_TIME',
+          delay_minutes: 0,
+          provenance: 'DEMO DATA'
+        }
+      ]
+    }
+  },
+
+  /** Fetch Gandhinagar Electric Bus Stats & Environmental impact */
+  async getElectricBusStats(): Promise<ElectricBusStats> {
+    const res = await transitFetch<ElectricBusStats>('/electric-bus/stats/')
+    if (res) return res
+
+    return {
+      network_name: 'Gandhinagar Greenline Electric Bus Network (GGTSL)',
+      program: 'PM-eBus Sewa & Gujarat Green Mobility Initiative',
+      operator: 'Gandhinagar Greenline Transport Service Limited (GGTSL)',
+      partner_agency: 'GIFT Urban Mobility Provider',
+      fleet_metrics: {
+        fleet_total: 85,
+        fleet_deployed: 68,
+        fleet_active: 54,
+        active_routes_count: 17,
+        electrified_stops_count: 75,
+        ev_depots_count: 3,
+        ev_depot_locations: [
+          'Sector 21 GGTSL Central Electric Depot',
+          'Pathikashram Main EV Fast Charging Hub',
+          'GIFT City Automated Transit EV Hub'
+        ]
+      },
+      environmental_impact: {
+        clean_km_today: 9990,
+        co2_saved_kg_today: 8191,
+        diesel_saved_liters_today: 2628,
+        tree_equivalent_co2_offset: 377,
+        zero_tailpipe_emissions: true
+      },
+      service_quality: {
+        fleet_electrification_rate: '100%',
+        air_conditioned_pct: 100,
+        low_floor_accessible_pct: 100,
+        average_battery_soc_pct: 78,
+        on_time_performance_pct: 94.6,
+        average_peak_headway_mins: 12
+      },
+      provenance: 'DEMO DATA',
+      last_updated: new Date().toISOString()
+    }
+  },
+
+  /** Fetch active electric bus service alerts */
+  async getElectricBusAlerts(): Promise<any> {
+    const res = await transitFetch<any>('/electric-bus/alerts/')
+    if (res) return res
+    return { count: 0, alerts: [] }
   }
 }
+

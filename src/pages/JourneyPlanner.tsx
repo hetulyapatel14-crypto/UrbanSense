@@ -8,12 +8,13 @@ import {
   RefreshCw,
   Database,
   Activity,
-  Sparkles
+  Sparkles,
+  Map,
+  Zap
 } from 'lucide-react'
 import { JourneySearchPanel } from '../components/journey/JourneySearchPanel'
 import { RouteResultsList } from '../components/journey/RouteResultsList'
 import { JourneyTimeline } from '../components/journey/JourneyTimeline'
-import { TransitMap } from '../components/journey/TransitMap'
 import { DepartureBoard } from '../components/journey/DepartureBoard'
 import { LiveVehicleTrackerCard } from '../components/journey/LiveVehicleTrackerCard'
 import { NearbyTransportFinder } from '../components/journey/NearbyTransportFinder'
@@ -22,20 +23,33 @@ import { DataSourceStatusModal } from '../components/journey/DataSourceStatusMod
 import { AiJourneyAssistantBar } from '../components/journey/AiJourneyAssistantBar'
 import { RouteComparisonTable } from '../components/journey/RouteComparisonTable'
 import { AdminNetworkMonitorModal } from '../components/journey/AdminNetworkMonitorModal'
-import { JourneyPlanResult, JourneyRouteOption, LiveVehicle } from '../types/transit'
+import { TransitMapModal } from '../components/journey/TransitMapModal'
+import { TraccarGpsModal } from '../components/journey/TraccarGpsModal'
+import { ElectricBusDetails } from '../components/journey/ElectricBusDetails'
+import { ElectricBusDepartureBoard } from '../components/journey/ElectricBusDepartureBoard'
+import { ElectricBusRouteCard } from '../components/journey/ElectricBusRouteCard'
+import { ElectricBusVehicleCard } from '../components/journey/ElectricBusVehicleCard'
+import { JourneyProgressTracker } from '../components/journey/JourneyProgressTracker'
+import { JourneyPlanResult, JourneyRouteOption, LiveVehicle, ElectricBusRoute, ElectricBusVehicle } from '../types/transit'
 import { transitApi } from '../services/transitApi'
 
-type FeatureMode = 'plan' | 'ai' | 'tracker' | 'departures' | 'nearby'
+type FeatureMode = 'plan' | 'ai' | 'electric-bus' | 'tracker' | 'departures' | 'nearby'
 
 export default function JourneyPlanner() {
   const [activeFeature, setActiveFeature] = useState<FeatureMode>('plan')
   const [journeyData, setJourneyData] = useState<JourneyPlanResult | null>(null)
   const [selectedRoute, setSelectedRoute] = useState<JourneyRouteOption | null>(null)
   const [liveVehicles, setLiveVehicles] = useState<LiveVehicle[]>([])
+  const [electricRoutes, setElectricRoutes] = useState<ElectricBusRoute[]>([])
+  const [electricVehicles, setElectricVehicles] = useState<ElectricBusVehicle[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showAdminMonitor, setShowAdminMonitor] = useState(false)
+  const [showTraccarModal, setShowTraccarModal] = useState(false)
   const [showMatrix, setShowMatrix] = useState(false)
+  const [showMapModal, setShowMapModal] = useState(false)
+  const [isCompanionActive, setIsCompanionActive] = useState(false)
+  const [companionRoute, setCompanionRoute] = useState<JourneyRouteOption | null>(null)
 
   const [searchFrom, setSearchFrom] = useState('')
   const [searchTo, setSearchTo] = useState('')
@@ -110,8 +124,14 @@ export default function JourneyPlanner() {
     if (plan.to?.name) setSearchTo(plan.to.name)
   }
 
+  useEffect(() => {
+    transitApi.getElectricBusRoutes().then(setElectricRoutes)
+    transitApi.getElectricBusVehicles().then(res => setElectricVehicles(res.vehicles || []))
+  }, [])
+
   const FEATURES = [
     { id: 'plan' as FeatureMode, label: 'Plan Trip', icon: Compass },
+    { id: 'electric-bus' as FeatureMode, label: '⚡ Gandhinagar e-Bus', icon: Zap, isLive: true, isElectric: true },
     { id: 'ai' as FeatureMode, label: 'AI Assistant', icon: Sparkles },
     { id: 'tracker' as FeatureMode, label: 'Live Tracker', icon: Radio, isLive: true },
     { id: 'departures' as FeatureMode, label: 'Departures', icon: Clock },
@@ -120,11 +140,11 @@ export default function JourneyPlanner() {
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh)] lg:h-screen lg:max-h-screen flex flex-col p-2.5 sm:p-3 md:p-3.5 gap-2 max-w-[1900px] w-full mx-auto overflow-y-auto lg:overflow-hidden">
-        {/* Top Header & Navigation Command Bar */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 bg-white/90 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-slate-200/90 shadow-xs flex-shrink-0">
+      <div className="h-full min-h-screen lg:min-h-0 lg:h-screen lg:max-h-screen flex flex-col p-2.5 sm:p-3 md:p-4 gap-2.5 max-w-[1900px] w-full mx-auto overflow-y-auto custom-scrollbar">
+        {/* Top Header Bar: Brand & Action Controls */}
+        <div className="flex items-center justify-between gap-3 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-200/90 shadow-xs flex-shrink-0">
           {/* Brand & Subtitle */}
-          <div className="flex items-center space-x-2.5">
+          <div className="flex items-center space-x-3">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-700 flex items-center justify-center text-white shadow-xs">
               <Compass className="w-4 h-4" />
             </div>
@@ -143,41 +163,26 @@ export default function JourneyPlanner() {
             </div>
           </div>
 
-          {/* Feature Navigation Tabs */}
-          <div className="bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 flex items-center gap-1 overflow-x-auto no-scrollbar">
-            {FEATURES.map((feat) => {
-              const Icon = feat.icon
-              const isActive = activeFeature === feat.id
-              return (
-                <button
-                  key={feat.id}
-                  type="button"
-                  onClick={() => setActiveFeature(feat.id)}
-                  className={`py-1 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition-all whitespace-nowrap ${
-                    isActive
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                  }`}
-                >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
-                  <span>{feat.label}</span>
-                  {feat.isLive && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5"></span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+          {/* Quick Action Tools with Open Map Button */}
+          <div className="flex items-center space-x-2 flex-shrink-0">
+            {/* Dedicated Open Map Button */}
+            <button
+              type="button"
+              onClick={() => setShowMapModal(true)}
+              title="Open Interactive Transit Map in Center"
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-sm shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              <Map className="w-3.5 h-3.5" />
+              <span>Open Map</span>
+            </button>
 
-          {/* Quick Action Tools */}
-          <div className="flex items-center space-x-1.5 flex-shrink-0">
             <button
               type="button"
               onClick={() => setShowAdminMonitor(true)}
               title="Live Network Status"
-              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-all"
+              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 text-xs font-bold shadow-xs transition-all cursor-pointer"
             >
-              <Activity className="w-3.5 h-3.5 animate-pulse" />
+              <Activity className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
               <span className="hidden sm:inline">Network</span>
             </button>
 
@@ -185,7 +190,7 @@ export default function JourneyPlanner() {
               type="button"
               onClick={() => setShowStatusModal(true)}
               title="Data Feeds"
-              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold transition-colors shadow-xs"
+              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold transition-colors shadow-xs cursor-pointer"
             >
               <Database className="w-3.5 h-3.5 text-indigo-600" />
               <span className="hidden sm:inline">Feeds</span>
@@ -196,7 +201,7 @@ export default function JourneyPlanner() {
               onClick={handleRefresh}
               disabled={isLoading}
               title="Refresh Data"
-              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Refresh</span>
@@ -204,91 +209,158 @@ export default function JourneyPlanner() {
           </div>
         </div>
 
-        {/* FEATURE 1: PLAN TRIP (2-PANE SPLIT SCREEN) */}
+        {/* Dedicated Feature Navigation Portion (Plan Trip, Gandhinagar e-Bus, AI Assistant, Live Tracker, Departures, Nearby Stops) */}
+        <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/90 shadow-xs flex-shrink-0">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
+            {FEATURES.map((feat) => {
+              const Icon = feat.icon
+              const isActive = activeFeature === feat.id
+              return (
+                <button
+                  key={feat.id}
+                  type="button"
+                  onClick={() => setActiveFeature(feat.id)}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                    isActive
+                      ? feat.isElectric
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-sm ring-1 ring-emerald-400/30'
+                        : 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-slate-50/80 hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200/60'
+                  }`}
+                >
+                  <Icon
+                    className={`w-4 h-4 ${
+                      isActive
+                        ? feat.isElectric
+                          ? 'text-emerald-200 fill-emerald-200'
+                          : 'text-white'
+                        : feat.isElectric
+                        ? 'text-emerald-600'
+                        : 'text-slate-500'
+                    }`}
+                  />
+                  <span>{feat.label}</span>
+                  {feat.isLive && (
+                    <span
+                      className={`w-2 h-2 rounded-full ml-0.5 ${
+                        isActive ? 'bg-emerald-300 animate-pulse' : 'bg-emerald-500 animate-pulse'
+                      }`}
+                    />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* FEATURE 1: PLAN TRIP */}
         {activeFeature === 'plan' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 flex-1 min-h-0 h-full overflow-hidden">
-            {/* Left Column: Search Form, Route Options & Step-by-Step Directions */}
-            <div className="lg:col-span-5 h-full flex flex-col min-h-0 overflow-y-auto custom-scrollbar space-y-2.5 pr-0.5">
-              {/* Service Alert Banner (Compact) */}
-              <ServiceAlertsBanner />
+          <div className="flex-1 min-h-0 space-y-3 pb-4">
+            {/* Live Service Alerts Banner */}
+            <ServiceAlertsBanner />
 
-              {/* Search Panel */}
-              <JourneySearchPanel
-                onSearch={handleSearch}
-                isLoading={isLoading}
-                initialFrom={searchFrom}
-                initialTo={searchTo}
+            {/* Search Panel */}
+            <JourneySearchPanel
+              onSearch={handleSearch}
+              isLoading={isLoading}
+              initialFrom={searchFrom}
+              initialTo={searchTo}
+            />
+
+            {/* Route Comparison Matrix Modal/Table if open */}
+            {showMatrix && journeyData && journeyData.routes && (
+              <RouteComparisonTable
+                routes={journeyData.routes}
+                selectedRouteKey={selectedRoute?.route_key || ''}
+                onSelectRoute={(key) => {
+                  const target = journeyData.routes.find((r) => r.route_key === key)
+                  if (target) setSelectedRoute(target)
+                }}
+                onClose={() => setShowMatrix(false)}
               />
+            )}
 
-              {/* Route Comparison Matrix Modal/Table if open */}
-              {showMatrix && journeyData && journeyData.routes && (
-                <RouteComparisonTable
-                  routes={journeyData.routes}
-                  selectedRouteKey={selectedRoute?.route_key || ''}
-                  onSelectRoute={(key) => {
-                    const target = journeyData.routes.find((r) => r.route_key === key)
-                    if (target) setSelectedRoute(target)
-                  }}
-                  onClose={() => setShowMatrix(false)}
-                />
-              )}
-
-              {/* Results or Empty State */}
-              {!journeyData ? (
-                <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs space-y-3">
+            {/* If no route planned yet: Popular Express Corridors */}
+            {!journeyData ? (
+              <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-3.5">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2.5">
                     <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
                       <Sparkles className="w-4 h-4 text-amber-500" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-900 text-xs">Popular Express Corridors</h3>
-                      <p className="text-[11px] text-slate-500">Tap to instantly route across cities</p>
+                      <h3 className="font-bold text-slate-900 text-sm">Popular Express Corridors</h3>
+                      <p className="text-xs text-slate-500">Tap any corridor to route instantly across Metro, BRTS, and Rail</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    {[
-                      { from: 'Kalupur Railway Station', to: 'GIFT City FinTech Zone', label: 'Kalupur ➔ GIFT City', desc: 'Metro Line 1 + EV Shuttle' },
-                      { from: 'Sardar Vallabhbhai Patel International Airport', to: 'Mahatma Mandir Convention Centre', label: 'Airport ➔ Gandhinagar', desc: 'Express Bus + BRTS' },
-                      { from: 'Sabarmati Railway Station', to: 'Infocity IT Park (Gandhinagar)', label: 'Sabarmati ➔ Infocity', desc: 'Metro Phase 2 / Rail' },
-                      { from: 'Iskcon Cross Road (SG Highway)', to: 'Vastral Gam Metro Terminal', label: 'Iskcon ➔ Vastral Gam', desc: 'East-West Metro Cross' },
-                    ].map((item, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          setSearchFrom(item.from)
-                          setSearchTo(item.to)
-                          handleSearch({
-                            from: item.from,
-                            to: item.to,
-                            preference: 'fastest',
-                            modes: ['METRO', 'BRTS', 'AMTS', 'RAIL', 'BUS', 'WALK'],
-                            wheelchair: false,
-                          })
-                        }}
-                        className="text-left p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50/80 hover:border-blue-300 border border-slate-200/80 transition-all group"
-                      >
-                        <div className="font-bold text-slate-800 text-[11px] group-hover:text-blue-700 flex items-center justify-between">
-                          <span>{item.label}</span>
-                          <span className="text-slate-400 group-hover:text-blue-600">➔</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">{item.desc}</div>
-                      </button>
-                    ))}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowMapModal(true)}
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 text-blue-600 text-xs font-bold border border-slate-200 hover:border-blue-300 transition-all"
+                  >
+                    <Map className="w-3.5 h-3.5" />
+                    <span>View Transit Map</span>
+                  </button>
                 </div>
-              ) : (
-                <div className="space-y-2.5 pb-2">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+                  {[
+                    { from: 'Kalupur Railway Station', to: 'GIFT City FinTech Zone', label: 'Kalupur ➔ GIFT City', desc: 'Metro Line 1 + EV Shuttle' },
+                    { from: 'Sardar Vallabhbhai Patel International Airport', to: 'Mahatma Mandir Convention Centre', label: 'Airport ➔ Gandhinagar', desc: 'Express Bus + BRTS' },
+                    { from: 'Sabarmati Railway Station', to: 'Infocity IT Park (Gandhinagar)', label: 'Sabarmati ➔ Infocity', desc: 'Metro Phase 2 / Rail' },
+                    { from: 'Iskcon Cross Road (SG Highway)', to: 'Vastral Gam Metro Terminal', label: 'Iskcon ➔ Vastral Gam', desc: 'East-West Metro Cross' },
+                  ].map((item, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setSearchFrom(item.from)
+                        setSearchTo(item.to)
+                        handleSearch({
+                          from: item.from,
+                          to: item.to,
+                          preference: 'fastest',
+                          modes: ['METRO', 'BRTS', 'AMTS', 'RAIL', 'BUS', 'WALK'],
+                          wheelchair: false,
+                        })
+                      }}
+                      className="text-left p-3 rounded-xl bg-slate-50 hover:bg-blue-50/90 hover:border-blue-300 border border-slate-200/80 transition-all group shadow-2xs hover:shadow-xs"
+                    >
+                      <div className="font-bold text-slate-800 text-xs group-hover:text-blue-700 flex items-center justify-between">
+                        <span>{item.label}</span>
+                        <span className="text-slate-400 group-hover:text-blue-600 transition-transform group-hover:translate-x-0.5">➔</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-1">{item.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* If journey planned: 2-Column Results List & Step-by-Step Directions */
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                {/* Route Options List */}
+                <div className="lg:col-span-6">
                   <RouteResultsList
                     routes={journeyData.routes}
                     selectedRouteKey={selectedRoute?.route_key || null}
                     onSelectRoute={(r) => setSelectedRoute(r)}
                     onToggleMatrix={() => setShowMatrix(!showMatrix)}
+                    onOpenMap={(r) => {
+                      if (r) setSelectedRoute(r)
+                      setShowMapModal(true)
+                    }}
+                    onStartCompanion={(r) => {
+                      setCompanionRoute(r)
+                      setIsCompanionActive(true)
+                    }}
                     delayCallout={journeyData.delay_alert_callout}
                     leaveBySummary={journeyData.leave_by_summary}
                   />
+                </div>
 
+                {/* Step-by-Step Directions */}
+                <div className="lg:col-span-6">
                   {selectedRoute && (
                     <JourneyTimeline
                       steps={selectedRoute.steps}
@@ -297,138 +369,237 @@ export default function JourneyPlanner() {
                       totalDuration={selectedRoute.duration_minutes}
                       departureTime={selectedRoute.departure_time}
                       arrivalTime={selectedRoute.arrival_time}
+                      onOpenMap={() => setShowMapModal(true)}
                     />
                   )}
                 </div>
-              )}
-            </div>
-
-            {/* Right Column: Full-Height Interactive Transit Map */}
-            <div className="lg:col-span-7 h-full min-h-[360px] lg:min-h-0 rounded-2xl overflow-hidden shadow-sm border border-slate-200/90 relative bg-white">
-              <TransitMap
-                route={selectedRoute}
-                liveVehicles={liveVehicles}
-                onSelectVehicle={() => {
-                  setActiveFeature('tracker')
-                }}
-              />
-            </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* FEATURE 2: AI ASSISTANT (2-PANE SPLIT SCREEN) */}
-        {activeFeature === 'ai' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 flex-1 min-h-0 h-full overflow-hidden">
-            <div className="lg:col-span-5 h-full flex flex-col min-h-0 overflow-y-auto custom-scrollbar space-y-2.5 pr-0.5">
-              <AiJourneyAssistantBar
-                onJourneyPlanned={(plan) => {
-                  handleAiPlan(plan)
-                  setActiveFeature('plan')
-                }}
-                onUpdateSearchParams={(from, to) => {
-                  setSearchFrom(from)
-                  setSearchTo(to)
-                }}
-              />
+        {/* FEATURE: GANDHINAGAR ELECTRIC BUS NETWORK (GGTSL / PM-eBus Sewa / GIFT) */}
+        {activeFeature === 'electric-bus' && (
+          <div className="flex-1 min-h-0 space-y-6 max-w-7xl mx-auto w-full pb-8">
+            {/* Real-time Green Fleet Intelligence Header */}
+            <ElectricBusDetails />
 
-              <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-2.5">
-                <h3 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                  How to Use AI Transit Assistant
-                </h3>
-                <p className="text-[11px] text-slate-600 leading-relaxed">
-                  Type your request in natural language. The AI understands multimodal routes, departures, transfer windows, landmarks, and fares.
-                </p>
-                <div className="space-y-1.5 pt-2 border-t border-slate-100 text-[11px]">
-                  <div className="font-bold text-slate-700">Try these prompt examples:</div>
-                  <div className="space-y-1 text-slate-600">
-                    {[
-                      'Fastest way from Sabarmati to GIFT City before 9 AM',
-                      'Cheapest route from Gandhinagar Sector 21 to Airport',
-                      'Direct route from Infocity to Vastral Gam with low walking',
-                    ].map((prompt, idx) => (
-                      <div key={idx} className="p-2 rounded-lg bg-slate-50 border border-slate-200/80 text-[10px] font-medium text-slate-700 flex items-center gap-1.5">
-                        <span className="text-blue-600">💬</span>
-                        <span>"{prompt}"</span>
-                      </div>
-                    ))}
-                  </div>
+            {/* Live Electric Departures Board */}
+            <ElectricBusDepartureBoard />
+
+            {/* Electric Routes Directory */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap border-b border-white/10 pb-2">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-emerald-400 fill-emerald-400" />
+                    <span>Electrified Route Directory (E-1 to E-16 & GIFT Shuttles)</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    100% Battery Electric Vehicles connecting Gandhinagar Sectors, Metro Phase 2 & GIFT City
+                  </p>
                 </div>
+
+                <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                  {electricRoutes.length} Electrified Routes
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {electricRoutes.map((route) => (
+                  <ElectricBusRouteCard
+                    key={route.route_id}
+                    route={route}
+                    onPlanTripToRoute={(orig, dest) => {
+                      setSearchFrom(orig)
+                      setSearchTo(dest)
+                      handleSearch({
+                        from: orig,
+                        to: dest,
+                        preference: 'fastest',
+                        modes: ['METRO', 'GANDHINAGAR_ELECTRIC_BUS', 'BRTS', 'AMTS', 'BUS', 'WALK'],
+                        wheelchair: false,
+                      })
+                      setActiveFeature('plan')
+                    }}
+                  />
+                ))}
               </div>
             </div>
 
-            <div className="lg:col-span-7 h-full min-h-[360px] lg:min-h-0 rounded-2xl overflow-hidden shadow-sm border border-slate-200/90 relative bg-white">
-              <TransitMap
-                route={selectedRoute}
-                liveVehicles={liveVehicles}
-              />
+            {/* Live GPS Telemetry Fleet Feed */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-2">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
+                    <span>Live Telemetry & Battery Health Stream</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Real-time battery SOC %, live speed, charging state, and delay monitor
+                  </p>
+                </div>
+                <span className="text-xs font-mono font-bold text-teal-300 bg-teal-500/10 px-3 py-1 rounded-full border border-teal-500/20">
+                  {electricVehicles.length} Active e-Buses Tracked
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {electricVehicles.map((veh) => (
+                  <ElectricBusVehicleCard
+                    key={veh.vehicle_id}
+                    vehicle={veh}
+                    onFocusOnMap={() => {
+                      setShowMapModal(true)
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* FEATURE 3: LIVE TRACKER (2-PANE SPLIT SCREEN) */}
+        {/* FEATURE 2: AI ASSISTANT */}
+        {activeFeature === 'ai' && (
+          <div className="flex-1 min-h-0 space-y-4 max-w-5xl mx-auto w-full pb-6">
+            <AiJourneyAssistantBar
+              onJourneyPlanned={(plan) => {
+                handleAiPlan(plan)
+                setActiveFeature('plan')
+              }}
+              onUpdateSearchParams={(from, to) => {
+                setSearchFrom(from)
+                setSearchTo(to)
+              }}
+            />
+
+            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  <span>How to Use AI Transit Assistant</span>
+                </h3>
+
+                <button
+                  type="button"
+                  onClick={() => setShowMapModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 transition-colors"
+                >
+                  <Map className="w-3.5 h-3.5" />
+                  <span>Open Map</span>
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Type your request in natural language. The AI understands multimodal routes, departures, transfer windows, landmarks, and fares.
+              </p>
+
+              <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
+                <div className="font-bold text-slate-700">Try these prompt examples:</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  {[
+                    'Fastest way from Sabarmati to GIFT City before 9 AM',
+                    'Cheapest route from Gandhinagar Sector 21 to Airport',
+                    'Direct route from Infocity to Vastral Gam with low walking',
+                  ].map((prompt, idx) => (
+                    <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs font-medium text-slate-700 flex flex-col justify-between">
+                      <span className="text-slate-800 font-semibold">"{prompt}"</span>
+                      <span className="text-[10px] text-blue-600 font-bold mt-2">Natural Language AI</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* FEATURE 3: LIVE TRACKER */}
         {activeFeature === 'tracker' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 flex-1 min-h-0 h-full overflow-hidden">
-            <div className="lg:col-span-5 h-full flex flex-col min-h-0 overflow-y-auto custom-scrollbar pr-0.5">
-              <LiveVehicleTrackerCard />
+          <div className="flex-1 min-h-0 max-w-5xl mx-auto w-full pb-6 space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                Live Transit Fleet Tracker
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMapModal(true)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all"
+              >
+                <Map className="w-3.5 h-3.5" />
+                <span>View Live Vehicles on Map</span>
+              </button>
             </div>
-
-            <div className="lg:col-span-7 h-full min-h-[360px] lg:min-h-0 rounded-2xl overflow-hidden shadow-sm border border-slate-200/90 relative bg-white">
-              <TransitMap
-                route={null}
-                liveVehicles={liveVehicles}
-              />
-            </div>
+            <LiveVehicleTrackerCard />
           </div>
         )}
 
-        {/* FEATURE 4: DEPARTURES (2-PANE SPLIT SCREEN) */}
+        {/* FEATURE 4: DEPARTURES */}
         {activeFeature === 'departures' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 flex-1 min-h-0 h-full overflow-hidden">
-            <div className="lg:col-span-6 h-full flex flex-col min-h-0 overflow-y-auto custom-scrollbar pr-0.5">
-              <DepartureBoard initialStopId={selectedDepartureStopId} />
+          <div className="flex-1 min-h-0 max-w-5xl mx-auto w-full pb-6 space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                Live Platform Departure Board
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMapModal(true)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all"
+              >
+                <Map className="w-3.5 h-3.5" />
+                <span>View Station on Map</span>
+              </button>
             </div>
-
-            <div className="lg:col-span-6 h-full min-h-[360px] lg:min-h-0 rounded-2xl overflow-hidden shadow-sm border border-slate-200/90 relative bg-white">
-              <TransitMap
-                route={null}
-                liveVehicles={liveVehicles}
-              />
-            </div>
+            <DepartureBoard initialStopId={selectedDepartureStopId} />
           </div>
         )}
 
-        {/* FEATURE 5: NEARBY STOPS (2-PANE SPLIT SCREEN) */}
+        {/* FEATURE 5: NEARBY STOPS */}
         {activeFeature === 'nearby' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 flex-1 min-h-0 h-full overflow-hidden">
-            <div className="lg:col-span-5 h-full flex flex-col min-h-0 overflow-y-auto custom-scrollbar pr-0.5">
-              <NearbyTransportFinder
-                onSelectStopDepartures={(stopId) => {
-                  setSelectedDepartureStopId(stopId)
-                  setActiveFeature('departures')
-                }}
-                onSelectOriginStop={(name) => {
-                  handleSearch({
-                    from: name,
-                    to: journeyData?.to?.name || 'GIFT City',
-                    preference: 'fastest',
-                    modes: ['METRO', 'BRTS', 'AMTS', 'RAIL', 'BUS', 'WALK'],
-                    wheelchair: false,
-                  })
-                  setActiveFeature('plan')
-                }}
-              />
+          <div className="flex-1 min-h-0 max-w-5xl mx-auto w-full pb-6 space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                Nearby Transport Hubs & Stops
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMapModal(true)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all"
+              >
+                <Map className="w-3.5 h-3.5" />
+                <span>View Stops on Map</span>
+              </button>
             </div>
-
-            <div className="lg:col-span-7 h-full min-h-[360px] lg:min-h-0 rounded-2xl overflow-hidden shadow-sm border border-slate-200/90 relative bg-white">
-              <TransitMap
-                route={null}
-                liveVehicles={liveVehicles}
-              />
-            </div>
+            <NearbyTransportFinder
+              onSelectStopDepartures={(stopId) => {
+                setSelectedDepartureStopId(stopId)
+                setActiveFeature('departures')
+              }}
+              onSelectOriginStop={(name) => {
+                handleSearch({
+                  from: name,
+                  to: journeyData?.to?.name || 'GIFT City',
+                  preference: 'fastest',
+                  modes: ['METRO', 'BRTS', 'AMTS', 'RAIL', 'BUS', 'WALK'],
+                  wheelchair: false,
+                })
+                setActiveFeature('plan')
+              }}
+            />
           </div>
         )}
       </div>
+
+      {/* Centered Transit Map Modal with Backdrop Blur */}
+      <TransitMapModal
+        isOpen={showMapModal}
+        onClose={() => setShowMapModal(false)}
+        route={selectedRoute}
+        liveVehicles={liveVehicles}
+        onSelectVehicle={() => {
+          setShowMapModal(false)
+          setActiveFeature('tracker')
+        }}
+      />
 
       {/* Data Source Status Modal */}
       <DataSourceStatusModal
@@ -436,12 +607,28 @@ export default function JourneyPlanner() {
         onClose={() => setShowStatusModal(false)}
       />
 
+      {/* Live Turn-by-Turn Companion Mode Tracker */}
+      {isCompanionActive && (companionRoute || selectedRoute) && (
+        <JourneyProgressTracker
+          route={companionRoute || selectedRoute!}
+          onClose={() => setIsCompanionActive(false)}
+          onFocusStepOnMap={() => setShowMapModal(true)}
+        />
+      )}
+
       {/* Admin Network Monitor Modal */}
       <AdminNetworkMonitorModal
         isOpen={showAdminMonitor}
         onClose={() => setShowAdminMonitor(false)}
       />
+
+      {/* Traccar Phone & Live GPS Controller Modal */}
+      <TraccarGpsModal
+        isOpen={showTraccarModal}
+        onClose={() => setShowTraccarModal(false)}
+      />
     </DashboardLayout>
   )
 }
+
 

@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from .views import (
     JourneyPlanView,
     AiJourneyAssistView,
@@ -11,7 +11,8 @@ from .views import (
     TransitAlertsView,
     LocationSearchView,
     TransitStatusView,
-    FareCalculatorView
+    FareCalculatorView,
+    LocationDebugNearestView
 )
 
 urlpatterns = [
@@ -25,6 +26,7 @@ urlpatterns = [
 
     # Nearby Transport & Stops
     path('stops/nearby/', NearbyStopsView.as_view(), name='nearby_stops'),
+    path('debug/nearest/', LocationDebugNearestView.as_view(), name='debug_nearest_stops'),
 
     # Live Station Departures
     path('departures/', StationDeparturesView.as_view(), name='station_departures_query'),
@@ -43,4 +45,6 @@ urlpatterns = [
     # Status & Fares
     path('status/', TransitStatusView.as_view(), name='transit_status'),
     path('fares/', FareCalculatorView.as_view(), name='fare_calculator'),
+    path('electric-bus/', include('transit.electric_bus_urls')),
+    path('traccar/', include('transit.traccar_urls')),
 ]

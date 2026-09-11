@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
+import { MapContainer, TileLayer, Popup, Circle } from 'react-leaflet'
 import { buses as defaultBuses } from '../data/buses'
 import { alerts as defaultAlerts } from '../data/alerts'
 import { roadHazards as defaultHazards } from '../data/roadHazards'
@@ -9,6 +9,10 @@ import { Layers, Info, Map as MapIcon, Globe, ChevronDown, ChevronUp } from 'luc
 import HeaderActions from '../components/HeaderActions'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
+import { MovingVehicleMarker } from '../components/journey/MovingVehicleMarker'
+import { TraccarGpsModal } from '../components/journey/TraccarGpsModal'
+import { traccarApi, TraccarGpsPacket } from '../services/traccarApi'
+import { LiveVehicle } from '../types/transit'
 
 // Fix Leaflet default icon issue
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -24,15 +28,66 @@ L.Icon.Default.mergeOptions({
 })
 
 export default function UrbanMap() {
-  const [buses, setBuses] = useState(defaultBuses)
   const [alerts, setAlerts] = useState(defaultAlerts)
   const [roadHazards, setRoadHazards] = useState(defaultHazards)
   const [mapMode, setMapMode] = useState<'street' | 'satellite'>('street')
   const [telemetryCollapsed, setTelemetryCollapsed] = useState(false)
+  const [isTraccarModalOpen, setIsTraccarModalOpen] = useState(false)
+  const [liveVehiclesMap, setLiveVehiclesMap] = useState<Record<string, LiveVehicle>>(() => {
+    const initialMap: Record<string, LiveVehicle> = {}
+    defaultBuses.forEach((b: any) => {
+      initialMap[b.id] = {
+        vehicle_id: b.id,
+        registration: b.id,
+        mode: 'BUS',
+        is_electric: b.id.includes('EB') || b.id.includes('EV'),
+        battery_soc_pct: 85,
+        agency_code: 'AMTS',
+        agency_name: 'Ahmedabad Transport',
+        route_number: b.route || 'AMTS-101',
+        route_name: b.location || 'Ahmedabad Corridor',
+        latitude: b.gps[0],
+        longitude: b.gps[1],
+        speed_kmh: b.speed || 30,
+        heading: 0,
+        current_location_name: b.location,
+        status: 'ON_TIME',
+        telemetry_type: 'REAL_TIME',
+        data_source: 'TRACCAR_GPS',
+      }
+    })
+    return initialMap
+  })
 
   useEffect(() => {
     apiService.getBuses('online').then(data => {
-      if (data && data.length > 0) setBuses(data)
+      if (data && data.length > 0) {
+        setLiveVehiclesMap(prev => {
+          const next = { ...prev }
+          data.forEach((b: any) => {
+            next[b.id] = {
+              vehicle_id: b.id,
+              registration: b.id,
+              mode: 'BUS',
+              is_electric: b.id.includes('EB') || b.id.includes('EV'),
+              battery_soc_pct: 85,
+              agency_code: 'AMTS',
+              agency_name: 'Ahmedabad Transport',
+              route_number: b.route || 'AMTS-101',
+              route_name: b.location || 'Ahmedabad Corridor',
+              latitude: b.gps[0],
+              longitude: b.gps[1],
+              speed_kmh: b.speed || 30,
+              heading: 0,
+              current_location_name: b.location,
+              status: 'ON_TIME',
+              telemetry_type: 'REAL_TIME',
+              data_source: 'TRACCAR_GPS',
+            }
+          })
+          return next
+        })
+      }
     })
     apiService.getLiveAlerts().then(data => {
       if (data && data.length > 0) setAlerts(data)
@@ -40,6 +95,48 @@ export default function UrbanMap() {
     apiService.getRoadHazards().then(data => {
       if (data && data.length > 0) setRoadHazards(data)
     })
+
+    // Connect to live Traccar SSE stream
+    const unsubscribe = traccarApi.connectLiveStream(
+      (packet: TraccarGpsPacket) => {
+        setLiveVehiclesMap(prev => ({
+          ...prev,
+          [packet.vehicle_id]: {
+            vehicle_id: packet.vehicle_id,
+            registration: packet.registration || packet.vehicle_id,
+            mode: (packet.mode as any) || 'GANDHINAGAR_ELECTRIC_BUS',
+            is_electric: packet.is_electric,
+            battery_soc_pct: packet.battery_soc_pct,
+            agency_code: 'GGTSL',
+            agency_name: packet.operator || 'Gandhinagar Greenline',
+            route_number: packet.route_number || 'E-1',
+            latitude: packet.latitude,
+            longitude: packet.longitude,
+            speed_kmh: packet.speed_kmh,
+            heading: packet.heading,
+            current_location_name: packet.location_name || 'Gandhinagar Corridor',
+            status: 'ON_TIME',
+            telemetry_type: 'REAL_TIME',
+            data_source: packet.data_source || 'TRACCAR_GPS',
+          }
+        }))
+      },
+      (initialVehicles) => {
+        if (initialVehicles && initialVehicles.length > 0) {
+          setLiveVehiclesMap(prev => {
+            const next = { ...prev }
+            initialVehicles.forEach(v => {
+              next[v.vehicle_id] = { ...v, ...(next[v.vehicle_id] || {}) }
+            })
+            return next
+          })
+        }
+      }
+    )
+
+    return () => {
+      unsubscribe()
+    }
   }, [])
 
   const [layers, setLayers] = useState({
@@ -55,6 +152,8 @@ export default function UrbanMap() {
   const toggleLayer = (layer: keyof typeof layers) => {
     setLayers(prev => ({ ...prev, [layer]: !prev[layer] }))
   }
+
+  const liveVehicleArray = Object.values(liveVehiclesMap)
 
   return (
     <DashboardLayout>
@@ -105,6 +204,10 @@ export default function UrbanMap() {
             <div className="mt-6 pt-5 border-t border-slate-200/80">
               <h3 className="font-extrabold text-slate-900 text-xs mb-3 uppercase tracking-wider">MAP LEGEND</h3>
               <div className="space-y-2.5 text-xs font-medium">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-3 h-3 bg-emerald-600 rounded-full ring-2 ring-emerald-100 animate-pulse"></div>
+                  <span className="text-slate-700 font-bold">⚡ Electric Bus (Live)</span>
+                </div>
                 <div className="flex items-center space-x-2.5">
                   <div className="w-3 h-3 bg-blue-600 rounded-full ring-2 ring-blue-100"></div>
                   <span className="text-slate-700">Active Bus Transponder</span>
@@ -162,7 +265,7 @@ export default function UrbanMap() {
           </div>
 
           <MapContainer
-            center={[23.0300, 72.5700]}
+            center={[23.1000, 72.6000]}
             zoom={12}
             style={{ height: '100%', width: '100%' }}
             zoomControl={true}
@@ -183,21 +286,12 @@ export default function UrbanMap() {
               />
             )}
 
-            {/* Buses */}
-            {layers.buses && buses.filter(b => b.status === 'online').map(bus => (
-              <Marker key={bus.id} position={bus.gps}>
-                <Popup>
-                  <div className="text-slate-900 font-sans p-1">
-                    <div className="font-extrabold text-base text-blue-700">{bus.id}</div>
-                    <div className="mt-2 space-y-1 text-xs">
-                      <div><strong className="text-slate-600">Route:</strong> {bus.route}</div>
-                      <div><strong className="text-slate-600">Location:</strong> {bus.location}</div>
-                      <div><strong className="text-slate-600">Speed:</strong> {bus.speed} km/h</div>
-                      <div><strong className="text-slate-600">Status:</strong> <span className="text-emerald-700 font-bold uppercase">{bus.status}</span></div>
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
+            {/* Smooth Moving Buses on Map */}
+            {layers.buses && liveVehicleArray.map(v => (
+              <MovingVehicleMarker
+                key={v.vehicle_id}
+                vehicle={v}
+              />
             ))}
 
             {/* Road Hazards */}
@@ -271,7 +365,7 @@ export default function UrbanMap() {
                 </div>
                 <div className="flex items-center space-x-1.5">
                   <span className="text-[10px] font-bold text-blue-600 bg-blue-50/90 px-2 py-0.5 rounded-full">
-                    Ahmedabad
+                    Ahmedabad • Gandhinagar
                   </span>
                   <button
                     type="button"
@@ -284,15 +378,15 @@ export default function UrbanMap() {
                 </div>
               </div>
 
-              {/* 4 Clean Borderless Stats - No internal box boundaries */}
+              {/* 4 Clean Stats */}
               {!telemetryCollapsed && (
                 <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-1 animate-in fade-in duration-150">
                   <div>
-                    <div className="text-[11px] font-medium text-slate-500">Active Buses</div>
+                    <div className="text-[11px] font-medium text-slate-500">Active Live Units</div>
                     <div className="text-2xl font-black text-blue-600 tracking-tight mt-0.5">
-                      {buses.filter(b => b.status === 'online').length}
+                      {liveVehicleArray.length}
                     </div>
-                    <div className="text-[10px] text-slate-400">Mobile units</div>
+                    <div className="text-[10px] text-slate-400">Live Telemetry stream</div>
                   </div>
 
                   <div>
@@ -314,9 +408,9 @@ export default function UrbanMap() {
                   <div>
                     <div className="text-[11px] font-medium text-slate-500">Coverage Area</div>
                     <div className="text-2xl font-black text-emerald-600 tracking-tight mt-0.5">
-                      284 <span className="text-sm font-bold">km²</span>
+                      340 <span className="text-sm font-bold">km²</span>
                     </div>
-                    <div className="text-[10px] text-slate-400">Corridor sweep</div>
+                    <div className="text-[10px] text-slate-400">Twin cities sweep</div>
                   </div>
                 </div>
               )}
@@ -324,6 +418,12 @@ export default function UrbanMap() {
           </div>
         </div>
       </div>
+
+      {/* Traccar Phone & GPS Modal */}
+      <TraccarGpsModal
+        isOpen={isTraccarModalOpen}
+        onClose={() => setIsTraccarModalOpen(false)}
+      />
     </DashboardLayout>
   )
 }

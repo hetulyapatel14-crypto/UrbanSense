@@ -12,7 +12,7 @@ from detections.views import EdgeDetectionView
 from incidents.views import EdgeIncidentView
 from common.views import SchoolZoneSafetyView
 from dashboard.views import DemoStartView, DemoStopView, DemoStatusView
-from transit.views import JourneyPlanView, AiJourneyAssistView, RouteComparisonView
+from transit.views import JourneyPlanView, AiJourneyAssistView, RouteComparisonView, LocationDebugNearestView
 
 from django.views.generic import RedirectView
 
@@ -39,9 +39,12 @@ urlpatterns = [
 
     # Ahmedabad + Gandhinagar + GIFT City Smart Mobility & Journey Planner APIs
     path('api/transit/', include('transit.urls')),
+    path('api/electric-bus/', include('transit.electric_bus_urls')),
+    path('api/traccar/', include('transit.traccar_urls')),
     path('api/journey/plan/', JourneyPlanView.as_view(), name='journey_plan_root'),
     path('api/journey/ai-assist/', AiJourneyAssistView.as_view(), name='journey_ai_assist_root'),
     path('api/journey/compare/', RouteComparisonView.as_view(), name='journey_compare_root'),
+    path('api/location/debug/nearest/', LocationDebugNearestView.as_view(), name='location_debug_nearest_root'),
 
     # Demo Simulation APIs
     path('api/demo/start/', DemoStartView.as_view(), name='demo_start_direct'),

@@ -1,10 +1,41 @@
 import math
+import logging
 from typing import List, Dict, Any, Optional, Tuple
+from django.conf import settings
 from django.db.models import Q
 from ..models import Stop, PlaceLandmark
 
+logger = logging.getLogger('transit.geocoding')
+
 class GeocodingService:
-    """Geocoding & location intelligence for Ahmedabad Transit Network."""
+    """Geocoding & geospatial location intelligence for Ahmedabad & Gandhinagar Transit Network."""
+
+    CATEGORY_TO_DB_MODE = {
+        'METRO': 'METRO',
+        'METRO_STATION': 'METRO',
+        'BRTS': 'BRTS',
+        'BRTS_STOP': 'BRTS',
+        'AMTS': 'AMTS',
+        'AMTS_STOP': 'AMTS',
+        'GANDHINAGAR_ELECTRIC_BUS': 'GANDHINAGAR_ELECTRIC_BUS',
+        'GANDHINAGAR_ELECTRIC_BUS_STOP': 'GANDHINAGAR_ELECTRIC_BUS',
+        'BUS': 'BUS',
+        'GANDHINAGAR_BUS_STOP': 'BUS',
+        'RAIL': 'RAIL',
+        'RAILWAY_STATION': 'RAIL',
+        'GIFT_CITY_BUS': 'BUS',
+        'GIFT_CITY_STOP': 'BUS',
+    }
+
+    DB_MODE_TO_CATEGORY = {
+        'METRO': 'METRO_STATION',
+        'BRTS': 'BRTS_STOP',
+        'AMTS': 'AMTS_STOP',
+        'GANDHINAGAR_ELECTRIC_BUS': 'GANDHINAGAR_ELECTRIC_BUS_STOP',
+        'BUS': 'GANDHINAGAR_BUS_STOP',
+        'RAIL': 'RAILWAY_STATION',
+    }
+    MODE_CATEGORY_MAP = DB_MODE_TO_CATEGORY
 
     @staticmethod
     def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -48,13 +79,14 @@ class GeocodingService:
             Q(code__icontains=q)
         ).select_related('agency')[:limit]
         for s in stops:
+            cat = cls.DB_MODE_TO_CATEGORY.get(s.mode, f"{s.mode}_STOP")
             results.append({
                 'id': s.stop_id,
                 'name': s.name,
                 'name_gu': s.name_gu,
-                'category': f"{s.mode}_STATION" if s.mode == 'METRO' else f"{s.mode}_STOP",
+                'category': cat,
                 'type': s.mode,
-                'address': f"{s.mode} Network, Ahmedabad",
+                'address': f"{s.mode} Network, {s.city.title() if s.city else 'Ahmedabad'}",
                 'latitude': s.latitude,
                 'longitude': s.longitude,
                 'is_interchange': s.is_interchange,
@@ -75,7 +107,7 @@ class GeocodingService:
     @classmethod
     def resolve_location(cls, name_or_query: str, lat: Optional[float] = None, lng: Optional[float] = None) -> Tuple[str, float, float]:
         """Resolves location name to (display_name, lat, lng)."""
-        if lat is not None and lng is not None:
+        if lat is not None and lng is not None and not math.isnan(float(lat)) and not math.isnan(float(lng)):
             return name_or_query or "Selected Location", float(lat), float(lng)
 
         # Look up landmark
@@ -98,34 +130,70 @@ class GeocodingService:
         return name_or_query, 23.0300, 72.5800
 
     @classmethod
-    def find_nearby_stops(cls, lat: float, lng: float, radius_km: float = 1.5, mode: Optional[str] = None, limit: int = 15) -> List[Dict[str, Any]]:
-        """Finds nearest transit stops from a geographic point with realistic walking time."""
-        stops = Stop.objects.all().select_related('agency')
-        if mode:
-            stops = stops.filter(mode=mode)
+    def find_nearby_stops(
+        cls,
+        lat: float,
+        lng: float,
+        radius_km: float = 2.5,
+        mode: Optional[str] = None,
+        limit: int = 15
+    ) -> List[Dict[str, Any]]:
+        """
+        Finds nearest transit stops/stations from a geographic coordinate.
+        Calculates exact Haversine straight-line distance and practical walking route estimations.
+        Strictly respects mode filtering so 'METRO' queries only return Metro stations.
+        """
+        if mode and str(mode).upper() not in ['ALL', '*', '']:
+            # Map category strings (e.g. METRO_STATION -> METRO)
+            canonical_mode = cls.CATEGORY_TO_DB_MODE.get(str(mode).upper(), mode)
+            stops = Stop.objects.filter(mode=canonical_mode).select_related('agency')
+        else:
+            stops = Stop.objects.all().select_related('agency')
 
         results = []
         for s in stops:
             dist_km = cls.haversine_distance_km(lat, lng, s.latitude, s.longitude)
             if dist_km <= radius_km:
-                walk_mins = max(1, math.ceil((dist_km / 4.5) * 60)) # 4.5 km/h walking speed
+                dist_m = int(round(dist_km * 1000))
+                # Realistic walking path network factor (~1.25x for urban street networks)
+                walking_dist_m = max(dist_m, int(round(dist_m * 1.25)))
+                # Walking duration at 4.5 km/h = 75 m/min
+                walk_mins = max(1, math.ceil(walking_dist_m / 75.0))
+
+                cat = cls.DB_MODE_TO_CATEGORY.get(s.mode, f"{s.mode}_STOP")
                 results.append({
+                    'id': s.stop_id,
                     'stop_id': s.stop_id,
                     'name': s.name,
                     'name_gu': s.name_gu,
                     'mode': s.mode,
-                    'agency_name': s.agency.name,
+                    'category': cat,
+                    'type': cat,
+                    'agency_name': s.agency.name if s.agency else 'Urban Transit',
+                    'city': s.city,
                     'latitude': s.latitude,
                     'longitude': s.longitude,
-                    'distance_m': int(dist_km * 1000),
+                    'distance_m': dist_m,
                     'distance_km': round(dist_km, 2),
+                    'distanceMeters': dist_m,
+                    'walking_distance_m': walking_dist_m,
+                    'walkingDistanceMeters': walking_dist_m,
                     'walking_time_mins': walk_mins,
+                    'walkingMinutes': walk_mins,
                     'is_interchange': s.is_interchange,
                     'wheelchair_accessible': s.wheelchair_accessible,
                     'platform_info': s.platform_info,
                 })
 
-        results.sort(key=lambda x: x['distance_m'])
+        # Sort by walking distance
+        results.sort(key=lambda x: x['walking_distance_m'])
+
+        if settings.DEBUG:
+            logger.debug(
+                f"[UrbanSense GPS] Nearest query lat={lat}, lng={lng}, mode={mode} -> "
+                f"found {len(results)} candidate stops. Closest: {results[0]['name'] if results else 'None'}"
+            )
+
         return results[:limit]
 
     @classmethod
@@ -141,3 +209,4 @@ class GeocodingService:
             'longitude': l.longitude,
             'is_popular': l.is_popular,
         }
+

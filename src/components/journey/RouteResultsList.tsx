@@ -7,13 +7,15 @@ import {
   ArrowRight,
   Train,
   Bus,
+  Zap,
   Info,
   Sparkles,
   Leaf,
   Layers,
   ChevronDown,
   ChevronUp,
-  Map
+  Map,
+  Navigation
 } from 'lucide-react'
 import { JourneyRouteOption, DelayAlertCallout, LeaveBySummary } from '../../types/transit'
 
@@ -23,6 +25,7 @@ interface RouteResultsListProps {
   onSelectRoute: (route: JourneyRouteOption) => void
   onToggleMatrix?: () => void
   onOpenMap?: (route?: JourneyRouteOption) => void
+  onStartCompanion?: (route: JourneyRouteOption) => void
   delayCallout?: DelayAlertCallout | null
   leaveBySummary?: LeaveBySummary | null
 }
@@ -64,8 +67,10 @@ const getBadgeInfo = (route: JourneyRouteOption) => {
     colorClass = 'bg-purple-600 text-white shadow-xs'
   } else if (label === 'MOST RELIABLE') {
     colorClass = 'bg-indigo-600 text-white shadow-xs'
-  } else if (label === 'MINIMUM WAIT') {
+  } else if (label === 'MINIMUM WAIT' || label === '⏱ MINIMIZE WAITING') {
     colorClass = 'bg-teal-600 text-white shadow-xs'
+  } else if (label === 'ELECTRIC EXPRESS' || label === 'ZERO EMISSION') {
+    colorClass = 'bg-emerald-600 text-white shadow-xs ring-1 ring-emerald-400'
   } else if (label === 'BRTS BUSWAY') {
     colorClass = 'bg-orange-600 text-white shadow-xs'
   } else if (label === 'SUBURBAN RAIL') {
@@ -88,6 +93,8 @@ export const RouteResultsList: React.FC<RouteResultsListProps> = ({
   selectedRouteKey,
   onSelectRoute,
   onToggleMatrix,
+  onOpenMap,
+  onStartCompanion,
   delayCallout,
   leaveBySummary,
 }) => {
@@ -214,7 +221,7 @@ export const RouteResultsList: React.FC<RouteResultsListProps> = ({
                   </span>
                 </div>
 
-                {/* Fare, Duration Summary & View on Map Button */}
+                {/* Fare, Duration Summary, View on Map & Start Journey Buttons */}
                 <div className="flex items-center space-x-2">
                   <div className="flex items-baseline space-x-1.5 text-right">
                     <div className="text-lg font-black text-slate-900 tracking-tight">
@@ -238,6 +245,22 @@ export const RouteResultsList: React.FC<RouteResultsListProps> = ({
                     >
                       <Map className="w-3 h-3" />
                       <span>Map</span>
+                    </button>
+                  )}
+
+                  {onStartCompanion && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSelectRoute(route)
+                        onStartCompanion(route)
+                      }}
+                      title="Start Live Turn-by-Turn Journey Companion"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-[11px] font-bold shadow-xs transition-all hover:scale-105 active:scale-95"
+                    >
+                      <Navigation className="w-3 h-3" />
+                      <span className="hidden sm:inline">Start</span>
                     </button>
                   )}
                 </div>
@@ -266,53 +289,58 @@ export const RouteResultsList: React.FC<RouteResultsListProps> = ({
 
               {/* Tight Transfer Warning if applicable */}
               {tightStep && (
-                <div className="mb-2 bg-amber-50 border border-amber-300 rounded-lg p-2 text-[11px] text-amber-800 flex items-center gap-2">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                <div className="mb-2 bg-rose-50 border border-rose-300 rounded-lg p-2 text-[11px] text-rose-900 flex items-center gap-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-600 flex-shrink-0" />
                   <span>
-                    <strong>Tight Connection:</strong> {tightStep.tight_transfer_warning || `Only ${tightStep.transfer_window_mins || 4} mins transfer window.`}
+                    <strong>🔴 Tight Transfer Connection:</strong> {tightStep.tight_transfer_warning || `Only ${tightStep.transfer_window_mins || 4} mins transfer window.`}
                   </span>
                 </div>
               )}
 
               {/* Mode Chain Visualizer */}
               <div className="flex flex-wrap items-center gap-1.5 py-1.5 text-xs">
-                {route.steps.map((step, sIdx) => (
-                  <React.Fragment key={sIdx}>
-                    <div className="flex items-center space-x-1">
-                      {step.step_type === 'WALK' ? (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[11px] font-medium">
-                          <Footprints className="w-3 h-3 text-slate-400" />
-                          {step.duration_mins}m
-                        </span>
-                      ) : step.step_type === 'TRANSFER' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-[11px] font-semibold border border-purple-200/60">
-                          <Shuffle className="w-3 h-3 text-purple-500" />
-                          Transfer ({step.duration_mins}m)
-                          {step.transfer_window_mins && (
-                            <span className="text-[10px] text-purple-500">
-                              [{step.transfer_window_mins}m window]
-                            </span>
-                          )}
-                        </span>
-                      ) : (
-                        <span
-                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold text-white shadow-xs"
-                          style={{ backgroundColor: step.route_color || '#2563EB' }}
-                        >
-                          {step.mode === 'METRO' || step.mode === 'RAIL' ? (
-                            <Train className="w-3 h-3" />
-                          ) : (
-                            <Bus className="w-3 h-3" />
-                          )}
-                          {step.route_number} ({step.duration_mins}m)
-                        </span>
+                {route.steps.map((step, sIdx) => {
+                  const isEBus = step.mode === 'GANDHINAGAR_ELECTRIC_BUS' || step.mode?.includes('ELECTRIC') || step.route_number?.startsWith('E-') || step.route_number?.startsWith('GIFT-')
+                  return (
+                    <React.Fragment key={sIdx}>
+                      <div className="flex items-center space-x-1">
+                        {step.step_type === 'WALK' ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[11px] font-medium">
+                            <Footprints className="w-3 h-3 text-slate-400" />
+                            {step.duration_mins}m
+                          </span>
+                        ) : step.step_type === 'TRANSFER' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-[11px] font-semibold border border-purple-200/60">
+                            <Shuffle className="w-3 h-3 text-purple-500" />
+                            Transfer ({step.duration_mins}m)
+                            {step.transfer_window_mins && (
+                              <span className="text-[10px] text-purple-500">
+                                [{step.transfer_window_mins}m window]
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold text-white shadow-xs"
+                            style={{ backgroundColor: step.route_color || (isEBus ? '#059669' : '#2563EB') }}
+                          >
+                            {isEBus ? (
+                              <Zap className="w-3 h-3 fill-emerald-200 text-emerald-200" />
+                            ) : step.mode === 'METRO' || step.mode === 'RAIL' ? (
+                              <Train className="w-3 h-3" />
+                            ) : (
+                              <Bus className="w-3 h-3" />
+                            )}
+                            {isEBus ? `🚌⚡ ${step.route_number}` : `${step.route_number}`} ({step.duration_mins}m{step.fare !== undefined && step.fare > 0 ? ` • ₹${step.fare}` : ''})
+                          </span>
+                        )}
+                      </div>
+                      {sIdx < route.steps.length - 1 && (
+                        <ArrowRight className="w-3 h-3 text-slate-300" />
                       )}
-                    </div>
-                    {sIdx < route.steps.length - 1 && (
-                      <ArrowRight className="w-3 h-3 text-slate-300" />
-                    )}
-                  </React.Fragment>
-                ))}
+                    </React.Fragment>
+                  )
+                })}
               </div>
 
               {/* Metrics Grid Footer */}

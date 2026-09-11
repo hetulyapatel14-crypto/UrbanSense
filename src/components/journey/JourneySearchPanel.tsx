@@ -13,10 +13,13 @@ import {
   Sparkles,
   SlidersHorizontal,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  RefreshCw,
+  Train,
+  Bus
 } from 'lucide-react'
 import { LocationSearchResult } from '../../types/transit'
-import { transitApi } from '../../services/transitApi'
+import { transitApi, NearestStationCandidate } from '../../services/transitApi'
 
 interface JourneySearchPanelProps {
   onSearch: (params: {
@@ -57,21 +60,22 @@ export const POPULAR_LANDMARKS: PopularLocationItem[] = [
   { name: 'GIFT EV Shuttle Hub', fullName: 'GIFT City EV Smart Shuttle Terminal', city: 'GIFT City', category: 'EV Transit Hub', lat: 23.1605, lng: 72.6835 },
 
   // --- Gandhinagar ---
-  { name: 'Mahatma Mandir', fullName: 'Mahatma Mandir Convention Centre', city: 'Gandhinagar', category: 'Convention Hub', lat: 23.2500, lng: 72.6520 },
+  { name: 'Mahatma Mandir', fullName: 'Mahatma Mandir Convention Centre', city: 'Gandhinagar', category: 'Convention Hub', lat: 23.2590, lng: 72.6520 },
   { name: 'Gandhinagar Capital', fullName: 'Gandhinagar Capital Railway Station', city: 'Gandhinagar', category: 'Railway Junction', lat: 23.2480, lng: 72.6490 },
-  { name: 'Infocity (Gandhinagar)', fullName: 'Infocity IT Park (Gandhinagar)', city: 'Gandhinagar', category: 'IT & Tech Hub', lat: 23.2280, lng: 72.6600 },
+  { name: 'Infocity (Gandhinagar)', fullName: 'Infocity IT Park & Metro (Gandhinagar)', city: 'Gandhinagar', category: 'IT & Tech Hub', lat: 23.1965, lng: 72.6288 },
+  { name: 'Dholakuva Circle', fullName: 'Dholakuva Circle & Metro Station', city: 'Gandhinagar', category: 'Metro Station', lat: 23.2087, lng: 72.6253 },
   { name: 'Akshardham Temple', fullName: 'Akshardham Temple (Sector 20)', city: 'Gandhinagar', category: 'Spiritual Landmark', lat: 23.2300, lng: 72.6730 },
-  { name: 'Sachivalaya (Secretariat)', fullName: 'Gujarat New Sachivalaya (Secretariat)', city: 'Gandhinagar', category: 'Government', lat: 23.2420, lng: 72.6580 },
+  { name: 'Sachivalaya (Secretariat)', fullName: 'Gujarat New Sachivalaya (Secretariat)', city: 'Gandhinagar', category: 'Government', lat: 23.2320, lng: 72.6480 },
   { name: 'Pathikashram Bus Hub', fullName: 'Pathikashram Central Bus Station (GSRTC)', city: 'Gandhinagar', category: 'Bus Terminal', lat: 23.2200, lng: 72.6480 },
   { name: 'Sector 21 Market', fullName: 'Gandhinagar Sector 21 Shopping Centre', city: 'Gandhinagar', category: 'Commercial Hub', lat: 23.2380, lng: 72.6420 },
-  { name: 'GNLU Interchange', fullName: 'GNLU (Gujarat National Law University)', city: 'Gandhinagar', category: 'Metro Interchange', lat: 23.1900, lng: 72.6320 },
-  { name: 'PDPU / PDEU', fullName: 'Pandit Deendayal Energy University (PDEU)', city: 'Gandhinagar', category: 'Education', lat: 23.1940, lng: 72.6600 },
+  { name: 'GNLU Interchange', fullName: 'GNLU (Gujarat National Law University)', city: 'Gandhinagar', category: 'Metro Interchange', lat: 23.1540, lng: 72.6500 },
+  { name: 'PDPU / PDEU', fullName: 'Pandit Deendayal Energy University (PDEU)', city: 'Gandhinagar', category: 'Education', lat: 23.1610, lng: 72.6650 },
   { name: 'DA-IICT', fullName: 'DA-IICT (Dhirubhai Ambani Institute)', city: 'Gandhinagar', category: 'Education', lat: 23.1880, lng: 72.6280 },
   { name: 'Indroda Nature Park', fullName: 'Indroda Dinosaur & Nature Fossil Park', city: 'Gandhinagar', category: 'Nature / Tourism', lat: 23.1950, lng: 72.6720 },
-  { name: 'Sector 10A Metro', fullName: 'Sector 10A / Sachivalaya Metro', city: 'Gandhinagar', category: 'Metro Station', lat: 23.2420, lng: 72.6580 },
+  { name: 'Sector 10A Metro', fullName: 'Sector 10A / Sachivalaya Metro', city: 'Gandhinagar', category: 'Metro Station', lat: 23.2320, lng: 72.6480 },
   { name: 'Sector 16 Metro', fullName: 'Sector 16 Metro Station', city: 'Gandhinagar', category: 'Metro Station', lat: 23.2450, lng: 72.6550 },
-  { name: 'Kudasan Cross Road', fullName: 'Kudasan Commercial Hub', city: 'Gandhinagar', category: 'Commercial', lat: 23.1850, lng: 72.6380 },
-  { name: 'Koba Circle', fullName: 'Koba Circle Transit Junction', city: 'Gandhinagar', category: 'Transit Junction', lat: 23.1550, lng: 72.5900 },
+  { name: 'Kudasan Cross Road', fullName: 'Kudasan Commercial Hub', city: 'Gandhinagar', category: 'Commercial', lat: 23.1780, lng: 72.6320 },
+  { name: 'Koba Circle', fullName: 'Koba Circle Transit Junction', city: 'Gandhinagar', category: 'Transit Junction', lat: 23.1550, lng: 72.6100 },
   { name: 'IIT Gandhinagar', fullName: 'IIT Gandhinagar (Palaj Campus)', city: 'Gandhinagar', category: 'Premier Institute', lat: 23.2130, lng: 72.6840 },
 
   // --- Ahmedabad ---
@@ -93,6 +97,8 @@ export const POPULAR_LANDMARKS: PopularLocationItem[] = [
   { name: 'Bopal Approach', fullName: 'Bopal Cross Road & SP Ring Road', city: 'Ahmedabad', category: 'Residential Hub', lat: 23.0310, lng: 72.4850 },
   { name: 'Gota Cross Road', fullName: 'Gota Cross Road (SG Highway)', city: 'Ahmedabad', category: 'SG Highway North', lat: 23.0980, lng: 72.5350 },
   { name: 'Tapovan Circle', fullName: 'Tapovan Circle (Visat Highway)', city: 'Ahmedabad', category: 'Highway Junction', lat: 23.1290, lng: 72.5950 },
+  { name: 'VGEC College', fullName: 'Vishwakarma Government Engineering College (VGEC)', city: 'Ahmedabad', category: 'Engineering College', lat: 23.1090, lng: 72.5950 },
+  { name: 'Vishwakarma Metro', fullName: 'Vishwakarma College Metro Station', city: 'Ahmedabad', category: 'Metro Station', lat: 23.1090, lng: 72.5950 },
   { name: 'Shivranjani BRTS', fullName: 'Shivranjani Cross Road BRTS', city: 'Ahmedabad', category: 'BRTS Hub', lat: 23.0245, lng: 72.5312 },
   { name: 'Maninagar Stn', fullName: 'Maninagar Railway Station & Hub', city: 'Ahmedabad', category: 'Transit Hub', lat: 22.9975, lng: 72.6020 },
   { name: 'Lal Darwaja', fullName: 'Lal Darwaja Central Terminus', city: 'Ahmedabad', category: 'City Bus Terminus', lat: 23.0250, lng: 72.5820 },
@@ -110,6 +116,9 @@ export const JourneySearchPanel: React.FC<JourneySearchPanelProps> = ({
   const [toLocation, setToLocation] = useState(initialTo || '')
   const [fromCoords, setFromCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [toCoords, setToCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [isLocating, setIsLocating] = useState(false)
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null)
+  const [nearestCandidates, setNearestCandidates] = useState<NearestStationCandidate[]>([])
   const [validationError, setValidationError] = useState<string | null>(null)
   const [cityTab, setCityTab] = useState<'ALL' | 'Ahmedabad' | 'Gandhinagar' | 'GIFT City'>('ALL')
 
@@ -130,7 +139,15 @@ export const JourneySearchPanel: React.FC<JourneySearchPanelProps> = ({
   const [selectedTime, setSelectedTime] = useState('15:30')
   const [preference, setPreference] = useState<'fastest' | 'cheapest' | 'least_walking' | 'fewest_transfers' | 'most_reliable' | 'min_wait'>('fastest')
   
-  const [selectedModes, setSelectedModes] = useState<string[]>(['METRO', 'BRTS', 'AMTS', 'RAIL', 'BUS', 'WALK'])
+  const [selectedModes, setSelectedModes] = useState<string[]>([
+    'METRO',
+    'GANDHINAGAR_ELECTRIC_BUS',
+    'BRTS',
+    'AMTS',
+    'RAIL',
+    'BUS',
+    'WALK'
+  ])
   const [wheelchairAccessible, setWheelchairAccessible] = useState(false)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
@@ -181,20 +198,50 @@ export const JourneySearchPanel: React.FC<JourneySearchPanelProps> = ({
     setToCoords(tempCoords)
   }
 
-  const handleUseCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setFromLocation('Current Location (GPS)')
-          setFromCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-        },
-        () => {
-          // Default to Ashram Road / Central Ahmedabad
-          setFromLocation('Income Tax Circle (Ashram Road)')
-          setFromCoords({ lat: 23.0415, lng: 72.5710 })
-        }
-      )
+  const handleUseCurrentLocation = (forceRefresh = false) => {
+    if (!navigator.geolocation) {
+      setValidationError('Geolocation is not supported by your browser.')
+      return
     }
+
+    setIsLocating(true)
+    setValidationError(null)
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        const accuracy = pos.coords.accuracy
+
+        setFromLocation('Current Location (GPS)')
+        setFromCoords({ lat, lng })
+        setGpsAccuracy(accuracy)
+
+        try {
+          // Query authoritative nearest transit station candidates
+          const res = await transitApi.getNearestStations(lat, lng, undefined, 4)
+          setNearestCandidates(res.results)
+        } catch (err) {
+          console.warn('Failed to fetch nearest station candidates:', err)
+        } finally {
+          setIsLocating(false)
+        }
+      },
+      (err) => {
+        setIsLocating(false)
+        console.warn('Geolocation error:', err.message)
+        // Fallback to Ashram Road / Central Ahmedabad
+        setFromLocation('Income Tax Circle (Ashram Road)')
+        setFromCoords({ lat: 23.0415, lng: 72.5710 })
+        setGpsAccuracy(null)
+        setNearestCandidates([])
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: forceRefresh ? 0 : 5000,
+      }
+    )
   }
 
   const handleModeToggle = (mode: string) => {
@@ -324,14 +371,22 @@ export const JourneySearchPanel: React.FC<JourneySearchPanelProps> = ({
                 <span className="w-2 h-2 rounded-full bg-blue-600 inline-block"></span>
                 From (Origin)
               </span>
-              <button
-                type="button"
-                onClick={handleUseCurrentLocation}
-                className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-0.5 hover:underline"
-              >
-                <Navigation className="w-2.5 h-2.5" />
-                <span>My Location</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleUseCurrentLocation(true)}
+                  disabled={isLocating}
+                  className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 hover:underline disabled:opacity-50"
+                  title="Use precise GPS location"
+                >
+                  {isLocating ? (
+                    <RefreshCw className="w-2.5 h-2.5 animate-spin text-blue-600" />
+                  ) : (
+                    <Navigation className="w-2.5 h-2.5" />
+                  )}
+                  <span>{isLocating ? 'Locating...' : 'My Location'}</span>
+                </button>
+              </div>
             </div>
 
             <div className="relative">
@@ -355,6 +410,8 @@ export const JourneySearchPanel: React.FC<JourneySearchPanelProps> = ({
                   onClick={() => {
                     setFromLocation('')
                     setFromCoords(null)
+                    setGpsAccuracy(null)
+                    setNearestCandidates([])
                   }}
                   className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600"
                 >
@@ -362,6 +419,81 @@ export const JourneySearchPanel: React.FC<JourneySearchPanelProps> = ({
                 </button>
               )}
             </div>
+
+            {/* GPS Accuracy & Nearest Station Quick Recommendation Banner */}
+            {fromCoords && (gpsAccuracy !== null || nearestCandidates.length > 0) && (
+              <div className="mt-1 p-1.5 bg-blue-50/70 border border-blue-200/80 rounded-lg text-[10px] text-slate-700 space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`w-2 h-2 rounded-full shrink-0 ${
+                        gpsAccuracy === null
+                          ? 'bg-blue-500'
+                          : gpsAccuracy <= 30
+                          ? 'bg-emerald-500 animate-pulse'
+                          : gpsAccuracy <= 100
+                          ? 'bg-amber-500'
+                          : 'bg-red-500'
+                      }`}
+                      title={gpsAccuracy ? `GPS Accuracy: ±${Math.round(gpsAccuracy)}m` : 'Coordinates set'}
+                    />
+                    <span className="font-semibold text-slate-800">
+                      {gpsAccuracy !== null
+                        ? gpsAccuracy <= 30
+                          ? `GPS: High Accuracy (±${Math.round(gpsAccuracy)}m)`
+                          : gpsAccuracy <= 100
+                          ? `GPS: Approx (±${Math.round(gpsAccuracy)}m)`
+                          : `GPS: Low Accuracy (±${Math.round(gpsAccuracy)}m)`
+                        : 'Coordinates Active'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleUseCurrentLocation(true)}
+                    className="text-[9px] text-blue-700 hover:text-blue-900 font-bold flex items-center gap-0.5"
+                  >
+                    <RefreshCw className="w-2 h-2" />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                {/* Nearest Station candidates quick chips */}
+                {nearestCandidates.length > 0 && (
+                  <div className="pt-0.5">
+                    <div className="text-[9px] text-slate-500 font-medium mb-1">
+                      Closest stations (click to use station origin):
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {nearestCandidates.slice(0, 2).map((candidate) => {
+                        const isMetro = candidate.mode === 'METRO'
+                        const isElectric = candidate.mode === 'GANDHINAGAR_ELECTRIC_BUS'
+
+                        return (
+                          <button
+                            key={candidate.id}
+                            type="button"
+                            onClick={() => {
+                              setFromLocation(candidate.name)
+                              setFromCoords({ lat: candidate.latitude, lng: candidate.longitude })
+                            }}
+                            className="px-1.5 py-0.5 rounded bg-white hover:bg-blue-100/80 border border-blue-200 text-slate-800 text-[9px] font-medium flex items-center gap-1 transition-colors shadow-2xs"
+                            title={`Use ${candidate.name} as origin`}
+                          >
+                            {isMetro ? (
+                              <Train className="w-2.5 h-2.5 text-blue-600" />
+                            ) : (
+                              <Bus className={`w-2.5 h-2.5 ${isElectric ? 'text-emerald-600' : 'text-orange-600'}`} />
+                            )}
+                            <span className="font-semibold truncate max-w-[130px]">{candidate.name}</span>
+                            <span className="text-slate-400">({candidate.walkingDistanceMeters}m • {candidate.walkingMinutes}m walk)</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Suggestions dropdown */}
             {showFromDropdown && fromSuggestions.length > 0 && (
@@ -680,10 +812,11 @@ export const JourneySearchPanel: React.FC<JourneySearchPanelProps> = ({
             </div>
 
             {/* Transport Modes Filter Checkboxes */}
-            <div className="pt-1.5 flex items-center space-x-1 flex-wrap">
+            <div className="pt-1.5 flex items-center space-x-1 flex-wrap gap-y-1">
               <span className="text-[10px] font-bold text-slate-500 mr-1">Allowed Modes:</span>
               {[
                 { id: 'METRO', label: 'Metro', color: 'text-red-700 bg-red-50 border-red-200' },
+                { id: 'GANDHINAGAR_ELECTRIC_BUS', label: '🚌⚡ Gandhinagar e-Bus', color: 'text-emerald-800 bg-emerald-100 border-emerald-300' },
                 { id: 'BRTS', label: 'BRTS', color: 'text-orange-700 bg-orange-50 border-orange-200' },
                 { id: 'AMTS', label: 'AMTS', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
                 { id: 'RAIL', label: 'Rail', color: 'text-purple-700 bg-purple-50 border-purple-200' },
@@ -698,8 +831,8 @@ export const JourneySearchPanel: React.FC<JourneySearchPanelProps> = ({
                     onClick={() => handleModeToggle(m.id)}
                     className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all ${
                       active
-                        ? `${m.color} shadow-xs ring-1 ring-blue-500/20`
-                        : 'bg-slate-50 text-slate-400 border-slate-200 line-through opacity-70'
+                        ? `${m.color} shadow-2xs font-bold ring-1 ring-black/5`
+                        : 'bg-slate-50 text-slate-400 border-slate-200 opacity-60'
                     }`}
                   >
                     {m.label}
