@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
+import { MapContainer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { JourneyRouteOption, LiveVehicle, TransitStop } from '../../types/transit'
 import { Navigation, Layers, ChevronDown, ChevronUp } from 'lucide-react'
 import { MovingVehicleMarker } from './MovingVehicleMarker'
 import { traccarApi, TraccarGpsPacket } from '../../services/traccarApi'
+import { MapTileLayer, MapViewToggle, type MapTileMode } from '../common/MapTileLayer'
 
 // Fix Leaflet icons
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -94,6 +95,7 @@ export const TransitMap: React.FC<TransitMapProps> = ({
   liveVehicles: propVehicles = [],
   onSelectVehicle,
 }) => {
+  const [mapMode, setMapMode] = useState<MapTileMode>('street')
   const [isLegendMinimized, setIsLegendMinimized] = useState(false)
   const [liveVehiclesMap, setLiveVehiclesMap] = useState<Record<string, LiveVehicle>>({})
 
@@ -263,16 +265,16 @@ export const TransitMap: React.FC<TransitMapProps> = ({
         )}
       </div>
 
+      {/* Floating Street / Satellite Switch */}
+      <MapViewToggle mode={mapMode} onChange={setMapMode} floating />
+
       <MapContainer
         center={defaultCenter}
         zoom={12}
         className="w-full h-full min-h-[420px] z-0"
         scrollWheelZoom={true}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <MapTileLayer mode={mapMode} />
 
         {/* Auto fit bounds to current route */}
         {allCoords.length > 0 && <MapBoundsUpdater coordinates={allCoords} />}

@@ -1,13 +1,16 @@
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet'
+import { MapContainer, Marker, Circle } from 'react-leaflet'
 import { ArrowLeft, MapPin, Clock, Camera, CheckCircle2, Car, ShieldCheck, Users, FileText, Layers } from 'lucide-react'
 import { incidents } from '../data/incidents'
 import { PremiumPanel } from '../components/common/PremiumPanel'
 import { ScrollReveal } from '../components/common/ScrollReveal'
+import { MapTileLayer, MapViewToggle, type MapTileMode } from '../components/common/MapTileLayer'
 
 export default function IncidentDetails() {
   const { id } = useParams()
+  const [mapMode, setMapMode] = useState<MapTileMode>('street')
   const incident = incidents.find(i => i.id === id) || incidents[0]
 
   const getSeverityBadge = (severity: string) => {
@@ -240,11 +243,7 @@ export default function IncidentDetails() {
               title="Geo-Location"
               subtitle="Precise incident coordinates"
               icon={MapPin}
-              badge={
-                <span className="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
-                  Hotspot
-                </span>
-              }
+              actions={<MapViewToggle mode={mapMode} onChange={setMapMode} />}
             >
               <div className="h-56 relative">
                 <MapContainer
@@ -253,7 +252,7 @@ export default function IncidentDetails() {
                   style={{ height: '100%', width: '100%' }}
                   zoomControl={false}
                 >
-                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <MapTileLayer mode={mapMode} />
                   <Circle
                     center={incident.gps}
                     radius={300}

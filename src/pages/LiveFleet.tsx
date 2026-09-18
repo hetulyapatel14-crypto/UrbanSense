@@ -17,7 +17,7 @@ import {
   Wifi
 } from 'lucide-react'
 
-import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
+import { MapContainer, Marker, Popup, Circle } from 'react-leaflet'
 import { buses as defaultBuses } from '../data/buses'
 import { apiService } from '../services/api'
 import HeaderActions from '../components/HeaderActions'
@@ -28,6 +28,7 @@ import { AnimatedCounter } from '../components/common/AnimatedCounter'
 import { ScrollReveal } from '../components/common/ScrollReveal'
 import { TraccarGpsModal } from '../components/journey/TraccarGpsModal'
 import { traccarApi, TraccarGpsPacket } from '../services/traccarApi'
+import { MapTileLayer, MapViewToggle, type MapTileMode } from '../components/common/MapTileLayer'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -54,6 +55,7 @@ export default function LiveFleet() {
   const [searchParams, setSearchParams] = useSearchParams()
   const busQueryParam = searchParams.get('bus')
 
+  const [mapMode, setMapMode] = useState<MapTileMode>('street')
   const [selectedBusId, setSelectedBusId] = useState<string>(busQueryParam || 'BUS-078')
   const detailsRef = useRef<HTMLDivElement>(null)
 
@@ -522,9 +524,12 @@ export default function LiveFleet() {
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                   LIVE SENSOR LOCATION ON AHMEDABAD MAP
                 </h3>
-                <span className="text-xs font-bold text-blue-600 font-mono">
-                  {selectedBus.gps.join(', ')}
-                </span>
+                <div className="flex items-center gap-2">
+                  <MapViewToggle mode={mapMode} onChange={setMapMode} />
+                  <span className="text-xs font-bold text-blue-600 font-mono hidden sm:inline">
+                    {selectedBus.gps.join(', ')}
+                  </span>
+                </div>
               </div>
 
               <div className="h-64 rounded-xl overflow-hidden border border-slate-200 shadow-sm relative">
@@ -534,10 +539,7 @@ export default function LiveFleet() {
                   style={{ height: '100%', width: '100%' }}
                   key={`${selectedBus.id}-${selectedBus.gps.join('-')}`}
                 >
-                  <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution="&copy; OpenStreetMap contributors"
-                  />
+                  <MapTileLayer mode={mapMode} />
                   <Circle
                     center={selectedBus.gps}
                     radius={350}

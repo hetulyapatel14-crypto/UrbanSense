@@ -1,6 +1,6 @@
 import { useState, useEffect, type CSSProperties } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
+import { MapContainer, Marker, Popup, Circle } from 'react-leaflet'
 import {
   TrendingUp,
   AlertCircle,
@@ -23,6 +23,7 @@ import { PageHeader } from '../components/common/PageHeader'
 import { KpiCard } from '../components/common/KpiCard'
 import { PremiumPanel } from '../components/common/PremiumPanel'
 import { AnimatedCounter } from '../components/common/AnimatedCounter'
+import { MapTileLayer, MapViewToggle, type MapTileMode } from '../components/common/MapTileLayer'
 import 'leaflet/dist/leaflet.css'
 
 import L from 'leaflet'
@@ -41,6 +42,7 @@ L.Icon.Default.mergeOptions({
 })
 
 export default function CommandCenter() {
+  const [mapMode, setMapMode] = useState<MapTileMode>('street')
   const [demoMode, setDemoMode] = useState(false)
   const [buses, setBuses] = useState(defaultBuses)
   const [alerts, setAlerts] = useState(defaultAlerts)
@@ -220,6 +222,8 @@ export default function CommandCenter() {
                 }
                 actions={
                   <div className="flex items-center gap-3 text-xs font-semibold text-slate-600">
+                    <MapViewToggle mode={mapMode} onChange={setMapMode} />
+                    <div className="h-3.5 w-px bg-slate-200 hidden sm:block" />
                     <label className="flex items-center space-x-1.5 cursor-pointer">
                       <input type="checkbox" defaultChecked className="rounded text-blue-600 focus:ring-blue-500" />
                       <span>Buses</span>
@@ -244,10 +248,7 @@ export default function CommandCenter() {
                     style={{ height: '100%', width: '100%' }}
                     zoomControl={true}
                   >
-                    <TileLayer
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                    />
+                    <MapTileLayer mode={mapMode} />
 
                     {/* Buses */}
                     {buses.filter(b => b.status === 'online').map(bus => (

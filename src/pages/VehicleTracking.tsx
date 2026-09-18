@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import { Search, Camera, AlertCircle, Car, Route, ScanLine, Clock } from 'lucide-react'
-import { MapContainer, TileLayer, Polyline, Marker } from 'react-leaflet'
+import { MapContainer, Polyline, Marker } from 'react-leaflet'
 import { apiService } from '../services/api'
 import HeaderActions from '../components/HeaderActions'
 import { PageHeader } from '../components/common/PageHeader'
 import { PremiumPanel } from '../components/common/PremiumPanel'
 import { ScrollReveal } from '../components/common/ScrollReveal'
+import { MapTileLayer, MapViewToggle, type MapTileMode } from '../components/common/MapTileLayer'
 
 
 const defaultDetections = [
@@ -17,6 +18,7 @@ const defaultDetections = [
 ]
 
 export default function VehicleTracking() {
+  const [mapMode, setMapMode] = useState<MapTileMode>('street')
   const [searchQuery, setSearchQuery] = useState('GJ 01 XX 4821')
   const [vehicleDetections, setVehicleDetections] = useState(defaultDetections)
   const [vehiclePath, setVehiclePath] = useState<[number, number][]>([
@@ -229,11 +231,7 @@ export default function VehicleTracking() {
                 title="Reconstructed Movement Path"
                 subtitle="GPS-interpolated trajectory across bus sightings"
                 icon={Route}
-                badge={
-                  <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
-                    GIS
-                  </span>
-                }
+                actions={<MapViewToggle mode={mapMode} onChange={setMapMode} />}
               >
                 <div className="h-[450px]">
                   <MapContainer
@@ -241,7 +239,7 @@ export default function VehicleTracking() {
                     zoom={12}
                     style={{ height: '100%', width: '100%' }}
                   >
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <MapTileLayer mode={mapMode} />
                     <Polyline positions={vehiclePath as [number, number][]} color="#2563eb" weight={4} dashArray="6, 6" />
                     {vehicleDetections.map(detection => (
                       <Marker key={detection.id} position={detection.gps as [number, number]} />

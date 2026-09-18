@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { MapContainer, TileLayer, Popup, Circle } from 'react-leaflet'
+import { MapContainer, Popup, Circle } from 'react-leaflet'
 import { buses as defaultBuses } from '../data/buses'
 import { alerts as defaultAlerts } from '../data/alerts'
 import { roadHazards as defaultHazards } from '../data/roadHazards'
@@ -9,6 +9,7 @@ import { Layers, Info, Map as MapIcon, Globe, ChevronDown, ChevronUp, Compass } 
 import HeaderActions from '../components/HeaderActions'
 import { PageHeader } from '../components/common/PageHeader'
 import { AnimatedCounter } from '../components/common/AnimatedCounter'
+import { MapTileLayer, type MapTileMode } from '../components/common/MapTileLayer'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { MovingVehicleMarker } from '../components/journey/MovingVehicleMarker'
@@ -32,7 +33,7 @@ L.Icon.Default.mergeOptions({
 export default function UrbanMap() {
   const [alerts, setAlerts] = useState(defaultAlerts)
   const [roadHazards, setRoadHazards] = useState(defaultHazards)
-  const [mapMode, setMapMode] = useState<'street' | 'satellite'>('street')
+  const [mapMode, setMapMode] = useState<MapTileMode>('street')
   const [telemetryCollapsed, setTelemetryCollapsed] = useState(false)
   const [isTraccarModalOpen, setIsTraccarModalOpen] = useState(false)
   const [liveVehiclesMap, setLiveVehiclesMap] = useState<Record<string, LiveVehicle>>(() => {
@@ -268,20 +269,7 @@ export default function UrbanMap() {
             zoomControl={true}
           >
             {/* Tile Layer: Street vs Satellite */}
-            {mapMode === 'street' ? (
-              <TileLayer
-                key="street-view-tiles"
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              />
-            ) : (
-              <TileLayer
-                key="satellite-view-tiles"
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-                maxZoom={19}
-              />
-            )}
+            <MapTileLayer mode={mapMode} />
 
             {/* Smooth Moving Buses on Map */}
             {layers.buses && liveVehicleArray.map(v => (
