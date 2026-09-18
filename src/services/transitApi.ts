@@ -11,7 +11,9 @@ import {
   ElectricBusRoute,
   ElectricBusStop,
   ElectricBusVehicle,
-  ElectricBusStats
+  ElectricBusStats,
+  AiStructuredCard,
+  AiJourneyResponse
 } from '../types/transit'
 
 export interface NearestStationCandidate {
@@ -1347,6 +1349,143 @@ export const transitApi = {
     return buildDynamicMultimodalRoutes(params)
   },
 
+  /** Natural language AI transit assistant */
+  async askAiAssistant(query: string): Promise<AiJourneyResponse> {
+    const backendRes = await transitFetch<AiJourneyResponse>(`/transit/ai/assistant/?q=${encodeURIComponent(query)}`)
+    if (backendRes && backendRes.parsed_intent) {
+      return backendRes
+    }
+
+    // Smart local Natural Language Processing fallback
+    const qLower = query.toLowerCase().trim()
+
+    let fromLoc = 'Gandhinagar Sector 21'
+    let toLoc = 'Sardar Vallabhbhai Patel International Airport'
+    let preference = 'fastest'
+    let arriveBy: string | undefined = undefined
+
+    // Extract "arrive before / before XX"
+    const timeMatch = qLower.match(/before\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i)
+    if (timeMatch) {
+      const rawTime = timeMatch[1].trim()
+      if (rawTime.toLowerCase().includes('am') || rawTime.toLowerCase().includes('pm')) {
+        const isPM = rawTime.toLowerCase().includes('pm')
+        const numPart = rawTime.replace(/(am|pm)/gi, '').trim()
+        const [h, m] = numPart.split(':').map(Number)
+        const hour24 = isPM ? (h % 12) + 12 : (h % 12)
+        arriveBy = `${String(hour24).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`
+      } else {
+        const [h, m] = rawTime.split(':').map(Number)
+        arriveBy = `${String(h || 9).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`
+      }
+    }
+
+    // Check preference keywords
+    if (qLower.includes('cheap') || qLower.includes('fare') || qLower.includes('low cost')) {
+      preference = 'cheapest'
+    } else if (qLower.includes('least walk') || qLower.includes('low walk') || qLower.includes('less walk')) {
+      preference = 'least_walking'
+    } else if (qLower.includes('fewest transfer') || qLower.includes('direct') || qLower.includes('no transfer')) {
+      preference = 'fewest_transfers'
+    } else if (qLower.includes('eco') || qLower.includes('green') || qLower.includes('electric')) {
+      preference = 'eco_friendly'
+    }
+
+    // Extract from ... to ... or ... to ...
+    const fromToPattern = /(?:from\s+)?(.+?)\s+to\s+(.+?)(?:\s+before|\s+via|\s+with|\s*\(|$)/i
+    const match = query.match(fromToPattern)
+    if (match) {
+      const pFrom = match[1].replace(/^(fastest|cheapest|direct|how to go from|way from)\s+/i, '').trim()
+      const pTo = match[2].replace(/\s*\([^)]*\)/g, '').trim()
+      if (pFrom) fromLoc = pFrom
+      if (pTo) toLoc = pTo
+    } else {
+      if (qLower.includes('gift city')) toLoc = 'GIFT City'
+      if (qLower.includes('sabarmati')) fromLoc = 'Sabarmati Railway Station'
+      if (qLower.includes('infocity')) fromLoc = 'Infocity Gandhinagar'
+      if (qLower.includes('vastral')) toLoc = 'Vastral Gam Metro'
+      if (qLower.includes('airport')) toLoc = 'Ahmedabad Airport (SVPIA)'
+    }
+
+    const plan = await this.planJourney({
+      from: fromLoc,
+      to: toLoc,
+      preference,
+      arrive_by: arriveBy,
+      modes: ['METRO', 'BRTS', 'AMTS', 'RAIL', 'BUS', 'WALK']
+    })
+
+    const bestRoute = plan.routes[0] || plan.routes[1] || null
+    const travelTime = bestRoute?.duration_minutes || 32
+    const fare = bestRoute?.fare || 25
+    const transfers = bestRoute?.transfers ?? 1
+    const modes = bestRoute?.modes || ['METRO', 'BUS']
+
+    const taxiCost = Math.max(180, Math.round(travelTime * 7.5 + 90))
+    const savingsInr = Math.max(0, taxiCost - fare)
+    const savingsPct = Math.round((savingsInr / taxiCost) * 100)
+
+    const structuredCard: AiStructuredCard = {
+      structured_title: `Recommended Journey: ${fromLoc} ➔ ${toLoc}`,
+      status: 'OPTIMAL_MULTIMODAL_ROUTE',
+      travel_time_mins: travelTime,
+      departure_time: bestRoute?.departure_time,
+      arrival_time: bestRoute?.arrival_time,
+      fare: fare,
+      transfers_count: transfers,
+      modes: modes,
+      primary_mode: bestRoute?.primary_mode || 'METRO',
+      reliability_pct: 95,
+      co2_saved_kg: parseFloat(((travelTime * 0.08) + 0.4).toFixed(1)),
+      taxi_comparison: {
+        taxi_cost_inr: taxiCost,
+        savings_inr: savingsInr,
+        savings_pct: savingsPct
+      },
+      weather_advisory: 'Clear transit corridor, optimal AC service across metro lines',
+      crowding_forecast: 'Moderate seating available on next departures',
+      step_by_step: (bestRoute?.steps || []).map((s, idx) => ({
+        step_number: idx + 1,
+        type: s.step_type,
+        icon: s.mode,
+        mode: s.mode,
+        title: s.title,
+        detail: s.instructions,
+        platform: s.platform_info,
+        duration_mins: s.duration_mins,
+        stops_count: s.stops_count,
+        window_mins: s.transfer_window_mins,
+        is_tight: s.is_tight
+      })),
+      advantages: [
+        `Save ₹${savingsInr} (${savingsPct}%) compared to app cabs`,
+        `${transfers === 0 ? 'Direct point-to-point transit' : `${transfers} convenient interchange`} with dedicated pedestrian skywalks`,
+        '100% rapid transit priority corridor'
+      ],
+      suggested_followups: [
+        `What are the return timings from ${toLoc}?`,
+        `Are feeder buses available at ${toLoc}?`
+      ],
+      markdown_summary: `Optimal route from **${fromLoc}** to **${toLoc}** takes **${travelTime} mins** with a total fare of **₹${fare}**.`
+    }
+
+    return {
+      query,
+      parsed_intent: {
+        from_location: fromLoc,
+        to_location: toLoc,
+        departure: 'NOW',
+        arrive_by: arriveBy,
+        preference,
+        modes: ['METRO', 'BRTS', 'AMTS', 'RAIL', 'BUS', 'WALK'],
+        wheelchair: false
+      },
+      assistant_response: `Found optimal route from ${fromLoc} to ${toLoc} in ${travelTime} mins (₹${fare}).`,
+      structured_card: structuredCard,
+      journey_plan: plan
+    }
+  },
+
   /** Find nearest stops & stations */
   async getNearbyStops(lat: number, lng: number, radius: number = 2.5, mode?: string): Promise<TransitStop[]> {
     const query = new URLSearchParams()
@@ -1723,51 +1862,6 @@ export const transitApi = {
         { source_name: 'AMTS City Bus Telemetry', provider_type: 'AMTS_PROVIDER', status: 'OPERATIONAL', records_count: 30, is_live_telemetry: true, freshness_seconds: 15, freshness_label: '15s ago', last_sync: new Date().toISOString() }
       ],
       server_time: new Date().toISOString()
-    }
-  },
-
-  /** Ask AI Multimodal Journey Assistant in natural language */
-  async askAiAssistant(query: string): Promise<any> {
-    const res = await transitFetch<any>('/journey/ai-assist/', {
-      method: 'POST',
-      body: JSON.stringify({ query })
-    })
-    if (res) return res
-
-    const q = (query || '').toLowerCase()
-    let origin = 'Sabarmati Railway Station'
-    let dest = 'GIFT City'
-    let explanation = 'I have mapped the optimal transit itinerary for your trip using the unified Ahmedabad-Gandhinagar transport network.'
-
-    if (q.includes('thaltej') || q.includes('vastral')) {
-      origin = 'Sabarmati Railway Station'
-      dest = 'Thaltej Metro'
-      explanation = 'Take Metro Red Line from Sabarmati to Old High Court Interchange, then transfer to Metro Blue Line directly to Thaltej (Total travel time: 28 mins, ₹25).'
-    } else if (q.includes('airport')) {
-      origin = 'Old High Court'
-      dest = 'Sardar Vallabhbhai Patel International Airport'
-      explanation = 'Take Metro Blue Line to Kalupur Junction, then connect to the dedicated Airport AC Express bus at Platform 1 (Total time: 32 mins, ₹35).'
-    } else if (q.includes('iskcon') || q.includes('sg highway')) {
-      origin = 'Sabarmati'
-      dest = 'Iskcon Cross Road BRTS'
-      explanation = 'Board Janmarg BRTS Line 1 directly along the dedicated median corridor to Iskcon Cross Road (Fast and traffic-free during peak hours).'
-    } else {
-      origin = 'Sabarmati Railway Station'
-      dest = 'GIFT City FinTech Zone'
-      explanation = 'Board the Metro Red Line to GNLU Interchange Station, then take the direct cross-platform GIFT City Branch connection (Total travel time: 32 mins, ₹30 fare).'
-    }
-
-    const plan = await this.planJourney({ from: origin, to: dest, preference: 'fastest' })
-
-    return {
-      answer: explanation,
-      parsed_intent: {
-        origin,
-        destination: dest,
-        preference: 'fastest',
-        wheelchair: false
-      },
-      plan
     }
   },
 

@@ -10,7 +10,6 @@ import {
   Activity,
   Sparkles,
   Map,
-  Zap
 } from 'lucide-react'
 import { JourneySearchPanel } from '../components/journey/JourneySearchPanel'
 import { RouteResultsList } from '../components/journey/RouteResultsList'
@@ -25,23 +24,17 @@ import { RouteComparisonTable } from '../components/journey/RouteComparisonTable
 import { AdminNetworkMonitorModal } from '../components/journey/AdminNetworkMonitorModal'
 import { TransitMapModal } from '../components/journey/TransitMapModal'
 import { TraccarGpsModal } from '../components/journey/TraccarGpsModal'
-import { ElectricBusDetails } from '../components/journey/ElectricBusDetails'
-import { ElectricBusDepartureBoard } from '../components/journey/ElectricBusDepartureBoard'
-import { ElectricBusRouteCard } from '../components/journey/ElectricBusRouteCard'
-import { ElectricBusVehicleCard } from '../components/journey/ElectricBusVehicleCard'
 import { JourneyProgressTracker } from '../components/journey/JourneyProgressTracker'
-import { JourneyPlanResult, JourneyRouteOption, LiveVehicle, ElectricBusRoute, ElectricBusVehicle } from '../types/transit'
+import { JourneyPlanResult, JourneyRouteOption, LiveVehicle } from '../types/transit'
 import { transitApi } from '../services/transitApi'
 
-type FeatureMode = 'plan' | 'ai' | 'electric-bus' | 'tracker' | 'departures' | 'nearby'
+type FeatureMode = 'plan' | 'ai' | 'tracker' | 'departures' | 'nearby'
 
 export default function JourneyPlanner() {
   const [activeFeature, setActiveFeature] = useState<FeatureMode>('plan')
   const [journeyData, setJourneyData] = useState<JourneyPlanResult | null>(null)
   const [selectedRoute, setSelectedRoute] = useState<JourneyRouteOption | null>(null)
   const [liveVehicles, setLiveVehicles] = useState<LiveVehicle[]>([])
-  const [electricRoutes, setElectricRoutes] = useState<ElectricBusRoute[]>([])
-  const [electricVehicles, setElectricVehicles] = useState<ElectricBusVehicle[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showAdminMonitor, setShowAdminMonitor] = useState(false)
@@ -115,7 +108,7 @@ export default function JourneyPlanner() {
     }
   }
 
-  const handleAiPlan = (plan: JourneyPlanResult) => {
+  const handleAiPlan = (plan: JourneyPlanResult, _queryText?: string) => {
     setJourneyData(plan)
     if (plan.routes && plan.routes.length > 0) {
       setSelectedRoute(plan.routes[0])
@@ -124,14 +117,8 @@ export default function JourneyPlanner() {
     if (plan.to?.name) setSearchTo(plan.to.name)
   }
 
-  useEffect(() => {
-    transitApi.getElectricBusRoutes().then(setElectricRoutes)
-    transitApi.getElectricBusVehicles().then(res => setElectricVehicles(res.vehicles || []))
-  }, [])
-
   const FEATURES = [
     { id: 'plan' as FeatureMode, label: 'Plan Trip', icon: Compass },
-    { id: 'electric-bus' as FeatureMode, label: '⚡ Gandhinagar e-Bus', icon: Zap, isLive: true, isElectric: true },
     { id: 'ai' as FeatureMode, label: 'AI Assistant', icon: Sparkles },
     { id: 'tracker' as FeatureMode, label: 'Live Tracker', icon: Radio, isLive: true },
     { id: 'departures' as FeatureMode, label: 'Departures', icon: Clock },
@@ -214,10 +201,10 @@ export default function JourneyPlanner() {
           </div>
         </div>
 
-        {/* Dedicated Feature Navigation Portion (Plan Trip, Gandhinagar e-Bus, AI Assistant, Live Tracker, Departures, Nearby Stops) */}
+        {/* Dedicated Feature Navigation Portion (Plan Trip, AI Assistant, Live Tracker, Departures, Nearby Stops) */}
         <div className="relative overflow-hidden bg-white/90 backdrop-blur-xl p-1.5 rounded-2xl border border-slate-200/90 shadow-card flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '80ms' }}>
           <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" aria-hidden="true" />
-          <div className="relative grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
+          <div className="relative grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5">
             {FEATURES.map((feat) => {
               const Icon = feat.icon
               const isActive = activeFeature === feat.id
@@ -228,20 +215,14 @@ export default function JourneyPlanner() {
                   onClick={() => setActiveFeature(feat.id)}
                   className={`group/tab relative overflow-hidden py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition-all duration-300 ease-silk cursor-pointer ${
                     isActive
-                      ? feat.isElectric
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-sm ring-1 ring-emerald-400/30'
-                        : 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
                       : 'bg-slate-50/80 hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200/60 hover:-translate-y-0.5 hover:shadow-xs'
                   }`}
                 >
                   <Icon
                     className={`w-4 h-4 ${
                       isActive
-                        ? feat.isElectric
-                          ? 'text-emerald-200 fill-emerald-200'
-                          : 'text-white'
-                        : feat.isElectric
-                        ? 'text-emerald-600'
+                        ? 'text-white'
                         : 'text-slate-500'
                     }`}
                   />
@@ -391,86 +372,7 @@ export default function JourneyPlanner() {
           </div>
         )}
 
-        {/* FEATURE: GANDHINAGAR ELECTRIC BUS NETWORK (GGTSL / PM-eBus Sewa / GIFT) */}
-        {activeFeature === 'electric-bus' && (
-          <div className="flex-1 min-h-0 space-y-6 max-w-7xl mx-auto w-full pb-8">
-            {/* Real-time Green Fleet Intelligence Header */}
-            <ElectricBusDetails />
-
-            {/* Live Electric Departures Board */}
-            <ElectricBusDepartureBoard />
-
-            {/* Electric Routes Directory */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3 flex-wrap border-b border-white/10 pb-2">
-                <div>
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-emerald-400 fill-emerald-400" />
-                    <span>Electrified Route Directory (E-1 to E-16 & GIFT Shuttles)</span>
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    100% Battery Electric Vehicles connecting Gandhinagar Sectors, Metro Phase 2 & GIFT City
-                  </p>
-                </div>
-
-                <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                  {electricRoutes.length} Electrified Routes
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {electricRoutes.map((route) => (
-                  <ElectricBusRouteCard
-                    key={route.route_id}
-                    route={route}
-                    onPlanTripToRoute={(orig, dest) => {
-                      setSearchFrom(orig)
-                      setSearchTo(dest)
-                      handleSearch({
-                        from: orig,
-                        to: dest,
-                        preference: 'fastest',
-                        modes: ['METRO', 'GANDHINAGAR_ELECTRIC_BUS', 'BRTS', 'AMTS', 'BUS', 'WALK'],
-                        wheelchair: false,
-                      })
-                      setActiveFeature('plan')
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Live GPS Telemetry Fleet Feed */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-2">
-                <div>
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
-                    <span>Live Telemetry & Battery Health Stream</span>
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Real-time battery SOC %, live speed, charging state, and delay monitor
-                  </p>
-                </div>
-                <span className="text-xs font-mono font-bold text-teal-300 bg-teal-500/10 px-3 py-1 rounded-full border border-teal-500/20">
-                  {electricVehicles.length} Active e-Buses Tracked
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {electricVehicles.map((veh) => (
-                  <ElectricBusVehicleCard
-                    key={veh.vehicle_id}
-                    vehicle={veh}
-                    onFocusOnMap={() => {
-                      setShowMapModal(true)
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Electric bus feature removed — now integrated into Plan Trip multimodal routing */}
 
         {/* FEATURE 2: AI ASSISTANT */}
         {activeFeature === 'ai' && (
