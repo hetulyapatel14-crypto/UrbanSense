@@ -1,13 +1,28 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type CSSProperties } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
-import { TrendingUp, AlertCircle, ShieldAlert } from 'lucide-react'
+import {
+  TrendingUp,
+  AlertCircle,
+  ShieldAlert,
+  Radar,
+  Bus,
+  Activity,
+  ScanLine,
+  AlertTriangle,
+  Siren,
+  Map as MapIcon
+} from 'lucide-react'
 
 import { buses as defaultBuses } from '../data/buses'
 import { alerts as defaultAlerts } from '../data/alerts'
 import { apiService } from '../services/api'
 import { Link } from 'react-router-dom'
 import HeaderActions from '../components/HeaderActions'
+import { PageHeader } from '../components/common/PageHeader'
+import { KpiCard } from '../components/common/KpiCard'
+import { PremiumPanel } from '../components/common/PremiumPanel'
+import { AnimatedCounter } from '../components/common/AnimatedCounter'
 import 'leaflet/dist/leaflet.css'
 
 import L from 'leaflet'
@@ -100,97 +115,121 @@ export default function CommandCenter() {
   return (
     <DashboardLayout>
       {/* Top Bar */}
-      <header className="bg-white border-b border-slate-200/90 px-6 py-4 shadow-sm sticky top-0 z-20">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
-              City Intelligence Command Center
-            </h1>
-            <div className="flex items-center space-x-2 mt-0.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-xs text-emerald-700 font-bold uppercase tracking-wider">
-                System Active • 248 Buses Sensing
-              </span>
-            </div>
+      <PageHeader
+        title="City Intelligence Command Center"
+        eyebrow="Live Operations"
+        icon={Radar}
+        live={{
+          label: `System Active • ${stats.activeBuses} Buses Sensing`,
+          tone: 'emerald'
+        }}
+        subtitle="Unified edge-AI telemetry, geospatial events and enforcement signals for the Ahmedabad network"
+        meta={
+          <div className="text-xs font-semibold text-slate-500 bg-white/70 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs">
+            {new Date().toLocaleString('en-IN', {
+              timeZone: 'Asia/Kolkata',
+              dateStyle: 'medium',
+              timeStyle: 'short'
+            })}
           </div>
-
-          <div className="flex items-center space-x-4">
+        }
+        actions={
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setDemoMode(!demoMode)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 ${
+              className={`press-scale px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 shadow-sm flex items-center gap-1.5 cursor-pointer ${
                 demoMode
-                  ? 'bg-emerald-600 text-white shadow-emerald-500/20'
-                  : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-300'
+                  ? 'bg-emerald-600 text-white shadow-emerald-500/25 shadow-md'
+                  : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-300 hover:border-slate-400'
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${demoMode ? 'bg-white animate-ping' : 'bg-slate-400'}`}></span>
               <span>{demoMode ? 'Demo Simulation Live' : 'Enable Demo Simulation'}</span>
             </button>
 
-            <div className="text-xs font-semibold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-              {new Date().toLocaleString('en-IN', {
-                timeZone: 'Asia/Kolkata',
-                dateStyle: 'medium',
-                timeStyle: 'short'
-              })}
-            </div>
-
             <HeaderActions />
           </div>
-        </div>
-      </header>
+        }
+      />
 
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto bg-slate-50">
+      <div className="flex-1 overflow-auto">
         <div className="p-6">
           {/* KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <div className="stat-card">
-              <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">ACTIVE FLEET</div>
-              <div className="text-3xl font-extrabold text-blue-600">{stats.activeBuses}</div>
-              <div className="text-xs text-slate-500 mt-1 font-medium">Buses en route</div>
-            </div>
+            <KpiCard
+              label="Active Fleet"
+              value={<AnimatedCounter value={stats.activeBuses} />}
+              icon={Bus}
+              accent="blue"
+              hint="Buses en route"
+              trend="Live"
+              trendTone="positive"
+              delay={0}
+            />
 
-            <div className="stat-card">
-              <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">ONLINE SENSORS</div>
-              <div className="text-3xl font-extrabold text-emerald-600">{stats.onlineBuses}</div>
-              <div className="text-xs text-emerald-700 mt-1 font-semibold">95.2% operational</div>
-            </div>
+            <KpiCard
+              label="Online Sensors"
+              value={<AnimatedCounter value={stats.onlineBuses} />}
+              icon={Activity}
+              accent="emerald"
+              hint="95.2% operational"
+              trend="+1.4%"
+              trendTone="positive"
+              delay={70}
+            />
 
-            <div className="stat-card">
-              <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">AI DETECTIONS</div>
-              <div className="text-3xl font-extrabold text-indigo-600">{stats.detections.toLocaleString()}</div>
-              <div className="text-xs text-slate-500 mt-1 font-medium">Today's total events</div>
-            </div>
+            <KpiCard
+              label="AI Detections"
+              value={<AnimatedCounter value={stats.detections.toLocaleString()} />}
+              icon={ScanLine}
+              accent="indigo"
+              hint="Today's total events"
+              trend="+8.2%"
+              trendTone="positive"
+              delay={140}
+            />
 
-            <div className="stat-card">
-              <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">OPEN INCIDENTS</div>
-              <div className="text-3xl font-extrabold text-amber-600">{stats.incidents}</div>
-              <div className="text-xs text-amber-700 mt-1 font-semibold">Action required</div>
-            </div>
+            <KpiCard
+              label="Open Incidents"
+              value={<AnimatedCounter value={stats.incidents} />}
+              icon={AlertTriangle}
+              accent="amber"
+              hint="Action required"
+              trend="Monitoring"
+              trendTone="warning"
+              delay={210}
+            />
 
-            <div className="stat-card">
-              <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">CRITICAL ALERTS</div>
-              <div className="text-3xl font-extrabold text-rose-600">{stats.criticalAlerts}</div>
-              <div className="text-xs text-rose-700 mt-1 font-semibold">Urgent attention</div>
-            </div>
+            <KpiCard
+              label="Critical Alerts"
+              value={<AnimatedCounter value={stats.criticalAlerts} />}
+              icon={Siren}
+              accent="rose"
+              hint="Urgent attention"
+              trend="Escalated"
+              trendTone="critical"
+              delay={280}
+            />
           </div>
 
           {/* Map and Alerts */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Map */}
             <div className="lg:col-span-2">
-              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-card">
-                <div className="px-5 py-3.5 border-b border-slate-200/80 bg-slate-50/60 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center space-x-2">
-                    <h2 className="font-bold text-slate-900 text-sm tracking-tight uppercase">Live Urban Geospatial Feed</h2>
-                    <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      Interactive
-                    </span>
-                  </div>
-
-                  <div className="flex items-center space-x-4 text-xs font-semibold text-slate-600">
+              <PremiumPanel
+                flush
+                title="Live Urban Geospatial Feed"
+                subtitle="Bus telemetry, incident zones and hazard overlays"
+                icon={MapIcon}
+                badge={
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
+                    Interactive
+                  </span>
+                }
+                actions={
+                  <div className="flex items-center gap-3 text-xs font-semibold text-slate-600">
                     <label className="flex items-center space-x-1.5 cursor-pointer">
                       <input type="checkbox" defaultChecked className="rounded text-blue-600 focus:ring-blue-500" />
                       <span>Buses</span>
@@ -204,9 +243,11 @@ export default function CommandCenter() {
                       <span>Hazards</span>
                     </label>
                   </div>
-                </div>
-
+                }
+              >
                 <div className="h-[550px] relative">
+                  {/* Cinematic scan sweep over the live feed */}
+                  <div className="scanline z-[450]" aria-hidden="true" />
                   <MapContainer
                     center={[23.0300, 72.5700]}
                     zoom={12}
@@ -262,27 +303,27 @@ export default function CommandCenter() {
                     ))}
                   </MapContainer>
                 </div>
-              </div>
+              </PremiumPanel>
             </div>
 
             {/* Live Alerts */}
             <div>
-              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-card">
-                <div className="px-5 py-3.5 border-b border-slate-200/80 bg-slate-50/60 flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <ShieldAlert className="w-4 h-4 text-slate-700" />
-                    <h2 className="font-bold text-slate-900 text-sm tracking-tight uppercase">Live Urban Alerts</h2>
-                  </div>
-                  <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+              <PremiumPanel
+                title="Live Urban Alerts"
+                icon={ShieldAlert}
+                badge={
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 live-dot" />
                     {alerts.length} Active
                   </span>
-                </div>
-
-                <div className="p-4 space-y-3 max-h-[550px] overflow-y-auto">
-                  {alerts.map(alert => (
+                }
+              >
+                <div className="space-y-3 max-h-[550px] overflow-y-auto pr-0.5">
+                  {alerts.map((alert, alertIndex) => (
                     <div
                       key={alert.id}
-                      className={`bg-white border rounded-xl p-3.5 transition-all shadow-sm hover:shadow ${getSeverityBorder(alert.severity)}`}
+                      style={{ '--i': alertIndex } as CSSProperties}
+                      className={`stagger-item bg-white border rounded-xl p-3.5 transition-all duration-300 ease-silk shadow-sm hover:shadow-card hover:-translate-y-0.5 ${getSeverityBorder(alert.severity)}`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${getSeverityBadge(alert.severity)}`}>
@@ -319,18 +360,25 @@ export default function CommandCenter() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </PremiumPanel>
             </div>
           </div>
 
           {/* Recent Activity */}
-          <div className="mt-6 bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-card">
-            <div className="px-5 py-3.5 border-b border-slate-200/80 bg-slate-50/60 flex items-center justify-between">
-              <h2 className="font-bold text-slate-900 text-sm tracking-tight uppercase">Recent Event Stream</h2>
-              <span className="text-xs font-semibold text-slate-500">Autonomous Edge Detections</span>
-            </div>
-            <div className="p-5">
-              <div className="space-y-3.5">
+          <PremiumPanel
+            className="mt-6"
+            title="Recent Event Stream"
+            subtitle="Autonomous edge detections"
+            icon={Activity}
+            badge={
+              <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot" />
+                Streaming
+              </span>
+            }
+          >
+            <div className="relative">
+              <div className="stagger-list space-y-3.5">
                 <div className="flex flex-wrap items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200/60 text-xs sm:text-sm">
                   <div className="flex items-center space-x-3">
                     <span className="p-1.5 rounded-md bg-rose-50 text-rose-600 border border-rose-200">
@@ -376,7 +424,7 @@ export default function CommandCenter() {
                 </div>
               </div>
             </div>
-          </div>
+          </PremiumPanel>
         </div>
       </div>
     </DashboardLayout>

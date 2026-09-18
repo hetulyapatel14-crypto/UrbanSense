@@ -19,19 +19,30 @@ export const ScrollReveal: React.FC<ScrollRevealProps> = ({
   const domRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    const current = domRef.current
+
+    // Reveal content when already in view, or when observation is unavailable,
+    // so nothing can be left permanently hidden.
+    const rect = current?.getBoundingClientRect()
+    const isOnScreen = !!rect && rect.top < window.innerHeight && rect.bottom > 0
+
+    if (isOnScreen || typeof IntersectionObserver === 'undefined') {
+      setIsVisible(true)
+      return
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setIsVisible(true)
-            if (domRef.current) observer.unobserve(domRef.current)
+            if (current) observer.unobserve(current)
           }
         })
       },
       { threshold }
     )
 
-    const current = domRef.current
     if (current) {
       observer.observe(current)
     }

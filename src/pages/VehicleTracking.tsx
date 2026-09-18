@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { Search, Camera, AlertCircle, Car } from 'lucide-react'
+import { Search, Camera, AlertCircle, Car, Route, ScanLine, Clock } from 'lucide-react'
 import { MapContainer, TileLayer, Polyline, Marker } from 'react-leaflet'
 import { apiService } from '../services/api'
 import HeaderActions from '../components/HeaderActions'
+import { PageHeader } from '../components/common/PageHeader'
+import { PremiumPanel } from '../components/common/PremiumPanel'
+import { ScrollReveal } from '../components/common/ScrollReveal'
 
 
 const defaultDetections = [
@@ -49,31 +52,27 @@ export default function VehicleTracking() {
 
   return (
     <DashboardLayout>
-      <header className="bg-white border-b border-slate-200/90 px-6 py-4 shadow-sm sticky top-0 z-20">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">ANPR Vehicle Tracking System</h1>
-            <p className="text-xs text-slate-500 mt-0.5">Automated Number Plate Recognition and cross-fleet spatial reconstruction</p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-              Multi-Bus Cross-Correlation
-            </span>
-            <HeaderActions />
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="ANPR Vehicle Tracking System"
+        eyebrow="Optical Enforcement"
+        icon={ScanLine}
+        live={{ label: 'Multi-Bus Cross-Correlation', tone: 'blue' }}
+        subtitle="Automated Number Plate Recognition and cross-fleet spatial reconstruction"
+        actions={<HeaderActions />}
+      />
 
-
-      <div className="flex-1 overflow-auto p-6 bg-slate-50">
+      <div className="flex-1 overflow-auto p-6">
         {/* Search */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 mb-6 shadow-card">
-          <div className="flex items-center space-x-2 mb-3">
-            <Car className="w-4 h-4 text-blue-600" />
-            <h2 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider">SEARCH VEHICLE BY REGISTRATION</h2>
+        <ScrollReveal direction="up" delay={0}>
+        <div className="panel-premium p-6 mb-6">
+          <div className="flex items-center space-x-2 mb-3 relative">
+            <span className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center">
+              <Car className="w-4 h-4" />
+            </span>
+            <h2 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider">Search Vehicle by Registration</h2>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 relative">
             <div className="flex-1 min-w-[260px] relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
               <input
@@ -84,19 +83,22 @@ export default function VehicleTracking() {
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono"
               />
             </div>
-            <button onClick={handleSearch} className="btn-primary text-sm px-8 py-3">
+            <button onClick={handleSearch} className="btn-primary group text-sm px-8 py-3">
+              <Search className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
               Search Fleet Detections
             </button>
           </div>
         </div>
+        </ScrollReveal>
 
         {/* Results */}
         {searchQuery && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Vehicle Info & Detections */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-card">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100">
+              <ScrollReveal direction="up" delay={40}>
+              <div className="panel-premium p-6 animate-fade-in-up">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100 relative">
                   <div>
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Identified Target</span>
                     <h2 className="text-2xl font-extrabold text-blue-700 font-mono tracking-wider">
@@ -139,14 +141,19 @@ export default function VehicleTracking() {
               </div>
 
               {/* Detection History */}
-              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-card">
-                <div className="px-6 py-4 border-b border-slate-200/80 bg-slate-50/60 flex items-center justify-between">
-                  <h3 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase">DETECTION TIMELINE & SIGHTINGS</h3>
-                  <span className="text-xs text-slate-500 font-semibold">4 Sightings Logged</span>
-                </div>
-
+              <PremiumPanel
+                flush
+                title="Detection Timeline & Sightings"
+                subtitle="Cross-fleet ANPR correlation of the target plate"
+                icon={Clock}
+                badge={
+                  <span className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                    {vehicleDetections.length} Sightings
+                  </span>
+                }
+              >
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left">
+                  <table className="premium-table w-full text-left">
                     <thead className="bg-slate-50/80 border-b border-slate-200/80">
                       <tr>
                         <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Bus Unit</th>
@@ -158,7 +165,7 @@ export default function VehicleTracking() {
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm">
                       {vehicleDetections.map(detection => (
-                        <tr key={detection.id} className="hover:bg-slate-50/80 transition-colors">
+                        <tr key={detection.id}>
                           <td className="px-6 py-4 whitespace-nowrap font-bold text-blue-600">
                             {detection.busId}
                           </td>
@@ -181,16 +188,25 @@ export default function VehicleTracking() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </PremiumPanel>
+              </ScrollReveal>
 
               {/* Evidence Frames */}
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-card">
-                <h3 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase mb-4">EXTRACTED EVIDENCE FRAMES</h3>
+              <ScrollReveal direction="up" delay={80}>
+              <div className="panel-premium p-6">
+                <div className="flex items-center justify-between mb-4 relative">
+                  <h3 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase">Extracted Evidence Frames</h3>
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 live-dot" />
+                    Captured
+                  </span>
+                </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="stagger-list grid grid-cols-2 gap-4">
                   {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="bg-slate-900 rounded-xl aspect-video flex items-center justify-center relative overflow-hidden shadow-inner">
-                      <Camera className="w-10 h-10 text-slate-600 opacity-40" />
+                    <div key={i} className="group/frame bg-slate-900 rounded-xl aspect-video flex items-center justify-center relative overflow-hidden shadow-inner border border-slate-800 transition-all duration-500 hover:shadow-2xl">
+                      <div className="scanline opacity-70" aria-hidden="true" />
+                      <Camera className="w-10 h-10 text-slate-600 opacity-40 transition-all duration-500 group-hover/frame:opacity-70 group-hover/frame:scale-110" />
                       <div className="absolute top-2 left-2 bg-slate-900/80 text-white px-2 py-0.5 rounded text-[10px] font-bold border border-slate-700 backdrop-blur-xs">
                         BUS-{100 + i}
                       </div>
@@ -201,14 +217,24 @@ export default function VehicleTracking() {
                   ))}
                 </div>
               </div>
+              </ScrollReveal>
             </div>
 
             {/* Path Map */}
             <div>
-              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-card sticky top-24">
-                <div className="px-5 py-3.5 border-b border-slate-200/80 bg-slate-50/60">
-                  <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider">RECONSTRUCTED MOVEMENT PATH</h3>
-                </div>
+              <ScrollReveal direction="up" delay={60}>
+              <PremiumPanel
+                flush
+                className="sticky top-24"
+                title="Reconstructed Movement Path"
+                subtitle="GPS-interpolated trajectory across bus sightings"
+                icon={Route}
+                badge={
+                  <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                    GIS
+                  </span>
+                }
+              >
                 <div className="h-[450px]">
                   <MapContainer
                     center={[23.0300, 72.5650]}
@@ -224,7 +250,7 @@ export default function VehicleTracking() {
                 </div>
 
                 <div className="p-4 bg-slate-50 border-t border-slate-200/80 text-xs font-medium">
-                  <div className="space-y-2">
+                  <div className="stagger-list space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">First Sighting:</span>
                       <span className="font-bold text-slate-800">14:20:33 (CG Road)</span>
@@ -239,7 +265,8 @@ export default function VehicleTracking() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </PremiumPanel>
+              </ScrollReveal>
             </div>
           </div>
         )}

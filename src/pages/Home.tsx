@@ -19,6 +19,7 @@ import { ScrollProgressBar } from '../components/common/ScrollProgressBar'
 import { AnimatedCounter } from '../components/common/AnimatedCounter'
 import { ScrollReveal } from '../components/common/ScrollReveal'
 import { InteractiveGlowCard } from '../components/common/InteractiveGlowCard'
+import { ClayBlobs } from '../components/common/ClayBlobs'
 
 export default function Home() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -33,7 +34,10 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 relative selection:bg-blue-100 selection:text-blue-900">
+    <div className="min-h-screen relative">
+      {/* Ambient clay lighting */}
+      <ClayBlobs variant="display" />
+
       {/* Top Scroll Progress Indicator */}
       <ScrollProgressBar />
 
@@ -186,7 +190,7 @@ export default function Home() {
       </section>
 
       {/* Live Statistics */}
-      <section className="py-16 bg-white border-y border-slate-200/80 relative">
+      <section className="py-16 bg-white/55 backdrop-blur-md border-y border-white/70 relative">
         <div className="container mx-auto px-6">
           <ScrollReveal direction="up" delay={0}>
             <div className="text-center mb-12">
@@ -274,7 +278,7 @@ export default function Home() {
       </section>
 
       {/* How It Works */}
-      <section className="py-20 bg-slate-50 bg-ambient-mesh">
+      <section className="py-20 bg-ambient-mesh">
         <div className="container mx-auto px-6">
           <ScrollReveal direction="up" delay={0}>
             <div className="text-center mb-16">
@@ -345,7 +349,7 @@ export default function Home() {
       </section>
 
       {/* AI Capabilities */}
-      <section className="py-20 bg-white border-y border-slate-200/80">
+      <section className="py-20 bg-white/55 backdrop-blur-md border-y border-white/70">
         <div className="container mx-auto px-6">
           <ScrollReveal direction="up" delay={0}>
             <div className="text-center mb-16">
@@ -454,7 +458,7 @@ export default function Home() {
       </section>
 
       {/* Visual Product Section - Simulated Camera Feed in Light Executive Frame */}
-      <section className="py-20 bg-slate-50 bg-tech-grid">
+      <section className="py-20 bg-tech-grid">
         <div className="container mx-auto px-6">
           <ScrollReveal direction="up" delay={0}>
             <div className="max-w-5xl mx-auto">
@@ -533,7 +537,7 @@ export default function Home() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-20 bg-gradient-to-b from-white via-blue-50/40 to-blue-50/80 border-t border-slate-200/80 relative overflow-hidden">
+      <section className="py-20 bg-gradient-to-b from-white/55 via-blue-50/40 to-blue-50/60 backdrop-blur-md border-t border-white/70 relative overflow-hidden">
         <div className="container mx-auto px-6 text-center relative z-10">
           <ScrollReveal direction="up" delay={0}>
             <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 mb-6 leading-tight tracking-tight">
@@ -565,7 +569,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 py-8 bg-white">
+      <footer className="border-t border-slate-200/70 py-8 bg-white/60 backdrop-blur-md">
         <div className="container mx-auto px-6 text-center text-slate-500 text-sm">
           <p>© 2026 UrbanSense. Smart City Intelligence Platform. Powered by Edge AI.</p>
         </div>

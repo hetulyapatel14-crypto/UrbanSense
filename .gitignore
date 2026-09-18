@@ -69,6 +69,7 @@ logs/
 *.log
 .vercel
 .wrangler/
+.freebuff/
 .env*
 !.env.example
 !backend/.env.example

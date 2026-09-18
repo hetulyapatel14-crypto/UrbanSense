@@ -95,7 +95,7 @@ export const MovingVehicleMarker: React.FC<MovingVehicleMarkerProps> = ({
     borderColor = '#EF4444'
     glowColor = 'rgba(239, 68, 68, 0.4)'
   } else if (vehicle.mode === 'BRTS') {
-    badgeBg = '#EA580C'
+    badgeBg = '#C2410C'
     borderColor = '#F97316'
     glowColor = 'rgba(249, 115, 22, 0.4)'
   } else if (vehicle.mode === 'RAIL') {
@@ -173,11 +173,11 @@ export const MovingVehicleMarker: React.FC<MovingVehicleMarkerProps> = ({
           ${
             batterySoc !== undefined
               ? `<span style="
-                  font-size: 9px;
-                  background: rgba(0, 0, 0, 0.25);
-                  padding: 1px 4px;
+                  font-size: 10px;
+                  background: rgba(0, 0, 0, 0.38);
+                  padding: 1px 5px;
                   border-radius: 8px;
-                  color: ${batterySoc < 25 ? '#FCA5A5' : '#A7F3D0'};
+                  color: ${batterySoc < 25 ? '#FECACA' : '#FFFFFF'};
                 ">${batterySoc}%</span>`
               : ''
           }

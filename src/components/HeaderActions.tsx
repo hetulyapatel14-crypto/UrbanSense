@@ -341,7 +341,7 @@ export default function HeaderActions() {
                   <div className="flex items-center space-x-1.5">
                     <h3 className="text-sm font-extrabold text-white truncate">Ahmedabad Command HQ</h3>
                   </div>
-                  <p className="text-[11px] text-blue-200 font-medium">Urban Mobility Central Unit</p>
+                  <p className="text-[11px] text-white/90 font-medium">Urban Mobility Central Unit</p>
                   <div className="flex items-center space-x-1.5 mt-1">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span className="text-[10px] font-semibold text-emerald-300">Operator Level 2 • Shift A</span>

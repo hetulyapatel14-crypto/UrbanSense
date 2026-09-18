@@ -18,6 +18,7 @@ import {
   PanelLeftOpen
 } from 'lucide-react'
 import ScrollProgressBar from '../components/common/ScrollProgressBar'
+import { ClayBlobs } from '../components/common/ClayBlobs'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -55,7 +56,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   ]
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col antialiased selection:bg-blue-100 selection:text-blue-900">
+    <div className="min-h-screen flex flex-col antialiased">
+      <ClayBlobs />
       <ScrollProgressBar />
 
       <div className="flex-1 flex relative">
@@ -70,7 +72,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Premium Light Sidebar (Collapsible on Desktop, Slide-over on Mobile) */}
         <aside
-          className={`bg-white/95 backdrop-blur-md border-r border-slate-200/90 flex flex-col shadow-sm z-30 sticky top-0 h-screen transition-all duration-300 ease-in-out ${
+          className={`bg-white/85 backdrop-blur-xl border-r border-slate-200/90 flex flex-col shadow-sm z-30 sticky top-0 h-screen transition-all duration-500 ease-silk ${
             isCollapsed ? 'w-20' : 'w-64'
           } ${
             isMobileOpen
@@ -83,8 +85,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             isCollapsed ? 'justify-center' : 'justify-between'
           }`}>
             <Link to="/" className={`flex items-center space-x-3 group ${isCollapsed ? 'hidden' : 'flex'}`}>
-              <div className="bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-700 p-2.5 rounded-xl shadow-md shadow-blue-500/15 text-white group-hover:scale-105 group-hover:shadow-blue-500/25 transition-all duration-300">
-                <Radio className="w-5 h-5 text-white animate-pulse" />
+              <div className="relative bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-700 p-2.5 rounded-xl shadow-md shadow-blue-500/15 text-white group-hover:scale-105 group-hover:shadow-blue-500/25 transition-all duration-300 overflow-hidden">
+                <Radio className="w-5 h-5 text-white relative z-10" />
+                <span className="pointer-events-none absolute inset-0 bg-sheen opacity-60 animate-sheen" aria-hidden="true" />
               </div>
               <div>
                 <span className="text-lg font-extrabold text-slate-900 tracking-tight block group-hover:text-blue-600 transition-colors">UrbanSense</span>
@@ -144,14 +147,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   key={item.to}
                   to={item.to}
                   title={isCollapsed ? item.label : undefined}
-                  className={`group relative flex items-center rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  style={{ animation: 'slide-in-left 0.5s cubic-bezier(0.22, 1, 0.36, 1) both', animationDelay: `${navItems.indexOf(item) * 45}ms` }}
+                  className={`group relative overflow-hidden flex items-center rounded-xl text-sm font-semibold transition-all duration-300 ease-silk ${
                     isCollapsed
                       ? 'justify-center p-3'
                       : 'justify-between px-3.5 py-2.5'
                   } ${
                     isActive
                       ? 'bg-gradient-to-r from-blue-50 to-indigo-50/60 text-blue-700 border border-blue-200/80 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 hover:translate-x-0.5'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 hover:translate-x-0.5 hover:shadow-xs'
                   }`}
                 >
                   <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
@@ -166,8 +170,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     </span>
                   )}
 
+                  {/* Hover wash */}
+                  <span
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    aria-hidden="true"
+                  />
+
                   {isActive && (
-                    <span className="absolute left-0 top-2 bottom-2 w-1 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-r-full" />
+                    <>
+                      <span className="absolute left-0 top-2 bottom-2 w-1 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-r-full shadow-[0_0_12px_rgba(37,99,235,0.5)]" />
+                      <span className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-transparent to-transparent animate-fade-in" aria-hidden="true" />
+                    </>
                   )}
                 </Link>
               )
@@ -197,9 +210,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 flex flex-col min-w-0 bg-slate-50">
+        <main className="relative flex-1 flex flex-col min-w-0 bg-tech-grid">
+          {/* Ambient aurora wash behind dashboard content */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-72 overflow-hidden opacity-60" aria-hidden="true">
+            <div className="absolute -top-28 left-1/4 w-[34rem] h-56 bg-gradient-to-tr from-blue-400/12 via-indigo-400/10 to-transparent blur-3xl rounded-full animate-aurora" />
+            <div className="absolute -top-20 right-1/4 w-[26rem] h-48 bg-gradient-to-tr from-cyan-400/12 to-transparent blur-3xl rounded-full animate-aurora" />
+          </div>
+
           {/* Mobile floating hamburger button if drawer closed */}
-          <div className="lg:hidden p-3 bg-white border-b border-slate-200 flex items-center justify-between">
+          <div className="relative z-10 lg:hidden p-3 bg-white border-b border-slate-200 flex items-center justify-between">
             <button
               onClick={() => setIsMobileOpen(true)}
               className="p-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 flex items-center space-x-2 font-bold text-xs"
@@ -211,7 +230,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <span className="text-xs font-extrabold text-slate-800 tracking-tight">UrbanSense AI</span>
           </div>
 
-          {children}
+          {/* Route content with a soft cross-fade between modules */}
+          <div
+            key={location.pathname}
+            className="page-enter relative flex-1 flex flex-col min-w-0 min-h-0"
+          >
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -1,7 +1,12 @@
 import DashboardLayout from '../layouts/DashboardLayout'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
-import { AlertTriangle, TrendingUp, MapPin } from 'lucide-react'
+import { AlertTriangle, TrendingUp, MapPin, Route, Gauge, Wrench, ListOrdered } from 'lucide-react'
 import HeaderActions from '../components/HeaderActions'
+import { PageHeader } from '../components/common/PageHeader'
+import { KpiCard } from '../components/common/KpiCard'
+import { PremiumPanel } from '../components/common/PremiumPanel'
+import { AnimatedCounter } from '../components/common/AnimatedCounter'
+import { ScrollReveal } from '../components/common/ScrollReveal'
 
 
 const hazardsByCategory = [
@@ -38,66 +43,76 @@ const maintenancePriority = [
 export default function RoadIntelligence() {
   return (
     <DashboardLayout>
-      <header className="bg-white border-b border-slate-200/90 px-6 py-4 shadow-sm sticky top-0 z-20">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Road Condition Intelligence</h1>
-            <p className="text-xs text-slate-500 mt-0.5">Automated pavement defect detection, surface quality indices, and civil repair dispatching</p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-              24 Segments Prioritized
-            </span>
-            <HeaderActions />
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Road Condition Intelligence"
+        eyebrow="Pavement Analytics"
+        icon={Route}
+        live={{ label: '24 Segments Prioritized', tone: 'amber' }}
+        subtitle="Automated pavement defect detection, surface quality indices, and civil repair dispatching"
+        actions={<HeaderActions />}
+      />
 
-
-      <div className="flex-1 overflow-auto p-6 bg-slate-50">
+      <div className="flex-1 overflow-auto p-6">
         {/* Statistics */}
+        <ScrollReveal direction="up" delay={0}>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="stat-card">
-            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">ROADS SCANNED</div>
-            <div className="text-3xl font-extrabold text-blue-600">1,284 km</div>
-            <div className="flex items-center text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 mt-2 w-fit">
-              <TrendingUp className="w-3 h-3 mr-1" />
-              +45 km today
-            </div>
-          </div>
+          <KpiCard
+            label="Roads Scanned"
+            value={<AnimatedCounter value="1,284 km" />}
+            icon={Route}
+            accent="blue"
+            hint="Network coverage"
+            trend="+45 km today"
+            trendTone="positive"
+            delay={0}
+          />
 
-          <div className="stat-card">
-            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">HAZARDS DETECTED</div>
-            <div className="text-3xl font-extrabold text-amber-600">327</div>
-            <div className="flex items-center text-xs font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60 mt-2 w-fit">
-              <TrendingUp className="w-3 h-3 mr-1" />
-              +12 new today
-            </div>
-          </div>
+          <KpiCard
+            label="Hazards Detected"
+            value={<AnimatedCounter value="327" />}
+            icon={AlertTriangle}
+            accent="amber"
+            hint="Surface defects logged"
+            trend="+12 new today"
+            trendTone="warning"
+            delay={70}
+          />
 
-          <div className="stat-card">
-            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">CRITICAL SEGMENTS</div>
-            <div className="text-3xl font-extrabold text-rose-600">24</div>
-            <div className="flex items-center text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/60 mt-2 w-fit">
-              <AlertTriangle className="w-3 h-3 mr-1" />
-              Needs civil repair
-            </div>
-          </div>
+          <KpiCard
+            label="Critical Segments"
+            value={<AnimatedCounter value="24" />}
+            icon={Wrench}
+            accent="rose"
+            hint="Needs civil repair"
+            trend="Escalated"
+            trendTone="critical"
+            delay={140}
+          />
 
-          <div className="stat-card">
-            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">REPAIR PRIORITY QUEUE</div>
-            <div className="text-3xl font-extrabold text-indigo-600">86</div>
-            <div className="text-xs text-slate-500 mt-2 font-medium">
-              Road segments ranked
-            </div>
-          </div>
+          <KpiCard
+            label="Repair Priority Queue"
+            value={<AnimatedCounter value="86" />}
+            icon={ListOrdered}
+            accent="indigo"
+            hint="Road segments ranked"
+            trend="Ranked"
+            trendTone="neutral"
+            delay={210}
+          />
         </div>
+        </ScrollReveal>
 
         {/* Charts */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Hazards Trend */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-card">
-            <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase mb-4">HAZARD DETECTION TREND</h2>
+          <ScrollReveal direction="up" delay={40}>
+          <div className="panel-premium hover-lift p-6 h-full">
+            <div className="flex items-center gap-2.5 mb-4">
+              <span className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-blue-600 flex items-center justify-center shadow-2xs">
+                <TrendingUp className="w-4 h-4" />
+              </span>
+              <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase">Hazard Detection Trend</h2>
+            </div>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -108,14 +123,25 @@ export default function RoadIntelligence() {
                   labelStyle={{ color: '#0f172a', fontWeight: 700 }}
                   itemStyle={{ color: '#2563eb' }}
                 />
-                <Line type="monotone" dataKey="hazards" stroke="#2563eb" strokeWidth={3} dot={{ fill: '#2563eb', r: 4 }} />
+                <Line
+                  type="monotone"
+                  dataKey="hazards"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  dot={{ fill: '#2563eb', r: 4 }}
+                  activeDot={{ r: 7 }}
+                  animationDuration={1400}
+                  animationEasing="ease-out"
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
+          </ScrollReveal>
 
           {/* Hazards by Category */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-card">
-            <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase mb-4">HAZARDS BY CATEGORY</h2>
+          <ScrollReveal direction="up" delay={90}>
+          <div className="panel-premium hover-lift p-6 h-full">
+            <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase mb-4">Hazards by Category</h2>
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
@@ -126,6 +152,8 @@ export default function RoadIntelligence() {
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   outerRadius={80}
                   dataKey="value"
+                  animationDuration={1200}
+                  animationBegin={150}
                 >
                   {hazardsByCategory.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -137,10 +165,12 @@ export default function RoadIntelligence() {
               </PieChart>
             </ResponsiveContainer>
           </div>
+          </ScrollReveal>
 
           {/* Detection Confidence */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-card">
-            <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase mb-4">DETECTION CONFIDENCE DISTRIBUTION</h2>
+          <ScrollReveal direction="up" delay={40}>
+          <div className="panel-premium hover-lift p-6 h-full">
+            <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase mb-4">Detection Confidence Distribution</h2>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={confidenceData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -150,15 +180,22 @@ export default function RoadIntelligence() {
                   contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   labelStyle={{ color: '#0f172a', fontWeight: 700 }}
                 />
-                <Bar dataKey="count" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="count" fill="#3b82f6" radius={[6, 6, 0, 0]} animationDuration={1300} />
               </BarChart>
             </ResponsiveContainer>
           </div>
+          </ScrollReveal>
 
           {/* Hazards by Zone */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-card">
-            <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase mb-4">HAZARDS BY CITY ZONE</h2>
-            <div className="space-y-3.5">
+          <ScrollReveal direction="up" delay={90}>
+          <div className="panel-premium hover-lift p-6 h-full">
+            <div className="flex items-center gap-2.5 mb-4">
+              <span className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-indigo-600 flex items-center justify-center shadow-2xs">
+                <Gauge className="w-4 h-4" />
+              </span>
+              <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase">Hazards by City Zone</h2>
+            </div>
+            <div className="stagger-list space-y-3.5">
               {[
                 { zone: 'Central Ahmedabad', count: 89, color: 'bg-rose-500' },
                 { zone: 'West Ahmedabad', count: 76, color: 'bg-amber-500' },
@@ -172,23 +209,30 @@ export default function RoadIntelligence() {
                     <span className="text-slate-900 font-extrabold">{zone.count} defects</span>
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div className={`${zone.color} h-2 rounded-full`} style={{ width: `${(zone.count / 89) * 100}%` }}></div>
+                    <div className={`${zone.color} bar-fill h-2 rounded-full`} style={{ width: `${(zone.count / 89) * 100}%` }}></div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
+          </ScrollReveal>
         </div>
 
         {/* Maintenance Priority Table */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-card">
-          <div className="px-6 py-4 border-b border-slate-200/80 bg-slate-50/60 flex items-center justify-between">
-            <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase">MAINTENANCE PRIORITY DISPATCH</h2>
-            <span className="text-xs font-bold text-slate-500">Sorted by Severity & Frequency</span>
-          </div>
-
+        <ScrollReveal direction="up" delay={40}>
+        <PremiumPanel
+          flush
+          title="Maintenance Priority Dispatch"
+          subtitle="Sorted by severity and detection frequency"
+          icon={Wrench}
+          badge={
+            <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+              {maintenancePriority.length} Segments
+            </span>
+          }
+        >
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="premium-table w-full text-left">
               <thead className="bg-slate-50/80 border-b border-slate-200/80">
                 <tr>
                   <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Road Segment</th>
@@ -237,7 +281,8 @@ export default function RoadIntelligence() {
               </tbody>
             </table>
           </div>
-        </div>
+        </PremiumPanel>
+        </ScrollReveal>
       </div>
     </DashboardLayout>
   )

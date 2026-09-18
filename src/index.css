@@ -2,30 +2,93 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===========================================================================
+ * High-Fidelity Claymorphism — global material layer
+ *
+ * Everything visual is funnelled through the tokens in tailwind.config.js and
+ * these component classes, so the ~45 feature files inherit the clay material
+ * without being rewritten. Where a page sets an explicit utility (e.g. `py-2`),
+ * the utilities layer still wins — by design, so no layout is surprised.
+ * ========================================================================= */
+
 @layer base {
   html {
     scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+    background-color: theme('colors.clay.canvas');
   }
 
   body {
-    @apply bg-slate-50 text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-900;
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    @apply bg-clay-canvas text-clay-ink antialiased;
+    font-family: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 500;
+    line-height: 1.625;
   }
 
-  /* Custom subtle light scrollbar */
+  ::selection {
+    background-color: rgba(139, 92, 246, 0.22);
+    color: #332F3A;
+  }
+
+  /* Nunito on every heading — the rounded terminals carry the clay character. */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: Nunito, "DM Sans", system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  /* …and on stat numbers / emphasis labels, without touching thousands of tags. */
+  .font-black,
+  .font-extrabold {
+    font-family: Nunito, "DM Sans", system-ui, sans-serif;
+  }
+
+  /* Leaflet ships its own low-contrast chrome (#0078A8 on grey); bring the
+     attribution and controls onto the clay muted floor. */
+  .leaflet-control-attribution,
+  .leaflet-control-attribution a {
+    color: #635F69 !important;
+    font-family: "DM Sans", system-ui, sans-serif;
+  }
+  .leaflet-control-attribution {
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(6px);
+    border-radius: 12px 0 0 0;
+  }
+  .leaflet-bar,
+  .leaflet-bar a {
+    color: #332F3A;
+    border-radius: 14px;
+  }
+  .leaflet-popup-content-wrapper {
+    border-radius: 20px;
+    box-shadow: 0 8px 16px rgba(160, 150, 180, 0.16), 0 24px 44px -18px rgba(139, 92, 246, 0.24);
+  }
+  .leaflet-popup-content {
+    font-family: "DM Sans", system-ui, sans-serif;
+  }
+
+  /* Soft clay scrollbar */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 10px;
+    height: 10px;
   }
   ::-webkit-scrollbar-track {
-    background: #f1f5f9;
+    background: theme('colors.clay.canvas');
   }
   ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: #CFC8DC;
     border-radius: 9999px;
+    border: 2px solid theme('colors.clay.canvas');
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: #BCA5F8;
+  }
+
+  /* Focus ring: violet, generously rounded to match the clay shapes. */
+  :focus-visible {
+    outline: 3px solid rgba(124, 58, 237, 0.45);
+    outline-offset: 2px;
+    border-radius: 12px;
   }
 
   /* Respect reduced motion */
@@ -40,85 +103,394 @@
 }
 
 @layer components {
-  /* Premium Stat Card */
+  /* ---------- Clay surfaces ---------- */
+
+  /* KPI / telemetry tile — restrained clay for data-dense views. */
   .stat-card {
-    @apply bg-white border border-slate-200/90 rounded-2xl p-5 shadow-card transition-all duration-300 relative overflow-hidden;
-    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    @apply relative overflow-hidden rounded-[28px] border border-white/70 bg-white/70 p-5 backdrop-blur-xl transition-all duration-500 shadow-clay-card;
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .stat-card:hover {
-    @apply shadow-card-hover border-blue-200/90 -translate-y-1;
+    @apply -translate-y-2 border-white shadow-clay-card-hover;
   }
 
-  /* High-end Primary Button with Gradient Shift & Arrow Micro-interaction */
-  .btn-primary {
-    @apply relative overflow-hidden inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-[length:200%_auto] hover:bg-[position:right_center] text-white px-6 py-2.5 rounded-xl font-semibold shadow-sm hover:shadow-glow-sm transition-all duration-300 active:scale-[0.98] cursor-pointer select-none;
-    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .btn-primary:hover {
-    transform: translateY(-2px);
-  }
-
-  /* High-end Secondary Button */
-  .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 px-6 py-2.5 rounded-xl font-semibold border border-slate-200/90 shadow-2xs hover:shadow-card hover:border-slate-300 transition-all duration-300 active:scale-[0.98] cursor-pointer select-none;
-    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .btn-secondary:hover {
-    transform: translateY(-1.5px);
-  }
-
-  /* Luxury Feature / Workflow Card */
+  /* Feature / workbench card — full clay character. */
   .card-luxury {
-    @apply bg-white border border-slate-200/90 rounded-2xl p-6 shadow-card transition-all duration-300 relative overflow-hidden;
-    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    @apply relative overflow-hidden rounded-[32px] border border-white/70 bg-white/70 p-6 sm:p-8 backdrop-blur-xl transition-all duration-500 shadow-clay-card;
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .card-luxury:hover {
-    @apply shadow-card-hover border-blue-300/80 -translate-y-1.5;
+    @apply -translate-y-2 border-white shadow-clay-card-hover;
   }
 
-  /* Subtle Atmospheric Grid Background */
+  /* Data panel — calmer surface beneath tables and charts. */
+  .panel-premium {
+    @apply relative overflow-hidden rounded-[32px] border border-white/70 bg-white/75 backdrop-blur-md transition-all duration-500 shadow-clay-card;
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .panel-premium:hover {
+    @apply shadow-clay-card-hover;
+  }
+
+  /* Glass-clay hybrids */
+  .glass-card {
+    @apply rounded-[32px] border border-white/60 bg-white/70 backdrop-blur-xl shadow-clay-card;
+  }
+  .glass-panel {
+    @apply border border-white/70 bg-white/70 backdrop-blur-xl shadow-clay-deep;
+  }
+
+  /* Handy standalone card primitives */
+  .clay-card {
+    @apply relative overflow-hidden rounded-[32px] border border-white/70 bg-white/70 backdrop-blur-xl shadow-clay-card transition-all duration-500;
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .clay-card-hover:hover {
+    @apply -translate-y-2 shadow-clay-card-hover;
+  }
+
+  /* Recessed surface (concavity) — inputs, active states, welled panels */
+  .clay-inset {
+    @apply rounded-2xl border-0 bg-clay-input shadow-clay-inset-sm;
+  }
+
+  /* Raised micro-surface — chips, legend swatches, toolbars */
+  .clay-raised {
+    @apply rounded-2xl border border-white/70 bg-white/80 backdrop-blur-md shadow-clay-raised;
+  }
+
+  /* Soft hairline separator */
+  .divider-gradient {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(228, 223, 238, 0.95), transparent);
+  }
+
+  /* Icon orb — gradient clay pill for feature icons */
+  .clay-orb {
+    @apply inline-flex items-center justify-center rounded-2xl text-white shadow-clay-button transition-transform duration-500;
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .clay-orb:hover {
+    transform: scale(1.1) rotate(-3deg);
+  }
+
+  /* ---------- Buttons (convex + squish) ---------- */
+
+  .btn-primary {
+    @apply relative inline-flex min-h-[44px] items-center justify-center gap-2 rounded-[20px] bg-clay-primary px-6 py-3 font-bold tracking-wide text-white shadow-clay-button transition-all duration-200 cursor-pointer select-none active:scale-[0.92] active:shadow-clay-pressed focus-visible:ring-4 focus-visible:ring-blue-500/30;
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .btn-primary:hover {
+    @apply -translate-y-1 shadow-clay-button-hover;
+  }
+
+  .btn-secondary {
+    @apply relative inline-flex min-h-[44px] items-center justify-center gap-2 rounded-[20px] border-0 bg-white px-6 py-3 font-bold tracking-wide text-clay-ink shadow-clay-button transition-all duration-200 cursor-pointer select-none active:scale-[0.92] active:shadow-clay-pressed;
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .btn-secondary:hover {
+    @apply -translate-y-1 shadow-clay-button-hover;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-[20px] border-0 bg-transparent px-4 py-2 font-bold text-clay-muted transition-all duration-200 cursor-pointer select-none hover:bg-blue-50 hover:text-blue-700 active:scale-[0.94];
+  }
+
+  /* ---------- Inputs (recessed) ---------- */
+
+  .clay-input {
+    @apply w-full rounded-2xl border-0 bg-clay-input px-5 py-3.5 text-clay-ink shadow-clay-inset-sm transition-all duration-200 placeholder:text-clay-muted focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/20;
+  }
+
+  /* ---------- Typography ---------- */
+
+  /* Gradient text is reserved for display sizes only (>= text-5xl). */
+  .gradient-text {
+    @apply bg-clay-accent bg-clip-text text-transparent;
+  }
+
+  .gradient-text-live {
+    background: linear-gradient(90deg, #6D28D9, #BE185D, #0E7490, #6D28D9);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: gradient-x 9s ease infinite;
+  }
+
+  .section-eyebrow {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-white/80 px-3.5 py-1 text-[11px] font-extrabold uppercase tracking-widest shadow-clay-raised backdrop-blur-md;
+  }
+
+  /* ---------- Backgrounds ---------- */
+
   .bg-tech-grid {
-    background-image: radial-gradient(rgba(37, 99, 235, 0.08) 1px, transparent 0);
+    background-image: radial-gradient(rgba(124, 58, 237, 0.10) 1px, transparent 0);
     background-size: 24px 24px;
     background-position: -19px -19px;
   }
 
-  /* Ambient Mesh Gradient */
   .bg-ambient-mesh {
-    background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.08) 0%, rgba(99, 102, 241, 0.04) 35%, transparent 70%);
+    background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.14) 0%, rgba(236, 72, 153, 0.07) 35%, transparent 70%);
   }
 
-  /* Glassmorphic Floating Panel */
-  .glass-card {
-    @apply bg-white/85 backdrop-blur-md border border-slate-200/80 shadow-card;
+  /* Ambient drifting clay blobs (used by <ClayBlobs />) */
+  .clay-blob {
+    @apply pointer-events-none absolute rounded-full blur-3xl;
+  }
+  .clay-blob-float {
+    animation: clay-float 8s ease-in-out infinite;
+  }
+  .clay-blob-float-delayed {
+    animation: clay-float-delayed 10s ease-in-out infinite;
+  }
+  .clay-blob-float-slow {
+    animation: clay-float-slow 12s ease-in-out infinite;
+  }
+
+  .aurora-layer {
+    @apply pointer-events-none absolute inset-0 overflow-hidden;
+  }
+  .aurora-layer::before,
+  .aurora-layer::after {
+    content: '';
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(70px);
+    opacity: 0.55;
+    will-change: transform;
+  }
+  .aurora-layer::before {
+    width: 46rem;
+    height: 26rem;
+    top: -12rem;
+    left: -10rem;
+    background: radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.30), transparent 65%);
+    animation: aurora 18s ease-in-out infinite alternate;
+  }
+  .aurora-layer::after {
+    width: 38rem;
+    height: 24rem;
+    top: -8rem;
+    right: -12rem;
+    background: radial-gradient(circle at 70% 40%, rgba(236, 72, 153, 0.26), transparent 65%);
+    animation: aurora 22s ease-in-out infinite alternate-reverse;
+  }
+
+  /* ---------- Motion helpers ---------- */
+
+  .hover-lift {
+    @apply transition-all duration-300;
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .hover-lift:hover {
+    transform: translateY(-8px);
+  }
+
+  .press-scale {
+    @apply transition-transform duration-200 active:scale-[0.92];
+  }
+
+  .stagger-item {
+    animation: fade-in-up 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+
+  /* Auto-stagger the direct children of a list container */
+  .stagger-list > * {
+    animation: fade-in-up 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .stagger-list > *:nth-child(1) { animation-delay: 40ms; }
+  .stagger-list > *:nth-child(2) { animation-delay: 110ms; }
+  .stagger-list > *:nth-child(3) { animation-delay: 180ms; }
+  .stagger-list > *:nth-child(4) { animation-delay: 250ms; }
+  .stagger-list > *:nth-child(5) { animation-delay: 320ms; }
+  .stagger-list > *:nth-child(6) { animation-delay: 390ms; }
+  .stagger-list > *:nth-child(7) { animation-delay: 460ms; }
+  .stagger-list > *:nth-child(n + 8) { animation-delay: 520ms; }
+
+  /* Page-level route transition (opacity only, so fixed-position modals
+     nested in pages keep the viewport as their containing block) */
+  .page-enter {
+    animation: page-fade 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* ---------- Live / telemetry accents ---------- */
+
+  .live-dot {
+    @apply relative inline-flex shrink-0 rounded-full;
+  }
+  .live-dot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: inherit;
+    animation: live-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  /* Sweeping scanline for simulated video feeds */
+  .scanline {
+    @apply pointer-events-none absolute inset-x-0 h-24;
+    background: linear-gradient(to bottom, transparent, rgba(139, 92, 246, 0.20), transparent);
+    animation: scan 4.5s linear infinite;
+  }
+
+  /* Sheen sweep on hover */
+  .sheen-sweep::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(110deg, transparent 20%, rgba(255, 255, 255, 0.7) 45%, rgba(255, 255, 255, 0.15) 55%, transparent 80%);
+    background-size: 250% 100%;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+  }
+  .sheen-sweep:hover::after {
+    opacity: 1;
+    animation: sheen 1.6s ease-in-out;
+  }
+
+  /* Top accent line that grows on hover */
+  .accent-top::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, #8555EE, #6D28D9, #BE185D);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .accent-top:hover::before {
+    transform: scaleX(1);
+  }
+
+  /* ---------- Data tables (kept calm for legibility) ---------- */
+
+  .premium-table tbody tr {
+    transition: background-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .premium-table tbody tr:hover {
+    background-color: rgba(243, 239, 254, 0.85);
+    box-shadow: inset 4px 0 0 0 rgba(124, 58, 237, 0.40);
+  }
+
+  /* Animated progress / density bar */
+  .bar-fill {
+    transform-origin: left center;
+    animation: bar-grow 1.1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  /* ---------- Loading placeholders ---------- */
+
+  .skeleton {
+    @apply relative overflow-hidden rounded-2xl bg-clay-input shadow-clay-inset-sm;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.8s linear infinite;
   }
 }
 
-/* Animations */
+/* ---------- Keyframes ---------- */
+
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: fadeInUp 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 @keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0);
-  }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.25); }
+  50% { box-shadow: 0 0 0 10px rgba(124, 58, 237, 0); }
 }
 
 .pulse-beacon {
   animation: pulseGlow 2.5s infinite;
+}
+
+@keyframes clay-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(2deg); }
+}
+
+@keyframes clay-float-delayed {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(-2deg); }
+}
+
+@keyframes clay-float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-30px) rotate(5deg); }
+}
+
+@keyframes clay-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes page-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(28px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gradient-x {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes aurora {
+  0% { transform: translate3d(-4%, -2%, 0) scale(1); }
+  50% { transform: translate3d(3%, 2%, 0) scale(1.08); }
+  100% { transform: translate3d(5%, -3%, 0) scale(1.03); }
+}
+
+@keyframes sheen {
+  0% { background-position: 200% 0; }
+  100% { background-position: -60% 0; }
+}
+
+@keyframes scan {
+  0% { top: -20%; opacity: 0; }
+  12% { opacity: 0.9; }
+  88% { opacity: 0.9; }
+  100% { top: 110%; opacity: 0; }
+}
+
+@keyframes live-ping {
+  0% { transform: scale(1); opacity: 0.55; }
+  70%, 100% { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }

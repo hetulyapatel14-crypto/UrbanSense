@@ -157,7 +157,7 @@ export const HeaderDrawerMenu = () => {
                   </div>
                 </div>
 
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
               </Link>
             )
           })}

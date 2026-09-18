@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { Search, Filter } from 'lucide-react'
+import { Search, Filter, AlertTriangle, Siren, ListChecks, SearchCheck, CheckCircle2, ClipboardList } from 'lucide-react'
 import { incidents as defaultIncidents } from '../data/incidents'
 import { apiService } from '../services/api'
 import { Link } from 'react-router-dom'
 import HeaderActions from '../components/HeaderActions'
+import { PageHeader } from '../components/common/PageHeader'
+import { KpiCard } from '../components/common/KpiCard'
+import { PremiumPanel } from '../components/common/PremiumPanel'
+import { AnimatedCounter } from '../components/common/AnimatedCounter'
+import { ScrollReveal } from '../components/common/ScrollReveal'
 
 export default function IncidentCenter() {
   const [incidents, setIncidents] = useState(defaultIncidents)
@@ -48,66 +53,82 @@ export default function IncidentCenter() {
 
   return (
     <DashboardLayout>
-      <header className="bg-white border-b border-slate-200/90 px-6 py-4 shadow-sm sticky top-0 z-20">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Incident Management Center</h1>
-            <p className="text-xs text-slate-500 mt-0.5">Automated detection, investigation timeline, and civil enforcement escalation</p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <span className="text-xs font-bold text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
-              {incidents.filter(i => i.severity === 'critical').length} Critical Escalations
-            </span>
-            <HeaderActions />
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Incident Management Center"
+        eyebrow="Enforcement"
+        icon={AlertTriangle}
+        live={{
+          label: `${incidents.filter(i => i.severity === 'critical').length} Critical Escalations`,
+          tone: 'rose'
+        }}
+        subtitle="Automated detection, investigation timeline, and civil enforcement escalation"
+        actions={<HeaderActions />}
+      />
 
-
-      <div className="flex-1 overflow-auto p-6 bg-slate-50">
+      <div className="flex-1 overflow-auto p-6">
         {/* Statistics */}
+        <ScrollReveal direction="up" delay={0}>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="stat-card">
-            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">TOTAL INCIDENTS</div>
-            <div className="text-3xl font-extrabold text-blue-600">{incidents.length}</div>
-            <div className="text-xs text-slate-500 mt-1">Logged today</div>
-          </div>
+          <KpiCard
+            label="Total Incidents"
+            value={<AnimatedCounter value={incidents.length} />}
+            icon={ClipboardList}
+            accent="blue"
+            hint="Logged today"
+            trend="Live feed"
+            trendTone="neutral"
+            delay={0}
+          />
 
-          <div className="stat-card">
-            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">CRITICAL</div>
-            <div className="text-3xl font-extrabold text-rose-600">
-              {incidents.filter(i => i.severity === 'critical').length}
-            </div>
-            <div className="text-xs text-rose-700 mt-1 font-semibold">Immediate action</div>
-          </div>
+          <KpiCard
+            label="Critical"
+            value={<AnimatedCounter value={incidents.filter(i => i.severity === 'critical').length} />}
+            icon={Siren}
+            accent="rose"
+            hint="Immediate action"
+            trend="Escalated"
+            trendTone="critical"
+            delay={70}
+          />
 
-          <div className="stat-card">
-            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">HIGH PRIORITY</div>
-            <div className="text-3xl font-extrabold text-amber-600">
-              {incidents.filter(i => i.severity === 'high').length}
-            </div>
-            <div className="text-xs text-amber-700 mt-1 font-semibold">Enforcement alerted</div>
-          </div>
+          <KpiCard
+            label="High Priority"
+            value={<AnimatedCounter value={incidents.filter(i => i.severity === 'high').length} />}
+            icon={AlertTriangle}
+            accent="amber"
+            hint="Enforcement alerted"
+            trend="Watchlist"
+            trendTone="warning"
+            delay={140}
+          />
 
-          <div className="stat-card">
-            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">INVESTIGATING</div>
-            <div className="text-3xl font-extrabold text-indigo-600">
-              {incidents.filter(i => i.status === 'investigating').length}
-            </div>
-            <div className="text-xs text-slate-500 mt-1">Review in progress</div>
-          </div>
+          <KpiCard
+            label="Investigating"
+            value={<AnimatedCounter value={incidents.filter(i => i.status === 'investigating').length} />}
+            icon={SearchCheck}
+            accent="indigo"
+            hint="Review in progress"
+            trend="Active"
+            trendTone="neutral"
+            delay={210}
+          />
 
-          <div className="stat-card">
-            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">RESOLVED TODAY</div>
-            <div className="text-3xl font-extrabold text-emerald-600">
-              {incidents.filter(i => i.status === 'resolved').length}
-            </div>
-            <div className="text-xs text-emerald-700 mt-1 font-semibold">Cases closed</div>
-          </div>
+          <KpiCard
+            label="Resolved Today"
+            value={<AnimatedCounter value={incidents.filter(i => i.status === 'resolved').length} />}
+            icon={CheckCircle2}
+            accent="emerald"
+            hint="Cases closed"
+            trend="Closed"
+            trendTone="positive"
+            delay={280}
+          />
         </div>
+        </ScrollReveal>
 
         {/* Filters */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 mb-6 shadow-card">
+        <ScrollReveal direction="up" delay={60}>
+        <div className="panel-premium p-4 mb-6">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex-1 min-w-[240px] relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
@@ -149,11 +170,23 @@ export default function IncidentCenter() {
             </div>
           </div>
         </div>
+        </ScrollReveal>
 
         {/* Incidents Table */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-card">
+        <ScrollReveal direction="up" delay={100}>
+        <PremiumPanel
+          flush
+          title="Incident Register"
+          subtitle="Correlated edge detections awaiting enforcement action"
+          icon={ListChecks}
+          badge={
+            <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+              {filteredIncidents.length} Records
+            </span>
+          }
+        >
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="premium-table w-full text-left">
               <thead className="bg-slate-50/80 border-b border-slate-200/80">
                 <tr>
                   <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Incident ID</th>
@@ -168,7 +201,7 @@ export default function IncidentCenter() {
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
                 {filteredIncidents.map(incident => (
-                  <tr key={incident.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={incident.id} className="cursor-pointer">
                     <td className="px-6 py-4 whitespace-nowrap font-bold text-blue-600">
                       <Link to={`/incident/${incident.id}`} className="hover:underline">
                         {incident.id}
@@ -208,7 +241,8 @@ export default function IncidentCenter() {
               </tbody>
             </table>
           </div>
-        </div>
+        </PremiumPanel>
+        </ScrollReveal>
       </div>
     </DashboardLayout>
   )

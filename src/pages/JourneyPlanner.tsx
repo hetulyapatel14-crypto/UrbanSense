@@ -142,11 +142,15 @@ export default function JourneyPlanner() {
     <DashboardLayout>
       <div className="h-full min-h-screen lg:min-h-0 lg:h-screen lg:max-h-screen flex flex-col p-2.5 sm:p-3 md:p-4 gap-2.5 max-w-[1900px] w-full mx-auto overflow-y-auto custom-scrollbar">
         {/* Top Header Bar: Brand & Action Controls */}
-        <div className="flex items-center justify-between gap-3 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-200/90 shadow-xs flex-shrink-0">
+        <div className="relative overflow-hidden flex items-center justify-between gap-3 bg-white/90 backdrop-blur-xl px-4 py-2.5 rounded-2xl border border-slate-200/90 shadow-card flex-shrink-0 animate-fade-in-up">
+          {/* Ambient glow wash */}
+          <span className="pointer-events-none absolute -top-16 left-1/4 w-72 h-32 bg-gradient-to-tr from-blue-400/12 via-indigo-400/10 to-transparent blur-3xl rounded-full animate-aurora" aria-hidden="true" />
+          <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" aria-hidden="true" />
           {/* Brand & Subtitle */}
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-700 flex items-center justify-center text-white shadow-xs">
-              <Compass className="w-4 h-4" />
+          <div className="relative flex items-center space-x-3">
+            <div className="relative overflow-hidden w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-700 flex items-center justify-center text-white shadow-xs transition-transform duration-500 hover:scale-105">
+              <Compass className="w-4 h-4 relative z-10" />
+              <span className="pointer-events-none absolute inset-0 bg-sheen opacity-60 animate-sheen" aria-hidden="true" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
@@ -164,14 +168,15 @@ export default function JourneyPlanner() {
           </div>
 
           {/* Quick Action Tools with Open Map Button */}
-          <div className="flex items-center space-x-2 flex-shrink-0">
+          <div className="relative flex items-center space-x-2 flex-shrink-0">
             {/* Dedicated Open Map Button */}
             <button
               type="button"
               onClick={() => setShowMapModal(true)}
               title="Open Interactive Transit Map in Center"
-              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-sm shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              className="group relative overflow-hidden flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-[length:200%_auto] hover:bg-[position:right_center] text-white text-xs font-bold shadow-sm shadow-blue-500/20 hover:shadow-glow-sm transition-all duration-300 hover:-translate-y-0.5 active:scale-95 cursor-pointer"
             >
+              <span className="pointer-events-none absolute inset-0 bg-sheen opacity-0 group-hover:opacity-100 group-hover:animate-sheen" aria-hidden="true" />
               <Map className="w-3.5 h-3.5" />
               <span>Open Map</span>
             </button>
@@ -180,7 +185,7 @@ export default function JourneyPlanner() {
               type="button"
               onClick={() => setShowAdminMonitor(true)}
               title="Live Network Status"
-              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 text-xs font-bold shadow-xs transition-all cursor-pointer"
+              className="press-scale flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 text-xs font-bold shadow-xs hover:shadow-sm transition-all duration-300 cursor-pointer"
             >
               <Activity className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
               <span className="hidden sm:inline">Network</span>
@@ -190,7 +195,7 @@ export default function JourneyPlanner() {
               type="button"
               onClick={() => setShowStatusModal(true)}
               title="Data Feeds"
-              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold transition-colors shadow-xs cursor-pointer"
+              className="press-scale flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold transition-all duration-300 shadow-xs hover:shadow-sm cursor-pointer"
             >
               <Database className="w-3.5 h-3.5 text-indigo-600" />
               <span className="hidden sm:inline">Feeds</span>
@@ -201,17 +206,18 @@ export default function JourneyPlanner() {
               onClick={handleRefresh}
               disabled={isLoading}
               title="Refresh Data"
-              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+              className="press-scale flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all duration-300 cursor-pointer"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 transition-transform duration-300 ${isLoading ? 'animate-spin' : 'group-hover:rotate-90'}`} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
         </div>
 
         {/* Dedicated Feature Navigation Portion (Plan Trip, Gandhinagar e-Bus, AI Assistant, Live Tracker, Departures, Nearby Stops) */}
-        <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/90 shadow-xs flex-shrink-0">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
+        <div className="relative overflow-hidden bg-white/90 backdrop-blur-xl p-1.5 rounded-2xl border border-slate-200/90 shadow-card flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '80ms' }}>
+          <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" aria-hidden="true" />
+          <div className="relative grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
             {FEATURES.map((feat) => {
               const Icon = feat.icon
               const isActive = activeFeature === feat.id
@@ -220,12 +226,12 @@ export default function JourneyPlanner() {
                   key={feat.id}
                   type="button"
                   onClick={() => setActiveFeature(feat.id)}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                  className={`group/tab relative overflow-hidden py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition-all duration-300 ease-silk cursor-pointer ${
                     isActive
                       ? feat.isElectric
                         ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-sm ring-1 ring-emerald-400/30'
-                        : 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-slate-50/80 hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200/60'
+                        : 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                      : 'bg-slate-50/80 hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200/60 hover:-translate-y-0.5 hover:shadow-xs'
                   }`}
                 >
                   <Icon
@@ -240,10 +246,17 @@ export default function JourneyPlanner() {
                     }`}
                   />
                   <span>{feat.label}</span>
+                  {/* Active sheen sweep */}
+                  {isActive && (
+                    <span
+                      className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-white/25 blur-md animate-sheen"
+                      aria-hidden="true"
+                    />
+                  )}
                   {feat.isLive && (
                     <span
-                      className={`w-2 h-2 rounded-full ml-0.5 ${
-                        isActive ? 'bg-emerald-300 animate-pulse' : 'bg-emerald-500 animate-pulse'
+                      className={`w-2 h-2 rounded-full ml-0.5 live-dot ${
+                        isActive ? 'bg-emerald-300' : 'bg-emerald-500'
                       }`}
                     />
                   )}
@@ -282,7 +295,7 @@ export default function JourneyPlanner() {
 
             {/* If no route planned yet: Popular Express Corridors */}
             {!journeyData ? (
-              <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-3.5">
+              <div className="panel-premium p-5 space-y-3.5 animate-fade-in-up">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2.5">
                     <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
@@ -325,7 +338,7 @@ export default function JourneyPlanner() {
                           wheelchair: false,
                         })
                       }}
-                      className="text-left p-3 rounded-xl bg-slate-50 hover:bg-blue-50/90 hover:border-blue-300 border border-slate-200/80 transition-all group shadow-2xs hover:shadow-xs"
+                      className="text-left p-3 rounded-xl bg-slate-50 hover:bg-blue-50/90 hover:border-blue-300 border border-slate-200/80 transition-all duration-300 ease-silk group shadow-2xs hover:shadow-card hover:-translate-y-1"
                     >
                       <div className="font-bold text-slate-800 text-xs group-hover:text-blue-700 flex items-center justify-between">
                         <span>{item.label}</span>

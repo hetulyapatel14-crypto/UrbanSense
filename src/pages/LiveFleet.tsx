@@ -12,13 +12,20 @@ import {
   MapPin,
   ExternalLink,
   ChevronRight,
-  Radio
+  Radio,
+  Gauge,
+  Wifi
 } from 'lucide-react'
 
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
 import { buses as defaultBuses } from '../data/buses'
 import { apiService } from '../services/api'
 import HeaderActions from '../components/HeaderActions'
+import { PageHeader } from '../components/common/PageHeader'
+import { KpiCard } from '../components/common/KpiCard'
+import { PremiumPanel } from '../components/common/PremiumPanel'
+import { AnimatedCounter } from '../components/common/AnimatedCounter'
+import { ScrollReveal } from '../components/common/ScrollReveal'
 import { TraccarGpsModal } from '../components/journey/TraccarGpsModal'
 import { traccarApi, TraccarGpsPacket } from '../services/traccarApi'
 import 'leaflet/dist/leaflet.css'
@@ -124,67 +131,76 @@ export default function LiveFleet() {
 
   return (
     <DashboardLayout>
-      <header className="bg-white border-b border-slate-200/90 px-6 py-4 shadow-sm sticky top-0 z-20">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Live Fleet Monitoring</h1>
-            <p className="text-xs text-slate-500 mt-0.5 font-medium">Real-time status of 248 city buses acting as mobile optical sensors</p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                Fleet Network Synchronized
-              </span>
-            </div>
-            <HeaderActions />
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Live Fleet Monitoring"
+        eyebrow="Fleet Telemetry"
+        icon={Bus}
+        live={{ label: 'Fleet Network Synchronized', tone: 'emerald' }}
+        subtitle="Real-time status of 248 city buses acting as mobile optical sensors"
+        actions={<HeaderActions />}
+      />
 
-      <div className="flex-1 overflow-auto p-6 bg-slate-50">
+      <div className="flex-1 overflow-auto p-6">
         {/* Statistics */}
+        <ScrollReveal direction="up" delay={0}>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="stat-card">
-            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">TOTAL FLEET</div>
-            <div className="text-3xl font-extrabold text-blue-600">{buses.length}</div>
-            <div className="text-xs text-slate-500 mt-1">Instrumented vehicles</div>
-          </div>
+          <KpiCard
+            label="Total Fleet"
+            value={<AnimatedCounter value={buses.length} />}
+            icon={Bus}
+            accent="blue"
+            hint="Instrumented vehicles"
+            trend="Registered"
+            trendTone="neutral"
+            delay={0}
+          />
 
-          <div className="stat-card">
-            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">ONLINE & ACTIVE</div>
-            <div className="text-3xl font-extrabold text-emerald-600">
-              {buses.filter(b => b.status === 'online').length}
-            </div>
-            <div className="text-xs text-emerald-700 mt-1 font-semibold">95.2% fleet uptime</div>
-          </div>
+          <KpiCard
+            label="Online & Active"
+            value={<AnimatedCounter value={buses.filter(b => b.status === 'online').length} />}
+            icon={Wifi}
+            accent="emerald"
+            hint="95.2% fleet uptime"
+            trend="+2.1%"
+            trendTone="positive"
+            delay={70}
+          />
 
-          <div className="stat-card">
-            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">STANDBY / OFFLINE</div>
-            <div className="text-3xl font-extrabold text-rose-600">
-              {buses.filter(b => b.status === 'offline').length}
-            </div>
-            <div className="text-xs text-rose-700 mt-1 font-semibold">Depot maintenance</div>
-          </div>
+          <KpiCard
+            label="Standby / Offline"
+            value={<AnimatedCounter value={buses.filter(b => b.status === 'offline').length} />}
+            icon={XCircle}
+            accent="rose"
+            hint="Depot maintenance"
+            trend="Attention"
+            trendTone="warning"
+            delay={140}
+          />
 
-          <div className="stat-card">
-            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">EDGE AI STREAMS</div>
-            <div className="text-3xl font-extrabold text-indigo-600">
-              {buses.filter(b => b.status === 'online').length * 5}
-            </div>
-            <div className="text-xs text-slate-500 mt-1">Active video channels</div>
-          </div>
+          <KpiCard
+            label="Edge AI Streams"
+            value={<AnimatedCounter value={buses.filter(b => b.status === 'online').length * 5} />}
+            icon={Gauge}
+            accent="indigo"
+            hint="Active video channels"
+            trend="1080p"
+            trendTone="neutral"
+            delay={210}
+          />
         </div>
+        </ScrollReveal>
 
         {/* Selected Bus Banner Notice */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-4 mb-6 shadow-md flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xs border border-white/20 flex items-center justify-center font-bold text-sm">
-              <Bus className="w-5 h-5 text-blue-200" />
+        <ScrollReveal direction="up" delay={80}>
+        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 bg-[length:200%_auto] animate-gradient-x text-white rounded-2xl p-4 mb-6 shadow-md hover:shadow-glow-md transition-shadow duration-500 flex flex-wrap items-center justify-between gap-3">
+          <span className="pointer-events-none absolute inset-0 bg-sheen opacity-25 animate-sheen" aria-hidden="true" />
+          <div className="relative z-10 flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xs border border-white/20 flex items-center justify-center font-bold text-sm transition-transform duration-500 hover:scale-105">
+              <Bus className="w-5 h-5 text-white/90" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-blue-200">Active Sensor Telemetry:</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-white/90">Active Sensor Telemetry:</span>
                 <span className="text-base font-extrabold text-white">{selectedBus.id}</span>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-white/20 text-white`}>
                   {selectedBus.status}
@@ -198,15 +214,17 @@ export default function LiveFleet() {
 
           <button
             onClick={() => detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-white text-blue-700 rounded-xl text-xs font-extrabold hover:bg-blue-50 transition-colors shadow-sm cursor-pointer"
+            className="relative z-10 group flex items-center space-x-1.5 px-3.5 py-1.5 bg-white text-blue-700 rounded-xl text-xs font-extrabold hover:bg-blue-50 transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer press-scale"
           >
             <span>Jump to Sensor Diagnostics</span>
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
           </button>
         </div>
+        </ScrollReveal>
 
         {/* Filters */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 mb-6 shadow-card">
+        <ScrollReveal direction="up" delay={120}>
+        <div className="panel-premium p-4 mb-6">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex-1 min-w-[240px] relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
@@ -233,20 +251,25 @@ export default function LiveFleet() {
             </div>
           </div>
         </div>
+        </ScrollReveal>
 
         {/* Fleet Table */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-card mb-8">
-          <div className="px-6 py-3.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Fleet Sensing Nodes ({filteredBuses.length} Vehicles)
+        <ScrollReveal direction="up" delay={160}>
+        <PremiumPanel
+          flush
+          className="mb-8"
+          title={`Fleet Sensing Nodes (${filteredBuses.length} Vehicles)`}
+          subtitle="Select a Bus ID to inspect multi-angle camera feeds and edge diagnostics"
+          icon={Bus}
+          badge={
+            <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot" />
+              Streaming
             </span>
-            <span className="text-xs text-slate-500">
-              Click any <strong className="text-blue-600">Bus ID</strong> to inspect multi-angle camera feeds & diagnostics
-            </span>
-          </div>
-
+          }
+        >
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="premium-table w-full text-left">
               <thead className="bg-slate-50/80 border-b border-slate-200/80">
                 <tr>
                   <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Bus ID</th>
@@ -356,12 +379,14 @@ export default function LiveFleet() {
               </tbody>
             </table>
           </div>
-        </div>
+        </PremiumPanel>
+        </ScrollReveal>
 
         {/* DYNAMIC BUS DETAILS PANEL (Ref for smooth scroll) */}
         <div
           ref={detailsRef}
-          className="bg-white border-2 border-blue-400/80 rounded-2xl p-6 shadow-xl relative overflow-hidden animate-in fade-in duration-200"
+          key={selectedBus.id}
+          className="bg-white border-2 border-blue-400/60 rounded-2xl p-6 shadow-premium relative overflow-hidden animate-fade-in-up"
         >
           {/* Header */}
           <div className="flex flex-wrap items-center justify-between pb-4 mb-5 border-b border-slate-200/80 gap-3">
@@ -533,7 +558,8 @@ export default function LiveFleet() {
 
               <div className="mt-3 p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between text-xs">
                 <div className="flex items-center space-x-2 text-slate-600 font-medium">
-                  <Radio className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot" />
+                  <Radio className="w-3.5 h-3.5 text-emerald-500" />
                   <span>Transmitting real-time NMEA GPS coordinate packets</span>
                 </div>
                 <span className="font-bold text-slate-800">{selectedBus.lastUpdate}</span>
@@ -564,7 +590,9 @@ export default function LiveFleet() {
 
             {/* Video Canvas Simulation */}
             <div className="bg-slate-950 rounded-2xl aspect-video max-h-[380px] w-full flex items-center justify-center relative overflow-hidden shadow-2xl border border-slate-800">
-              <Camera className="w-16 h-16 text-slate-700 opacity-40" />
+              <Camera className="w-16 h-16 text-slate-700 opacity-40 animate-float-slow" />
+              {/* Inference scan sweep */}
+              <div className="scanline" aria-hidden="true" />
 
               {/* Lens info overlay */}
               <div className="absolute top-4 left-4 bg-slate-900/85 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-mono text-white flex items-center space-x-2">
@@ -582,10 +610,10 @@ export default function LiveFleet() {
                   <div className="absolute top-16 left-20 border-2 border-cyan-400 bg-cyan-950/70 backdrop-blur-xs px-2.5 py-1 rounded text-xs font-mono shadow-md animate-pulse">
                     <span className="text-cyan-300 font-bold">VEHICLE #84 • 94% CONF</span>
                   </div>
-                  <div className="absolute bottom-24 right-36 border-2 border-emerald-400 bg-emerald-950/70 backdrop-blur-xs px-2.5 py-1 rounded text-xs font-mono shadow-md">
+                  <div className="absolute bottom-24 right-36 border-2 border-emerald-400 bg-emerald-950/70 backdrop-blur-xs px-2.5 py-1 rounded text-xs font-mono shadow-md animate-bob">
                     <span className="text-emerald-300 font-bold">PEDESTRIAN • 96% CONF</span>
                   </div>
-                  <div className="absolute bottom-12 left-32 border-2 border-rose-400 bg-rose-950/70 backdrop-blur-xs px-2.5 py-1 rounded text-xs font-mono shadow-md">
+                  <div className="absolute bottom-12 left-32 border-2 border-rose-400 bg-rose-950/70 backdrop-blur-xs px-2.5 py-1 rounded text-xs font-mono shadow-md animate-bob" style={{ animationDelay: '600ms' }}>
                     <span className="text-rose-300 font-bold">ROAD HAZARD • 91% CONF</span>
                   </div>
                   <div className="absolute top-20 right-20 border border-indigo-400/80 bg-indigo-950/80 px-2.5 py-1 rounded text-xs font-mono text-indigo-300">
