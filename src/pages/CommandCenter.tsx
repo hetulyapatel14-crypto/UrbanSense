@@ -116,35 +116,25 @@ export default function CommandCenter() {
     <DashboardLayout>
       {/* Top Bar */}
       <PageHeader
-        title="City Intelligence Command Center"
-        eyebrow="Live Operations"
+        title="Command Center"
         icon={Radar}
         live={{
-          label: `System Active • ${stats.activeBuses} Buses Sensing`,
+          label: `${stats.activeBuses} Buses Sensing`,
           tone: 'emerald'
         }}
-        subtitle="Unified edge-AI telemetry, geospatial events and enforcement signals for the Ahmedabad network"
-        meta={
-          <div className="text-xs font-semibold text-slate-500 bg-white/70 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs">
-            {new Date().toLocaleString('en-IN', {
-              timeZone: 'Asia/Kolkata',
-              dateStyle: 'medium',
-              timeStyle: 'short'
-            })}
-          </div>
-        }
+        subtitle="Real-time edge-AI telemetry and geospatial events across Ahmedabad"
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setDemoMode(!demoMode)}
-              className={`press-scale px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 shadow-sm flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
                 demoMode
-                  ? 'bg-emerald-600 text-white shadow-emerald-500/25 shadow-md'
-                  : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-300 hover:border-slate-400'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                  : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-slate-200'
               }`}
             >
-              <span className={`w-2 h-2 rounded-full ${demoMode ? 'bg-white animate-ping' : 'bg-slate-400'}`}></span>
-              <span>{demoMode ? 'Demo Simulation Live' : 'Enable Demo Simulation'}</span>
+              <span className={`w-2 h-2 rounded-full ${demoMode ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+              <span>{demoMode ? 'Demo Active' : 'Simulation'}</span>
             </button>
 
             <HeaderActions />
