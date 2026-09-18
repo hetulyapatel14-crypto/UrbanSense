@@ -6,8 +6,12 @@ export type MapTileMode = 'street' | 'satellite'
 
 export const SATELLITE_TILE_URL =
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+export const SATELLITE_LABELS_URL =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
+export const SATELLITE_ROADS_URL =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}'
 export const SATELLITE_ATTRIBUTION =
-  'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, GIS Community'
+  'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
 
 export const STREET_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 export const STREET_ATTRIBUTION =
@@ -20,12 +24,31 @@ interface MapTileLayerProps {
 export const MapTileLayer: React.FC<MapTileLayerProps> = ({ mode }) => {
   if (mode === 'satellite') {
     return (
-      <TileLayer
-        key="satellite-tiles"
-        url={SATELLITE_TILE_URL}
-        attribution={SATELLITE_ATTRIBUTION}
-        maxZoom={19}
-      />
+      <>
+        {/* Base high-res satellite imagery */}
+        <TileLayer
+          key="satellite-base-imagery"
+          url={SATELLITE_TILE_URL}
+          attribution={SATELLITE_ATTRIBUTION}
+          maxZoom={19}
+        />
+        {/* Road and street network overlay */}
+        <TileLayer
+          key="satellite-roads-overlay"
+          url={SATELLITE_ROADS_URL}
+          attribution=""
+          maxZoom={19}
+          opacity={0.85}
+        />
+        {/* Area names, city labels, and boundary names overlay */}
+        <TileLayer
+          key="satellite-places-overlay"
+          url={SATELLITE_LABELS_URL}
+          attribution=""
+          maxZoom={19}
+          opacity={0.95}
+        />
+      </>
     )
   }
 

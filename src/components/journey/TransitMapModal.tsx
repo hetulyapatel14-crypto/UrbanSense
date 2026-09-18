@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Compass } from 'lucide-react'
 import { TransitMap } from './TransitMap'
 import { JourneyRouteOption, LiveVehicle, TransitStop } from '../../types/transit'
@@ -27,15 +28,20 @@ export const TransitMapModal: React.FC<TransitMapModalProps> = ({
     }
     if (isOpen) {
       window.addEventListener('keydown', handleKeyDown)
+      // Prevent body scrolling when modal is open
+      document.body.style.overflow = 'hidden'
     }
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = ''
+    }
   }, [isOpen, onClose])
 
   if (!isOpen) return null
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 md:p-8 bg-slate-900/60 backdrop-blur-md transition-all animate-fadeIn"
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 md:p-8 bg-slate-900/60 backdrop-blur-md transition-all animate-fadeIn"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
@@ -71,7 +77,7 @@ export const TransitMapModal: React.FC<TransitMapModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
+              className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors cursor-pointer"
               title="Close Map (Esc)"
             >
               <X className="w-5 h-5" />
@@ -89,6 +95,9 @@ export const TransitMapModal: React.FC<TransitMapModalProps> = ({
           />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
+
+export default TransitMapModal

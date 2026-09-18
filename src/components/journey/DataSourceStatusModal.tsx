@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Database,
   X,
@@ -33,9 +34,9 @@ export const DataSourceStatusModal: React.FC<DataSourceStatusModalProps> = ({
 
   if (!isOpen) return null
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
@@ -138,6 +139,7 @@ export const DataSourceStatusModal: React.FC<DataSourceStatusModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
