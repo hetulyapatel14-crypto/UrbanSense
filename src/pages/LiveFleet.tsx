@@ -17,7 +17,7 @@ import {
   Wifi
 } from 'lucide-react'
 
-import { MapContainer, Marker, Popup, Circle } from 'react-leaflet'
+import { MapContainer, Marker, Popup, Circle, useMap } from 'react-leaflet'
 import { buses as defaultBuses } from '../data/buses'
 import { apiService } from '../services/api'
 import HeaderActions from '../components/HeaderActions'
@@ -31,6 +31,15 @@ import { traccarApi, TraccarGpsPacket } from '../services/traccarApi'
 import { MapTileLayer, MapViewToggle, type MapTileMode } from '../components/common/MapTileLayer'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
+
+// Helper to smoothly pan the map as the bus moves along the road
+function MapRecenter({ center }: { center: [number, number] }) {
+  const map = useMap()
+  useEffect(() => {
+    map.panTo(center)
+  }, [center, map])
+  return null
+}
 
 // Fix Leaflet default icon issue
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -537,9 +546,10 @@ export default function LiveFleet() {
                   center={selectedBus.gps}
                   zoom={14}
                   style={{ height: '100%', width: '100%' }}
-                  key={`${selectedBus.id}-${selectedBus.gps.join('-')}`}
+                  key={selectedBus.id}
                 >
                   <MapTileLayer mode={mapMode} />
+                  <MapRecenter center={selectedBus.gps} />
                   <Circle
                     center={selectedBus.gps}
                     radius={350}

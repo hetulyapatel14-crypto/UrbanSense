@@ -1,8 +1,8 @@
 import { Bus, Alert, Incident, RoadHazard } from '../types'
-import { buses as localBuses } from '../data/buses'
 import { alerts as localAlerts } from '../data/alerts'
 import { incidents as localIncidents } from '../data/incidents'
 import { roadHazards as localRoadHazards } from '../data/roadHazards'
+import { roadSimulator } from './roadSimulator'
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000/api'
 
@@ -169,7 +169,7 @@ export const apiService = {
         status: (b.status || 'online').toLowerCase() as any
       }))
     }
-    return localBuses
+    return roadSimulator.getLiveBuses(status)
   },
 
   // Incidents

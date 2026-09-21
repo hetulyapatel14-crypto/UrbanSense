@@ -15,6 +15,7 @@ import {
   AiStructuredCard,
   AiJourneyResponse
 } from '../types/transit'
+import { roadSimulator } from './roadSimulator'
 
 export interface NearestStationCandidate {
   id: string
@@ -184,225 +185,8 @@ export const ALL_TRANSIT_STOPS: TransitStop[] = [
   { stop_id: 'AMTS-42', name: 'Geeta Mandir Central ST Bus Stand', name_gu: 'ગીતા મંદિર સેન્ટ્રલ એસટી બસ સ્ટેન્ડ', mode: 'AMTS', latitude: 23.0145, longitude: 72.5890, is_interchange: true, wheelchair_accessible: true, platform_info: 'Intercity Bus Stand Link' },
 ]
 
-// Fallback real-time simulated vehicles
-export const FALLBACK_LIVE_VEHICLES: LiveVehicle[] = [
-  {
-    vehicle_id: 'GMRC-METRO-101',
-    registration: 'GJ-01-METRO-01',
-    mode: 'METRO',
-    agency_code: 'GMRC',
-    agency_name: 'Ahmedabad Metro',
-    route_id: 'GMRC-BLUE-EW',
-    route_number: 'Blue Line',
-    route_name: 'Thaltej Gam ↔ Vastral Gam',
-    route_color: '#2563EB',
-    latitude: 23.0401,
-    longitude: 72.5709,
-    speed_kmh: 36,
-    heading: 275,
-    current_location_name: 'Old High Court Interchange (Level 1)',
-    next_stop_id: 'METRO-EW-07',
-    next_stop_name: 'SP Stadium Metro',
-    eta_next_stop_seconds: 120,
-    eta_next_stop_mins: 2,
-    delay_minutes: 0,
-    status: 'ON_TIME',
-    is_live: true,
-    data_source: 'GMRC_OFFICIAL_TELEMETRY',
-    last_updated: new Date().toISOString(),
-    freshness_seconds: 5,
-    freshness_label: 'Updated 5s ago'
-  },
-  {
-    vehicle_id: 'GMRC-METRO-204',
-    registration: 'GJ-01-METRO-08',
-    mode: 'METRO',
-    agency_code: 'GMRC',
-    agency_name: 'Ahmedabad Metro',
-    route_id: 'GMRC-RED-NS',
-    route_number: 'Red Line',
-    route_name: 'APMC ↔ Motera Stadium ↔ GNLU ↔ Mahatma Mandir',
-    route_color: '#DC2626',
-    latitude: 23.0762,
-    longitude: 72.5855,
-    speed_kmh: 42,
-    heading: 180,
-    current_location_name: 'Sabarmati Railway Station Metro',
-    next_stop_id: 'METRO-NS-03',
-    next_stop_name: 'AEC Metro Station',
-    eta_next_stop_seconds: 90,
-    eta_next_stop_mins: 1,
-    delay_minutes: 0,
-    status: 'ON_TIME',
-    is_live: true,
-    data_source: 'GMRC_OFFICIAL_TELEMETRY',
-    last_updated: new Date().toISOString(),
-    freshness_seconds: 8,
-    freshness_label: 'Updated 8s ago'
-  },
-  {
-    vehicle_id: 'GMRC-METRO-302',
-    registration: 'GJ-18-METRO-12',
-    mode: 'METRO',
-    agency_code: 'GMRC',
-    agency_name: 'Ahmedabad Metro',
-    route_id: 'GMRC-GIFT-BR',
-    route_number: 'GIFT Branch',
-    route_name: 'GNLU Interchange ↔ PDEU ↔ GIFT City',
-    route_color: '#0D9488',
-    latitude: 23.1900,
-    longitude: 72.6320,
-    speed_kmh: 45,
-    heading: 110,
-    current_location_name: 'GNLU Interchange Hub',
-    next_stop_id: 'METRO-GIFT-01',
-    next_stop_name: 'PDEU / PDPU Station',
-    eta_next_stop_seconds: 180,
-    eta_next_stop_mins: 3,
-    delay_minutes: 0,
-    status: 'ON_TIME',
-    is_live: true,
-    data_source: 'GMRC_OFFICIAL_TELEMETRY',
-    last_updated: new Date().toISOString(),
-    freshness_seconds: 4,
-    freshness_label: 'Updated 4s ago'
-  },
-  {
-    vehicle_id: 'BRTS-BUS-104',
-    registration: 'GJ-01-CZ-4412',
-    mode: 'BRTS',
-    agency_code: 'AJL',
-    agency_name: 'Janmarg BRTS',
-    route_id: 'BRTS-RT-01',
-    route_number: 'Line 1 (West)',
-    route_name: 'RTO Circle ↔ Shivranjani ↔ Maninagar',
-    route_color: '#F97316',
-    latitude: 23.0245,
-    longitude: 72.5312,
-    speed_kmh: 28,
-    heading: 90,
-    current_location_name: 'Shivranjani Cross Road BRTS',
-    next_stop_id: 'BRTS-25',
-    next_stop_name: 'Nehrunagar BRTS',
-    eta_next_stop_seconds: 140,
-    eta_next_stop_mins: 2,
-    delay_minutes: 0,
-    status: 'ON_TIME',
-    is_live: true,
-    data_source: 'JANMARG_GPS_AVL',
-    last_updated: new Date().toISOString(),
-    freshness_seconds: 12,
-    freshness_label: 'Updated 12s ago'
-  },
-  {
-    vehicle_id: 'BRTS-BUS-208',
-    registration: 'GJ-01-CZ-8891',
-    mode: 'BRTS',
-    agency_code: 'AJL',
-    agency_name: 'Janmarg BRTS',
-    route_id: 'BRTS-RT-12',
-    route_number: 'Line 12',
-    route_name: 'Iskcon Cross Road ↔ Kalupur Junction',
-    route_color: '#F97316',
-    latitude: 23.0280,
-    longitude: 72.5070,
-    speed_kmh: 24,
-    heading: 85,
-    current_location_name: 'Iskcon Cross Road BRTS (SG Highway)',
-    next_stop_id: 'BRTS-07',
-    next_stop_name: 'Shivranjani Cross Road BRTS',
-    eta_next_stop_seconds: 210,
-    eta_next_stop_mins: 3,
-    delay_minutes: 1,
-    status: 'SLIGHT_DELAY',
-    is_live: true,
-    data_source: 'JANMARG_GPS_AVL',
-    last_updated: new Date().toISOString(),
-    freshness_seconds: 6,
-    freshness_label: 'Updated 6s ago'
-  },
-  {
-    vehicle_id: 'AMTS-BUS-402',
-    registration: 'GJ-01-BZ-5501',
-    mode: 'AMTS',
-    agency_code: 'AMTS',
-    agency_name: 'AMTS City Bus',
-    route_id: 'AMTS-RT-13',
-    route_number: '13/1 Express',
-    route_name: 'Sabarmati Railway Station ↔ Lal Darwaja',
-    route_color: '#059669',
-    latitude: 23.0415,
-    longitude: 72.5710,
-    speed_kmh: 22,
-    heading: 175,
-    current_location_name: 'Income Tax Circle (Ashram Road)',
-    next_stop_id: 'AMTS-05',
-    next_stop_name: 'Lal Darwaja Terminus',
-    eta_next_stop_seconds: 300,
-    eta_next_stop_mins: 5,
-    delay_minutes: 0,
-    status: 'ON_TIME',
-    is_live: true,
-    data_source: 'AMTS_FLEET_TELEMETRY',
-    last_updated: new Date().toISOString(),
-    freshness_seconds: 14,
-    freshness_label: 'Updated 14s ago'
-  },
-  {
-    vehicle_id: 'AMTS-BUS-510',
-    registration: 'GJ-01-BZ-9090',
-    mode: 'AMTS',
-    agency_code: 'AMTS',
-    agency_name: 'AMTS City Bus',
-    route_id: 'AMTS-RT-AIRPORT',
-    route_number: 'Airport AC-1',
-    route_name: 'Airport T2 ↔ Kalupur ↔ Ashram Road',
-    route_color: '#059669',
-    latitude: 23.0735,
-    longitude: 72.6265,
-    speed_kmh: 32,
-    heading: 230,
-    current_location_name: 'Ahmedabad International Airport Terminal 2',
-    next_stop_id: 'METRO-EW-11',
-    next_stop_name: 'Kalupur Railway Station Metro',
-    eta_next_stop_seconds: 360,
-    eta_next_stop_mins: 6,
-    delay_minutes: 0,
-    status: 'ON_TIME',
-    is_live: true,
-    data_source: 'AMTS_FLEET_TELEMETRY',
-    last_updated: new Date().toISOString(),
-    freshness_seconds: 9,
-    freshness_label: 'Updated 9s ago'
-  },
-  {
-    vehicle_id: 'GIFT-EV-01',
-    registration: 'GJ-18-EV-0101',
-    mode: 'BUS',
-    agency_code: 'GIFT_TRANSIT',
-    agency_name: 'GIFT City EV Shuttle',
-    route_id: 'GIFT-SHUTTLE-01',
-    route_number: 'EV Shuttle 1',
-    route_name: 'GIFT Metro Station ↔ GIFT SEZ Towers 1 & 2',
-    route_color: '#0D9488',
-    latitude: 23.1600,
-    longitude: 72.6840,
-    speed_kmh: 20,
-    heading: 45,
-    current_location_name: 'GIFT City Metro Station Concierge',
-    next_stop_id: 'GIFT-SEZ-01',
-    next_stop_name: 'GIFT One & Two SEZ Towers',
-    eta_next_stop_seconds: 90,
-    eta_next_stop_mins: 1,
-    delay_minutes: 0,
-    status: 'ON_TIME',
-    is_live: true,
-    data_source: 'GIFT_SMART_CITY_TELEMETRY',
-    last_updated: new Date().toISOString(),
-    freshness_seconds: 3,
-    freshness_label: 'Updated 3s ago'
-  }
-]
+// Fallback real-time simulated vehicles - 100% constrained to OpenStreetMap road geometry
+export const FALLBACK_LIVE_VEHICLES: LiveVehicle[] = roadSimulator.getLiveVehicles()
 
 // Helper: Resolve landmark / location string to closest matching station & coordinates
 function resolveTransitLocation(nameOrQuery: string, lat?: number, lng?: number): { name: string; stop: TransitStop; lat: number; lng: number } {
@@ -1680,7 +1464,7 @@ export const transitApi = {
     }
   },
 
-  /** Live vehicle fleet positions */
+  /** Live vehicle fleet positions (100% road-constrained) */
   async getLiveVehicles(mode?: string): Promise<LiveVehicle[]> {
     const query = mode ? `?mode=${mode}` : ''
     const res = await transitFetch<{ vehicles: LiveVehicle[] }>(`/transit/vehicles/${query}`)
@@ -1688,10 +1472,7 @@ export const transitApi = {
       return res.vehicles
     }
 
-    if (mode) {
-      return FALLBACK_LIVE_VEHICLES.filter((v) => v.mode === mode)
-    }
-    return FALLBACK_LIVE_VEHICLES
+    return roadSimulator.getLiveVehicles(mode)
   },
 
   /** Track specific vehicle by ID ("Where is my bus?") */
@@ -1699,7 +1480,8 @@ export const transitApi = {
     const res = await transitFetch<LiveVehicle>(`/transit/vehicles/${vehicleId}/`)
     if (res) return res
 
-    return FALLBACK_LIVE_VEHICLES.find((v) => v.vehicle_id === vehicleId) || FALLBACK_LIVE_VEHICLES[0]
+    const all = roadSimulator.getLiveVehicles()
+    return all.find((v) => v.vehicle_id.toLowerCase() === vehicleId.toLowerCase()) || all[0]
   },
 
   /** Service Alerts */

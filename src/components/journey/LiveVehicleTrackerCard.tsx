@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { LiveVehicle, TransportMode } from '../../types/transit'
 import { transitApi, FALLBACK_LIVE_VEHICLES } from '../../services/transitApi'
+import { roadSimulator } from '../../services/roadSimulator'
 
 interface LiveVehicleTrackerCardProps {
   initialVehicleId?: string
@@ -24,7 +25,7 @@ export const LiveVehicleTrackerCard: React.FC<LiveVehicleTrackerCardProps> = ({
   initialVehicleId = 'GMRC-METRO-101',
   onFocusVehicleOnMap,
 }) => {
-  const [vehicles, setVehicles] = useState<LiveVehicle[]>(FALLBACK_LIVE_VEHICLES)
+  const [vehicles, setVehicles] = useState<LiveVehicle[]>(() => roadSimulator.getLiveVehicles())
   const [selectedVehicleId, setSelectedVehicleId] = useState(initialVehicleId)
   const [selectedMode, setSelectedMode] = useState<string | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(false)
@@ -35,12 +36,9 @@ export const LiveVehicleTrackerCard: React.FC<LiveVehicleTrackerCardProps> = ({
       const data = await transitApi.getLiveVehicles(selectedMode)
       if (data && data.length > 0) {
         setVehicles(data)
-      } else {
-        const filtered = selectedMode
-          ? FALLBACK_LIVE_VEHICLES.filter((v) => v.mode === selectedMode)
-          : FALLBACK_LIVE_VEHICLES
-        setVehicles(filtered.length > 0 ? filtered : FALLBACK_LIVE_VEHICLES)
       }
+    } catch (e) {
+      // Fallback
     } finally {
       setIsLoading(false)
     }
@@ -48,10 +46,12 @@ export const LiveVehicleTrackerCard: React.FC<LiveVehicleTrackerCardProps> = ({
 
   useEffect(() => {
     fetchVehicles()
-    const interval = setInterval(() => {
-      fetchVehicles()
-    }, 12000)
-    return () => clearInterval(interval)
+    const unsubscribe = roadSimulator.subscribe((liveVehs) => {
+      setVehicles(liveVehs)
+    })
+    return () => {
+      unsubscribe()
+    }
   }, [selectedMode])
 
   const filteredVehicles = selectedMode

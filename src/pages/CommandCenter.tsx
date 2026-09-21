@@ -17,6 +17,7 @@ import {
 import { buses as defaultBuses } from '../data/buses'
 import { alerts as defaultAlerts } from '../data/alerts'
 import { apiService } from '../services/api'
+import { roadSimulator } from '../services/roadSimulator'
 import { Link } from 'react-router-dom'
 import HeaderActions from '../components/HeaderActions'
 import { PageHeader } from '../components/common/PageHeader'
@@ -54,7 +55,7 @@ export default function CommandCenter() {
     criticalAlerts: 4,
   })
 
-  // Fetch live stats and alerts from Django backend
+  // Fetch live stats and alerts, and subscribe to road-snapped live bus movement
   useEffect(() => {
     apiService.getDashboardSummary().then(data => {
       setStats(prev => ({ ...prev, ...data }))
@@ -65,6 +66,14 @@ export default function CommandCenter() {
     apiService.getBuses('online').then(data => {
       if (data && data.length > 0) setBuses(data)
     })
+
+    const unsubscribe = roadSimulator.subscribeBuses((liveBuses) => {
+      setBuses(liveBuses.filter(b => b.status === 'online'))
+    })
+
+    return () => {
+      unsubscribe()
+    }
   }, [])
 
   useEffect(() => {

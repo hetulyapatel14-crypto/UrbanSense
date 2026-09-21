@@ -99,7 +99,7 @@ export default function UrbanMap() {
       if (data && data.length > 0) setRoadHazards(data)
     })
 
-    // Connect to live Traccar SSE stream
+    // Connect to live road-snapped stream
     const unsubscribe = traccarApi.connectLiveStream(
       (packet: TraccarGpsPacket) => {
         setLiveVehiclesMap(prev => ({
@@ -107,20 +107,24 @@ export default function UrbanMap() {
           [packet.vehicle_id]: {
             vehicle_id: packet.vehicle_id,
             registration: packet.registration || packet.vehicle_id,
-            mode: (packet.mode as any) || 'GANDHINAGAR_ELECTRIC_BUS',
-            is_electric: packet.is_electric,
-            battery_soc_pct: packet.battery_soc_pct,
-            agency_code: 'GGTSL',
-            agency_name: packet.operator || 'Gandhinagar Greenline',
-            route_number: packet.route_number || 'E-1',
+            mode: (packet.mode as any) || prev[packet.vehicle_id]?.mode || 'BUS',
+            is_electric: packet.is_electric ?? prev[packet.vehicle_id]?.is_electric,
+            battery_soc_pct: packet.battery_soc_pct ?? prev[packet.vehicle_id]?.battery_soc_pct,
+            agency_code: prev[packet.vehicle_id]?.agency_code || 'AMTS',
+            agency_name: packet.operator || prev[packet.vehicle_id]?.agency_name || 'Ahmedabad Transport',
+            route_number: packet.route_number || prev[packet.vehicle_id]?.route_number || 'Route 18',
+            route_name: packet.route_name || prev[packet.vehicle_id]?.route_name || 'Transit Corridor',
+            route_color: packet.route_color || prev[packet.vehicle_id]?.route_color || '#2563EB',
             latitude: packet.latitude,
             longitude: packet.longitude,
             speed_kmh: packet.speed_kmh,
             heading: packet.heading,
-            current_location_name: packet.location_name || 'Gandhinagar Corridor',
+            current_location_name: packet.location_name || prev[packet.vehicle_id]?.current_location_name || 'Transit Corridor',
+            next_stop_name: packet.next_stop_name || prev[packet.vehicle_id]?.next_stop_name,
+            next_stop_id: packet.next_stop_id !== undefined ? String(packet.next_stop_id) : prev[packet.vehicle_id]?.next_stop_id,
             status: 'ON_TIME',
             telemetry_type: 'REAL_TIME',
-            data_source: packet.data_source || 'TRACCAR_GPS',
+            data_source: packet.data_source || 'ROAD_SNAPPED_TELEMETRY',
           }
         }))
       },
