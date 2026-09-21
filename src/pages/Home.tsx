@@ -119,19 +119,15 @@ export default function Home() {
 
       {/* ══ Hero ═════════════════════════════════════════════════════════ */}
       <section className="relative overflow-hidden">
-        {/* Ambient background glow */}
-        <div className="pointer-events-none absolute -right-24 -top-24 h-[500px] w-[500px] rounded-full bg-brand-500/10 blur-[120px]" aria-hidden="true" />
-        <div className="pointer-events-none absolute right-1/3 top-1/2 h-[350px] w-[350px] -translate-y-1/2 rounded-full bg-cyan-500/10 blur-[100px]" aria-hidden="true" />
-
-        <div className="mx-auto grid max-w-[1240px] items-center gap-10 px-5 pb-16 pt-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-12 lg:px-8 lg:pb-24 lg:pt-16">
+        <div className="mx-auto max-w-[1240px] px-5 pb-16 pt-12 lg:px-8 lg:pb-24 lg:pt-20">
           {/* Copy */}
-          <ScrollReveal direction="up" delay={0} className="flex flex-col justify-center">
+          <ScrollReveal direction="up" delay={0} className="flex flex-col justify-center max-w-3xl">
             <div className="u-chip u-chip-brand mb-6 w-fit">
               <Radio className="h-3 w-3" />
               Urban intelligence platform
             </div>
 
-            <h1 className="text-[38px] font-extrabold leading-[1.04] tracking-[-0.035em] text-ink u-emboss sm:text-[48px] lg:text-[56px]">
+            <h1 className="text-[38px] font-extrabold leading-[1.04] tracking-[-0.035em] text-ink u-emboss sm:text-[52px] lg:text-[62px]">
               See the city.
               <br />
               <span className="bg-gradient-to-r from-brand-500 to-[#ff7680] bg-clip-text text-transparent">
@@ -141,7 +137,7 @@ export default function Home() {
               in real time.
             </h1>
 
-            <p className="mt-6 max-w-lg text-[15.5px] leading-relaxed text-ink-secondary">
+            <p className="mt-6 max-w-2xl text-[16px] leading-relaxed text-ink-secondary">
               UrbanSense turns connected public transport into a continuously moving network of
               urban sensors — reading road condition, traffic and safety as the fleet goes about its
               daily routes.
@@ -170,53 +166,6 @@ export default function Home() {
                 </div>
               ))}
             </dl>
-          </ScrollReveal>
-
-          {/* Metro & Bus Visual Showcase */}
-          <ScrollReveal direction="up" delay={80} className="relative">
-            <div className="group relative overflow-hidden rounded-3xl border border-line-soft bg-gradient-to-b from-surface-2/80 to-surface-1/90 p-2 shadow-float backdrop-blur-md">
-              {/* Inner card frame */}
-              <div className="relative overflow-hidden rounded-2xl bg-surface-0/60">
-                <img
-                  src="/images/metro-bus-hero.jpg"
-                  alt="Connected Metro Train and Electric Bus Urban Intelligence Network"
-                  className="h-auto w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
-                  loading="eager"
-                />
-
-                {/* Ambient vignette / gradient overlay */}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface-0/90 via-transparent to-surface-0/20" />
-
-                {/* Floating telemetry chips over image */}
-                <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-2">
-                  <span className="flex items-center gap-1.5 rounded-lg border border-line/60 bg-surface-1/90 px-2.5 py-1.5 font-mono text-[10.5px] font-semibold tracking-wide text-ink shadow-key backdrop-blur-md">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Ahmedabad Metro · GMRC-101
-                  </span>
-                  <span className="flex items-center gap-1.5 rounded-lg border border-line/60 bg-surface-1/90 px-2.5 py-1.5 font-mono text-[10.5px] font-semibold tracking-wide text-ink shadow-key backdrop-blur-md">
-                    <span className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" />
-                    BRTS Electric · BUS-104
-                  </span>
-                </div>
-
-                {/* Bottom telemetry overlay */}
-                <div className="absolute inset-x-3 bottom-3 flex items-center justify-between rounded-xl border border-line/60 bg-surface-1/85 px-3.5 py-2 shadow-key backdrop-blur-md">
-                  <div className="flex items-center gap-2">
-                    <LedIndicator tone="mint" />
-                    <span className="font-mono text-[11px] font-medium text-ink-secondary">
-                      Multi-modal Edge AI Inference Active
-                    </span>
-                  </div>
-                  <Link
-                    to="/live-fleet"
-                    className="pointer-events-auto inline-flex items-center gap-1 font-mono text-[10.5px] font-semibold uppercase tracking-wider text-brand-600 transition-colors hover:text-brand-500"
-                  >
-                    Live Fleet
-                    <ArrowRight className="h-3 w-3" />
-                  </Link>
-                </div>
-              </div>
-            </div>
           </ScrollReveal>
         </div>
       </section>
