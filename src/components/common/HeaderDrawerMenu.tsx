@@ -58,43 +58,46 @@ export const HeaderDrawerMenu = () => {
 
   return (
     <>
-      {/* Hamburger Toggle Button */}
+      {/* Toggle key */}
       <button
         onClick={() => setIsOpen(prev => !prev)}
-        className="p-2.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 shadow-xs hover:shadow-sm transition-all duration-200 flex items-center justify-center cursor-pointer group"
+        className="u-icon-btn h-10 w-10 group cursor-pointer"
         aria-label="Toggle navigation menu"
-        title="Explore Platform Modules"
+        aria-expanded={isOpen}
+        title="Explore platform modules"
       >
-        <Menu className="w-5 h-5 transition-transform group-hover:scale-110" />
+        <Menu className="h-5 w-5 transition-transform duration-200 ease-mech group-hover:rotate-6" />
       </button>
 
-      {/* Backdrop Overlay */}
+      {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-50 bg-ink/30 backdrop-blur-sm transition-opacity duration-300 ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setIsOpen(false)}
         aria-hidden="true"
       />
 
-      {/* Slide-over Drawer Panel */}
+      {/* Slide-over cabinet */}
       <aside
-        className={`fixed top-0 right-0 bottom-0 w-full max-w-sm sm:max-w-md bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-out border-l border-slate-200 ${
+        className={`fixed top-0 right-0 bottom-0 w-full max-w-sm sm:max-w-md bg-surface-2 z-50 flex flex-col shadow-float transform transition-transform duration-300 ease-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
-        aria-label="Navigation Drawer"
+        aria-label="Navigation drawer"
       >
-        {/* Drawer Header */}
-        <div className="p-5 border-b border-slate-200/80 bg-slate-50/70 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 p-2 rounded-xl text-white shadow-sm">
-              <Radio className="w-4 h-4" />
-            </div>
+        <span className="u-hair" aria-hidden="true" />
+
+        {/* Cabinet header */}
+        <div className="flex items-center justify-between border-b border-[rgba(163,177,198,0.35)] px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="u-screws relative flex h-11 w-11 items-center justify-center rounded-xl bg-surface-2 shadow-key">
+              <Radio className="h-4 w-4 text-brand-600" />
+            </span>
             <div>
-              <span className="font-extrabold text-slate-900 text-base tracking-tight block">
+              <span className="block text-base font-bold tracking-tight text-ink u-emboss">
                 UrbanSense Platform
               </span>
-              <span className="text-[10px] font-bold text-blue-600 tracking-wider uppercase block">
+              <span className="block font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand-600">
                 GovTech AI Ecosystem
               </span>
             </div>
@@ -102,20 +105,18 @@ export const HeaderDrawerMenu = () => {
 
           <button
             onClick={() => setIsOpen(false)}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            className="u-icon-btn"
             aria-label="Close menu"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Modules List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
-          <div className="px-3 py-2 flex items-center justify-between text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">
-            <span>Platform Modules</span>
-            <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-mono font-bold">
-              {navItems.length}
-            </span>
+        {/* Module keys */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2 u-scroll">
+          <div className="flex items-center justify-between px-2 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-ink-muted">
+            <span>Platform modules</span>
+            <span className="u-chip u-chip-slate">{navItems.length}</span>
           </div>
 
           {navItems.map((item) => {
@@ -127,55 +128,54 @@ export const HeaderDrawerMenu = () => {
                 key={item.to}
                 to={item.to}
                 onClick={() => setIsOpen(false)}
-                className={`group flex items-center justify-between p-3 rounded-xl border transition-all duration-200 ${
+                className={`group flex items-center justify-between gap-3 p-3 rounded-xl transition-all duration-200 ease-mech ${
                   isActive
-                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50/60 border-blue-200 text-blue-700 shadow-xs'
-                    : 'bg-white hover:bg-slate-50 border-slate-100 hover:border-slate-200 text-slate-700 hover:text-slate-900'
+                    ? 'bg-surface-3 shadow-pressed text-ink'
+                    : 'text-ink-secondary hover:bg-surface-3/60 hover:text-ink'
                 }`}
               >
-                <div className="flex items-center space-x-3.5">
-                  <div
-                    className={`p-2 rounded-lg transition-colors ${
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all duration-200 ${
                       isActive
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-100 text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600'
+                        ? 'bg-brand-500 text-white shadow-key-accent'
+                        : 'bg-surface-0 text-ink-muted shadow-groove group-hover:text-brand-600'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold flex items-center gap-1.5">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 text-[13px] font-bold">
                       <span>{item.label}</span>
                       {item.highlight && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[9px] font-black rounded uppercase shadow-2xs">
-                          <Sparkles className="w-2.5 h-2.5" />
+                        <span className="inline-flex items-center gap-0.5 rounded bg-brand-500 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-white shadow-glow-accent">
+                          <Sparkles className="h-2.5 w-2.5" />
                           <span>AI</span>
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-400 font-medium line-clamp-1">{item.desc}</p>
+                    <p className="mt-0.5 line-clamp-1 text-[11px] font-medium text-ink-muted">{item.desc}</p>
                   </div>
                 </div>
 
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-brand-600" />
               </Link>
             )
           })}
 
-          <div className="pt-2 px-1">
-            <div className="border-t border-slate-100 my-2" />
-            <Link
-              to="/about"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center justify-between p-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-50 text-xs font-bold transition-colors"
-            >
-              <div className="flex items-center space-x-2.5">
-                <Info className="w-4 h-4 text-slate-400" />
-                <span>About UrbanSense Vision</span>
-              </div>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            </Link>
-          </div>
+          <div className="u-groove my-3" />
+
+          <Link
+            to="/about"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center justify-between rounded-xl p-2.5 text-xs font-bold text-ink-secondary transition-colors hover:bg-surface-3/60 hover:text-ink"
+          >
+            <span className="flex items-center gap-2.5">
+              <Info className="h-4 w-4 text-ink-faint" />
+              <span>About UrbanSense Vision</span>
+            </span>
+            <ChevronRight className="h-3.5 w-3.5 text-ink-faint" />
+          </Link>
         </div>
       </aside>
     </>

@@ -61,7 +61,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-6">
+    <div className="u-panel space-y-5 p-4 sm:p-5">
       {/* Journey Header Card */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
         <div>
@@ -87,7 +87,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
             <button
               type="button"
               onClick={onOpenMap}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all hover:scale-105 active:scale-95"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-white text-xs font-bold shadow-xs transition-all hover:scale-105 active:scale-95"
             >
               <Map className="w-3.5 h-3.5" />
               <span>View on Map</span>
@@ -189,7 +189,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
                   <div className="pt-2 border-t border-slate-200/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
                     <div className="flex items-center space-x-3 flex-wrap gap-y-1">
                       {step.platform_info && (
-                        <span className="font-semibold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">
+                        <span className="u-num rounded-md border border-line bg-surface-3 px-2 py-0.5 font-medium text-ink-secondary">
                           {step.platform_info}
                         </span>
                       )}
@@ -219,7 +219,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
 
                 {/* Step-Free / Accessibility Note */}
                 {step.is_step_free && (
-                  <div className="text-[10px] text-blue-600 font-semibold flex items-center gap-1">
+                  <div className="text-[10px] text-iris-600 font-semibold flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
                     <span>Wheelchair Accessible & Step-Free Concourse</span>
                   </div>
@@ -261,7 +261,7 @@ export const JourneyTimeline: React.FC<JourneyTimelineProps> = ({
                   : item.mode
               )
               return (
-                <div key={idx} className="flex items-center justify-between text-slate-600 py-1 px-2.5 rounded-lg bg-white/70 border border-slate-200/60">
+                <div key={idx} className="flex items-center justify-between rounded-lg border border-line/70 bg-surface-2/60 px-2.5 py-1 text-ink-secondary">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-semibold text-slate-800">{modeDisplay}</span>
                     {item.route_number && (

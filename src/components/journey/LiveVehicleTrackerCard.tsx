@@ -69,7 +69,7 @@ export const LiveVehicleTrackerCard: React.FC<LiveVehicleTrackerCardProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-4">
+    <div className="u-panel space-y-4 p-4 sm:p-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
         <div className="flex items-center space-x-2.5">
@@ -118,7 +118,7 @@ export const LiveVehicleTrackerCard: React.FC<LiveVehicleTrackerCardProps> = ({
               }}
               className={`px-3 py-1 rounded-lg font-semibold border transition-all text-[11px] ${
                 isSelected
-                  ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                  ? 'border-line-strong bg-surface-4 text-ink shadow-e1'
                   : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
               }`}
             >
@@ -139,7 +139,7 @@ export const LiveVehicleTrackerCard: React.FC<LiveVehicleTrackerCardProps> = ({
               onClick={() => setSelectedVehicleId(v.vehicle_id)}
               className={`px-3 py-1.5 rounded-xl font-semibold border whitespace-nowrap transition-all text-xs flex items-center gap-1.5 ${
                 isSelected
-                  ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                  ? 'border-line-strong bg-surface-4 text-ink shadow-e1'
                   : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
               }`}
             >
@@ -230,7 +230,7 @@ export const LiveVehicleTrackerCard: React.FC<LiveVehicleTrackerCardProps> = ({
                 <button
                   type="button"
                   onClick={() => onFocusVehicleOnMap(currentVehicle.latitude, currentVehicle.longitude)}
-                  className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 font-semibold text-[11px] transition-colors flex items-center gap-1 shadow-2xs"
+                  className="px-2.5 py-1 rounded-lg bg-iris-50 text-iris-600 hover:bg-iris-100 font-semibold text-[11px] transition-colors flex items-center gap-1 shadow-2xs"
                 >
                   <Compass className="w-3 h-3" />
                   <span>Locate on Map</span>

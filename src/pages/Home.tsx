@@ -1,577 +1,455 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Bus,
-  Map,
-  Brain,
-  Radio,
-  Shield,
-  Camera,
-  Activity,
-  Database,
-  Zap,
   ArrowRight,
-  TrendingUp,
-  AlertCircle,
-  Sparkles
+  Bus,
+  Activity,
+  Layers,
+  AlertTriangle,
+  Compass,
+  ScanLine,
+  Map as MapIcon,
+  BarChart3,
+  Radio,
+  ShieldCheck,
+  Cpu,
+  Waypoints,
+  Footprints,
+  TrainFront,
+  Zap,
+  Gauge,
 } from 'lucide-react'
 import { ScrollProgressBar } from '../components/common/ScrollProgressBar'
-import { AnimatedCounter } from '../components/common/AnimatedCounter'
 import { ScrollReveal } from '../components/common/ScrollReveal'
-import { InteractiveGlowCard } from '../components/common/InteractiveGlowCard'
-import { ClayBlobs } from '../components/common/ClayBlobs'
+import { UrbanSenseLogo, UrbanSenseMark } from '../components/common/UrbanSenseLogo'
+import { MetricStrip } from '../components/common/MetricStrip'
+import { SectionHeader } from '../components/common/SectionHeader'
+import { LedIndicator } from '../components/common/Industrial'
+
+const NAV_LINKS = [
+  { label: 'Platform', to: '#platform' },
+  { label: 'Intelligence', to: '/road-intelligence' },
+  { label: 'Mobility', to: '/journey-planner' },
+  { label: 'Fleet', to: '/live-fleet' },
+  { label: 'About', to: '/about' },
+]
+
+const MODES = [
+  { name: 'Ahmedabad Metro', code: 'GMRC', color: '#2563EB', note: 'Phase 1 & 2 corridors' },
+  { name: 'Janmarg BRTS', code: 'AJL', color: '#EA580C', note: 'Dedicated busways' },
+  { name: 'AMTS city bus', code: 'AMTS', color: '#4ADE80', note: 'Feeder network' },
+  { name: 'GIFT EV shuttle', code: 'GIFT', color: '#2DD4BF', note: 'SEZ & smart towers' },
+  { name: 'Suburban rail', code: 'WR', color: '#7C3AED', note: 'Kalupur · Sabarmati' },
+  { name: 'Greenline electric', code: 'GGTSL', color: '#059669', note: 'Gandhinagar corridors' },
+]
+
+
+
+const MODULES = [
+  { to: '/command-center', label: 'Command Center', desc: 'City operations console with live map and dispatch feed', icon: MapIcon, group: 'Operations' },
+  { to: '/live-fleet', label: 'Live Fleet', desc: 'Vehicle telemetry, camera array health and inference state', icon: Bus, group: 'Operations' },
+  { to: '/urban-map', label: 'Urban Map', desc: 'Layered spatial view of fleet, hazards and incidents', icon: Layers, group: 'Operations' },
+  { to: '/road-intelligence', label: 'Road Intelligence', desc: 'Pavement condition, hazard distribution and repair queue', icon: Activity, group: 'Intelligence' },
+  { to: '/traffic-analytics', label: 'Traffic Analytics', desc: 'Corridor speed, flow and delay patterns over time', icon: BarChart3, group: 'Intelligence' },
+  { to: '/incident-center', label: 'Incident Center', desc: 'Detection triage, investigation dossiers and escalation', icon: AlertTriangle, group: 'Intelligence' },
+  { to: '/journey-planner', label: 'Journey Planner', desc: 'Multimodal routing with departures, stops and AI answers', icon: Compass, group: 'Mobility' },
+  { to: '/vehicle-tracking', label: 'Vehicle Tracking', desc: 'Live kinematics, next stop and connection quality', icon: ScanLine, group: 'Mobility' },
+]
 
 export default function Home() {
   const [isScrolled, setIsScrolled] = useState(false)
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20)
-    }
+    const handleScroll = () => setIsScrolled(window.scrollY > 12)
     window.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   return (
-    <div className="min-h-screen relative">
-      {/* Ambient clay lighting */}
-      <ClayBlobs variant="display" />
-
-      {/* Top Scroll Progress Indicator */}
+    <div className="relative min-h-screen bg-surface-0 text-ink selection:bg-brand-500/30">
       <ScrollProgressBar />
 
-      {/* Header / Navbar */}
+      {/* ══ Navigation ═══════════════════════════════════════════════════ */}
       <header
-        className={`sticky top-0 z-50 transition-all duration-300 ${
-          isScrolled
-            ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200/80 py-3'
-            : 'bg-white/80 backdrop-blur-sm border-b border-slate-200/50 py-4'
+        className={`sticky top-0 z-50 border-b transition-colors duration-300 ${
+          isScrolled ? 'border-line bg-surface-1/80 backdrop-blur-xl' : 'border-transparent bg-transparent'
         }`}
       >
-        <div className="container mx-auto px-6">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <Link to="/" className="flex items-center space-x-3 group">
-              <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 p-2.5 rounded-xl shadow-sm text-white group-hover:scale-105 transition-transform duration-300">
-                <Radio className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <span className="text-xl font-extrabold text-slate-900 tracking-tight group-hover:text-blue-600 transition-colors">
-                  UrbanSense
-                </span>
-                <span className="hidden sm:inline-block ml-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 rounded-full">
-                  GovTech AI
-                </span>
-              </div>
-            </Link>
+        <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-6 px-5 lg:px-8">
+          <Link to="/" className="shrink-0" aria-label="UrbanSense home">
+            <UrbanSenseLogo size="md" subtext="Mobility OS" id="portal" />
+          </Link>
 
-            {/* Header CTA */}
-            <Link
-              to="/command-center"
-              className="btn-primary group flex items-center space-x-2 text-sm px-5 py-2.5 shadow-sm"
-            >
-              <span>Main Dashboard</span>
-              <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Sections">
+            {NAV_LINKS.map(link =>
+              link.to.startsWith('#') ? (
+                <a
+                  key={link.label}
+                  href={link.to}
+                  className="rounded-lg px-3 py-2 text-[13px] font-medium text-ink-secondary transition-colors hover:bg-surface-3/60 hover:text-ink"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.label}
+                  to={link.to}
+                  className="rounded-lg px-3 py-2 text-[13px] font-medium text-ink-secondary transition-colors hover:bg-surface-3/60 hover:text-ink"
+                >
+                  {link.label}
+                </Link>
+              )
+            )}
+          </nav>
+
+          <div className="flex items-center gap-3">
+            <span className="hidden items-center gap-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-muted md:flex">
+              <LedIndicator tone="mint" />
+              Live platform
+            </span>
+            <span className="hidden h-4 w-px bg-[rgba(163,177,198,0.4)] md:block" aria-hidden="true" />
+            <Link to="/command-center" className="u-btn u-btn-primary py-2 text-[12.5px]">
+              Open dashboard
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative py-20 lg:py-24 overflow-hidden bg-tech-grid bg-ambient-mesh">
-        {/* Subtle Ambient Floating Glows */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-tr from-blue-400/10 via-indigo-400/10 to-cyan-400/10 blur-3xl pointer-events-none rounded-full" />
-
-        <div className="container mx-auto px-6 relative z-10">
-          <ScrollReveal direction="up" delay={0}>
-            <div className="max-w-4xl mx-auto text-center mb-16">
-              {/* Badge */}
-              <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-blue-50/90 backdrop-blur-xs border border-blue-200/80 text-blue-700 text-xs font-semibold mb-6 shadow-2xs hover:shadow-xs transition-all duration-300 hover:scale-[1.02]">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
-                <span>Ahmedabad Unified Multimodal Mobility & Edge AI Platform</span>
-              </div>
-
-              {/* Main Headline */}
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 leading-tight tracking-tight text-slate-900">
-                SMART URBAN INTELLIGENCE &<br />
-                <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 bg-clip-text text-transparent">
-                  MULTIMODAL MOBILITY PLANNER
-                </span>
-              </h1>
-
-              {/* Subtitle */}
-              <p className="text-lg md:text-xl text-slate-600 mb-8 leading-relaxed max-w-2xl mx-auto font-normal">
-                Seamlessly unify <strong>Ahmedabad Metro</strong>, <strong>Janmarg BRTS</strong>, and <strong>AMTS Feeder Buses</strong> with real-time passenger routing, delay alerts, and AI urban sensing.
-              </p>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center justify-center gap-4">
-                <Link
-                  to="/journey-planner"
-                  className="btn-primary group text-base px-8 py-3.5 shadow-md shadow-blue-500/20 flex items-center gap-2.5"
-                >
-                  <Zap className="w-4 h-4 text-amber-300 animate-pulse" />
-                  <span>Open Smart Journey Planner</span>
-                  <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1.5" />
-                </Link>
-                <Link
-                  to="/command-center"
-                  className="btn-secondary text-base px-8 py-3.5 hover:border-slate-300 hover:shadow-sm"
-                >
-                  Launch Command Center
-                </Link>
-              </div>
+      {/* ══ Hero ═════════════════════════════════════════════════════════ */}
+      <section className="relative overflow-hidden">
+        <div className="mx-auto max-w-[1240px] px-5 pb-16 pt-12 lg:px-8 lg:pb-24 lg:pt-20">
+          {/* Copy */}
+          <ScrollReveal direction="up" delay={0} className="flex flex-col justify-center max-w-3xl">
+            <div className="u-chip u-chip-brand mb-6 w-fit">
+              <Radio className="h-3 w-3" />
+              Urban intelligence platform
             </div>
-          </ScrollReveal>
 
-          {/* Hero Visual Card */}
-          <ScrollReveal direction="up" delay={150}>
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 max-w-5xl mx-auto shadow-card hover:shadow-card-hover transition-all duration-300">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {/* Visual sub-card 1 */}
-                <div className="text-center p-6 bg-slate-50/80 rounded-2xl border border-slate-200/80 hover:border-blue-300 hover:bg-white hover:shadow-xs transition-all duration-300 group">
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mx-auto mb-3 text-blue-600 group-hover:scale-110 transition-transform duration-300">
-                    <Camera className="w-6 h-6" />
-                  </div>
-                  <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">BUS CAMERAS</div>
-                  <div className="text-2xl font-black text-slate-900">5 HD Feeds</div>
-                  <div className="text-xs text-slate-500 mt-1">Front, Rear, Perimeter</div>
-                </div>
-
-                {/* Visual sub-card 2 */}
-                <div className="text-center p-6 bg-slate-50/80 rounded-2xl border border-slate-200/80 hover:border-indigo-300 hover:bg-white hover:shadow-xs transition-all duration-300 group">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center mx-auto mb-3 text-indigo-600 group-hover:scale-110 transition-transform duration-300">
-                    <Brain className="w-6 h-6" />
-                  </div>
-                  <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">EDGE AI ENGINE</div>
-                  <div className="text-2xl font-black text-slate-900">&lt;50ms Latency</div>
-                  <div className="text-xs text-slate-500 mt-1">On-vehicle inference</div>
-                </div>
-
-                {/* Visual sub-card 3 */}
-                <div className="text-center p-6 bg-slate-50/80 rounded-2xl border border-slate-200/80 hover:border-emerald-300 hover:bg-white hover:shadow-xs transition-all duration-300 group">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center mx-auto mb-3 text-emerald-600 group-hover:scale-110 transition-transform duration-300">
-                    <Database className="w-6 h-6" />
-                  </div>
-                  <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">CITY INTELLIGENCE</div>
-                  <div className="text-2xl font-black text-slate-900">95% Bandwidth Saved</div>
-                  <div className="text-xs text-slate-500 mt-1">Event-driven telemetry</div>
-                </div>
-              </div>
-
-              {/* Pipeline Flow */}
-              <div className="bg-slate-50/90 rounded-2xl border border-slate-200 p-6">
-                <div className="flex flex-wrap items-center justify-center gap-4 text-sm font-semibold">
-                  <div className="flex items-center space-x-2 text-slate-800 bg-white px-3.5 py-2 rounded-xl border border-slate-200/90 shadow-2xs hover:border-blue-300 hover:shadow-xs transition-all">
-                    <Bus className="w-4 h-4 text-blue-600" />
-                    <span>Public Bus Fleet</span>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-blue-400 animate-pulse hidden sm:block" />
-                  <div className="flex items-center space-x-2 text-slate-800 bg-white px-3.5 py-2 rounded-xl border border-slate-200/90 shadow-2xs hover:border-indigo-300 hover:shadow-xs transition-all">
-                    <Camera className="w-4 h-4 text-indigo-600" />
-                    <span>HD Multi-Angle Vision</span>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-indigo-400 animate-pulse hidden sm:block" />
-                  <div className="flex items-center space-x-2 text-slate-800 bg-white px-3.5 py-2 rounded-xl border border-slate-200/90 shadow-2xs hover:border-cyan-300 hover:shadow-xs transition-all">
-                    <Brain className="w-4 h-4 text-cyan-600" />
-                    <span>On-Board Edge AI</span>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-cyan-400 animate-pulse hidden sm:block" />
-                  <div className="flex items-center space-x-2 text-slate-800 bg-white px-3.5 py-2 rounded-xl border border-slate-200/90 shadow-2xs hover:border-emerald-300 hover:shadow-xs transition-all">
-                    <Map className="w-4 h-4 text-emerald-600" />
-                    <span>Command Center</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
-
-      {/* Live Statistics */}
-      <section className="py-16 bg-white/55 backdrop-blur-md border-y border-white/70 relative">
-        <div className="container mx-auto px-6">
-          <ScrollReveal direction="up" delay={0}>
-            <div className="text-center mb-12">
-              <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
-                REAL-TIME URBAN INTELLIGENCE
-              </h2>
-              <p className="text-slate-500 max-w-xl mx-auto text-sm md:text-base">
-                Live sensing metrics aggregated across all active mobile sensing units.
-              </p>
-            </div>
-          </ScrollReveal>
-
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-6xl mx-auto">
-            {/* Stat 1 */}
-            <ScrollReveal direction="up" delay={50}>
-              <div className="stat-card text-center group">
-                <div className="text-3xl lg:text-4xl font-black text-blue-600 mb-1 tracking-tight">
-                  <AnimatedCounter value="248" />
-                </div>
-                <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">ACTIVE BUSES</div>
-                <div className="inline-flex items-center text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  +12.4% today
-                </div>
-              </div>
-            </ScrollReveal>
-
-            {/* Stat 2 */}
-            <ScrollReveal direction="up" delay={100}>
-              <div className="stat-card text-center group">
-                <div className="text-3xl lg:text-4xl font-black text-indigo-600 mb-1 tracking-tight">
-                  <AnimatedCounter value="12,846" />
-                </div>
-                <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">AI DETECTIONS</div>
-                <div className="inline-flex items-center text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  +8.2% today
-                </div>
-              </div>
-            </ScrollReveal>
-
-            {/* Stat 3 */}
-            <ScrollReveal direction="up" delay={150}>
-              <div className="stat-card text-center group">
-                <div className="text-3xl lg:text-4xl font-black text-amber-600 mb-1 tracking-tight">
-                  <AnimatedCounter value="327" />
-                </div>
-                <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">ROAD HAZARDS</div>
-                <div className="inline-flex items-center text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  +5.1% today
-                </div>
-              </div>
-            </ScrollReveal>
-
-            {/* Stat 4 */}
-            <ScrollReveal direction="up" delay={200}>
-              <div className="stat-card text-center group">
-                <div className="text-3xl lg:text-4xl font-black text-rose-600 mb-1 tracking-tight">
-                  <AnimatedCounter value="18" />
-                </div>
-                <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">OPEN INCIDENTS</div>
-                <div className="inline-flex items-center text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/60">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  4 critical
-                </div>
-              </div>
-            </ScrollReveal>
-
-            {/* Stat 5 */}
-            <ScrollReveal direction="up" delay={250}>
-              <div className="stat-card text-center group col-span-2 md:col-span-1">
-                <div className="text-3xl lg:text-4xl font-black text-emerald-600 mb-1 tracking-tight">
-                  <AnimatedCounter value="94.6%" />
-                </div>
-                <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">CONFIDENCE</div>
-                <div className="inline-flex items-center text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  +1.2% accuracy
-                </div>
-              </div>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-20 bg-ambient-mesh">
-        <div className="container mx-auto px-6">
-          <ScrollReveal direction="up" delay={0}>
-            <div className="text-center mb-16">
-              <span className="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200 shadow-2xs">
-                Workflow
+            <h1 className="text-[38px] font-extrabold leading-[1.04] tracking-[-0.035em] text-ink u-emboss sm:text-[52px] lg:text-[62px]">
+              See the city.
+              <br />
+              <span className="bg-gradient-to-r from-brand-500 to-[#ff7680] bg-clip-text text-transparent">
+                Understand it
               </span>
-              <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-3 mb-4 tracking-tight">HOW IT WORKS</h2>
-              <p className="text-slate-600 text-base md:text-lg max-w-xl mx-auto font-normal">
-                From on-bus optical capture to civic resolution in milliseconds
-              </p>
-            </div>
-          </ScrollReveal>
+              <br />
+              in real time.
+            </h1>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {/* Step 1 */}
-            <ScrollReveal direction="up" delay={50}>
-              <InteractiveGlowCard className="p-6 text-center group h-full">
-                <div className="bg-blue-50 border border-blue-200 text-blue-700 rounded-2xl w-14 h-14 flex items-center justify-center mx-auto mb-4 font-black text-xl shadow-xs group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 group-hover:scale-105">
-                  01
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2 tracking-tight">CAPTURE</h3>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  Multiple bus-mounted cameras continuously monitor road surface and traffic lanes.
-                </p>
-              </InteractiveGlowCard>
-            </ScrollReveal>
-
-            {/* Step 2 */}
-            <ScrollReveal direction="up" delay={100}>
-              <InteractiveGlowCard className="p-6 text-center group h-full">
-                <div className="bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-2xl w-14 h-14 flex items-center justify-center mx-auto mb-4 font-black text-xl shadow-xs group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 group-hover:scale-105">
-                  02
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2 tracking-tight">EDGE AI</h3>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  Computer vision models instantly detect potholes, congestion, and anomalies locally on each bus.
-                </p>
-              </InteractiveGlowCard>
-            </ScrollReveal>
-
-            {/* Step 3 */}
-            <ScrollReveal direction="up" delay={150}>
-              <InteractiveGlowCard className="p-6 text-center group h-full">
-                <div className="bg-cyan-50 border border-cyan-200 text-cyan-700 rounded-2xl w-14 h-14 flex items-center justify-center mx-auto mb-4 font-black text-xl shadow-xs group-hover:bg-cyan-600 group-hover:text-white transition-all duration-300 group-hover:scale-105">
-                  03
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2 tracking-tight">INTELLIGENCE</h3>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  Events are enriched with precise GPS, speed telemetry, confidence rating, and ANPR plate data.
-                </p>
-              </InteractiveGlowCard>
-            </ScrollReveal>
-
-            {/* Step 4 */}
-            <ScrollReveal direction="up" delay={200}>
-              <InteractiveGlowCard className="p-6 text-center group h-full">
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl w-14 h-14 flex items-center justify-center mx-auto mb-4 font-black text-xl shadow-xs group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 group-hover:scale-105">
-                  04
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2 tracking-tight">DISPATCH</h3>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  Municipal teams and traffic control receive verified, actionable alerts for immediate resolution.
-                </p>
-              </InteractiveGlowCard>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
-
-      {/* AI Capabilities */}
-      <section className="py-20 bg-white/55 backdrop-blur-md border-y border-white/70">
-        <div className="container mx-auto px-6">
-          <ScrollReveal direction="up" delay={0}>
-            <div className="text-center mb-16">
-              <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200 shadow-2xs">
-                Edge Vision Models
-              </span>
-              <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-3 mb-4 tracking-tight">AI CAPABILITIES</h2>
-              <p className="text-slate-600 text-base md:text-lg max-w-xl mx-auto font-normal">
-                Comprehensive city-wide intelligence running autonomously at the edge
-              </p>
-            </div>
-          </ScrollReveal>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {/* Feature 1 */}
-            <ScrollReveal direction="up" delay={50}>
-              <InteractiveGlowCard className="p-6 group h-full">
-                <div className="w-12 h-12 rounded-xl bg-rose-50 border border-rose-200/70 flex items-center justify-center mb-4 text-rose-600 group-hover:scale-110 transition-transform duration-300 shadow-2xs">
-                  <AlertCircle className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-rose-600 transition-colors">
-                  Road Hazard Detection
-                </h3>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  Automatically detects potholes, asphalt cracking, waterlogging, and missing manhole covers.
-                </p>
-              </InteractiveGlowCard>
-            </ScrollReveal>
-
-            {/* Feature 2 */}
-            <ScrollReveal direction="up" delay={100}>
-              <InteractiveGlowCard className="p-6 group h-full">
-                <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200/70 flex items-center justify-center mb-4 text-blue-600 group-hover:scale-110 transition-transform duration-300 shadow-2xs">
-                  <Activity className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
-                  Traffic Intelligence
-                </h3>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  Detects, classifies, and counts vehicles in real-time to compute congestion indices per corridor.
-                </p>
-              </InteractiveGlowCard>
-            </ScrollReveal>
-
-            {/* Feature 3 */}
-            <ScrollReveal direction="up" delay={150}>
-              <InteractiveGlowCard className="p-6 group h-full">
-                <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200/70 flex items-center justify-center mb-4 text-emerald-600 group-hover:scale-110 transition-transform duration-300 shadow-2xs">
-                  <Map className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-emerald-600 transition-colors">
-                  Infrastructure Monitoring
-                </h3>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  Flags damaged dividers, worn zebra crossings, occluded road signs, and street lighting issues.
-                </p>
-              </InteractiveGlowCard>
-            </ScrollReveal>
-
-            {/* Feature 4 */}
-            <ScrollReveal direction="up" delay={200}>
-              <InteractiveGlowCard className="p-6 group h-full">
-                <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200/70 flex items-center justify-center mb-4 text-amber-600 group-hover:scale-110 transition-transform duration-300 shadow-2xs">
-                  <Shield className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-amber-600 transition-colors">
-                  Pedestrian Safety
-                </h3>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  Monitors school zones and heavy pedestrian crossings to prevent accidents and protect vulnerable citizens.
-                </p>
-              </InteractiveGlowCard>
-            </ScrollReveal>
-
-            {/* Feature 5 */}
-            <ScrollReveal direction="up" delay={250}>
-              <InteractiveGlowCard className="p-6 group h-full">
-                <div className="w-12 h-12 rounded-xl bg-rose-50 border border-rose-200/70 flex items-center justify-center mb-4 text-rose-600 group-hover:scale-110 transition-transform duration-300 shadow-2xs">
-                  <Zap className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-rose-600 transition-colors">
-                  Incident Detection
-                </h3>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  Instant identification of vehicle breakdowns, accidents, hit-and-run occurrences, and lane violations.
-                </p>
-              </InteractiveGlowCard>
-            </ScrollReveal>
-
-            {/* Feature 6 */}
-            <ScrollReveal direction="up" delay={300}>
-              <InteractiveGlowCard className="p-6 group h-full">
-                <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-200/70 flex items-center justify-center mb-4 text-purple-600 group-hover:scale-110 transition-transform duration-300 shadow-2xs">
-                  <Camera className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-purple-600 transition-colors">
-                  ANPR Tracking
-                </h3>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  Optical character recognition for vehicle license plates, tracking movement histories across buses.
-                </p>
-              </InteractiveGlowCard>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
-
-      {/* Visual Product Section - Simulated Camera Feed in Light Executive Frame */}
-      <section className="py-20 bg-tech-grid">
-        <div className="container mx-auto px-6">
-          <ScrollReveal direction="up" delay={0}>
-            <div className="max-w-5xl mx-auto">
-              <div className="text-center mb-12">
-                <span className="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200 shadow-2xs">
-                  Live Simulation
-                </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-3 mb-4 tracking-tight">EDGE AI IN ACTION</h2>
-                <p className="text-slate-600 text-base md:text-lg font-normal">Real-time computer vision inference executed directly on-bus</p>
-              </div>
-
-              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300">
-                <div className="bg-slate-50/90 px-6 py-3.5 border-b border-slate-200 flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-rose-400"></div>
-                    <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                    <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
-                  </div>
-                  <div className="text-xs font-semibold text-slate-600 bg-white px-3 py-1 rounded-md border border-slate-200 shadow-2xs flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>BUS-104 | Front Wide Lens | Edge Stream Active</span>
-                  </div>
-                </div>
-
-                <div className="p-6 bg-slate-100/80">
-                  <div className="aspect-video bg-gradient-to-tr from-slate-800 to-slate-900 rounded-xl flex items-center justify-center relative overflow-hidden shadow-inner border border-slate-700/50">
-                    <div className="text-center">
-                      <Camera className="w-14 h-14 text-slate-500 mx-auto mb-2 opacity-60 animate-float-slow" />
-                      <div className="text-slate-400 text-sm font-medium">Urban Road Scenario (Simulated Live Feed)</div>
-                    </div>
-
-                    {/* High contrast overlay tags with pulse beacons */}
-                    <div className="absolute top-8 left-12 border border-cyan-400/90 bg-cyan-950/70 backdrop-blur-xs px-2.5 py-1 rounded text-xs shadow-sm flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                      <span className="text-cyan-300 font-bold">CAR 92%</span>
-                    </div>
-                    <div className="absolute top-24 right-20 border border-emerald-400/90 bg-emerald-950/70 backdrop-blur-xs px-2.5 py-1 rounded text-xs shadow-sm flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span className="text-emerald-300 font-bold">PEDESTRIAN 96%</span>
-                    </div>
-                    <div className="absolute bottom-16 left-32 border border-rose-400/90 bg-rose-950/70 backdrop-blur-xs px-2.5 py-1 rounded text-xs shadow-sm flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
-                      <span className="text-rose-300 font-bold">POTHOLE 89%</span>
-                    </div>
-                    <div className="absolute top-12 right-48 border border-amber-400/90 bg-amber-950/70 backdrop-blur-xs px-2.5 py-1 rounded text-xs shadow-sm flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                      <span className="text-amber-300 font-bold">SIGN POST 94%</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6 bg-white border-t border-slate-200">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center sm:text-left">
-                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 hover:border-blue-200 hover:bg-blue-50/30 transition-colors">
-                      <div className="text-xs font-bold text-slate-500 mb-1">OBJECTS DETECTED</div>
-                      <div className="text-2xl font-black text-blue-600">14 Targets</div>
-                    </div>
-                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 hover:border-rose-200 hover:bg-rose-50/30 transition-colors">
-                      <div className="text-xs font-bold text-slate-500 mb-1">ROAD HAZARDS</div>
-                      <div className="text-2xl font-black text-rose-600">2 Flagged</div>
-                    </div>
-                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 hover:border-emerald-200 hover:bg-emerald-50/30 transition-colors">
-                      <div className="text-xs font-bold text-slate-500 mb-1">INFERENCE STATUS</div>
-                      <div className="text-2xl font-black text-emerald-600">32 FPS</div>
-                    </div>
-                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 hover:border-slate-300 transition-colors">
-                      <div className="text-xs font-bold text-slate-500 mb-1">GPS COORDINATES</div>
-                      <div className="text-sm font-bold text-slate-900 mt-1">23.0225° N, 72.5714° E</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="py-20 bg-gradient-to-b from-white/55 via-blue-50/40 to-blue-50/60 backdrop-blur-md border-t border-white/70 relative overflow-hidden">
-        <div className="container mx-auto px-6 text-center relative z-10">
-          <ScrollReveal direction="up" delay={0}>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 mb-6 leading-tight tracking-tight">
-              ONE FLEET. THOUSANDS OF EYES.<br />
-              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                A SAFER, SMARTER CITY.
-              </span>
-            </h2>
-            <p className="text-lg md:text-xl text-slate-600 mb-8 max-w-2xl mx-auto leading-relaxed font-normal">
-              Turn existing public transport infrastructure into an automated, moving civic intelligence system.
+            <p className="mt-6 max-w-2xl text-[16px] leading-relaxed text-ink-secondary">
+              UrbanSense turns connected public transport into a continuously moving network of
+              urban sensors — reading road condition, traffic and safety as the fleet goes about its
+              daily routes.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <Link
-                to="/command-center"
-                className="btn-primary group text-base px-8 py-3.5 shadow-md shadow-blue-500/20"
-              >
-                <span>Launch Command Center</span>
-                <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link to="/command-center" className="u-btn u-btn-primary px-4 py-2.5 text-[13.5px]">
+                Explore UrbanSense
+                <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link
-                to="/architecture"
-                className="btn-secondary text-base px-8 py-3.5"
-              >
-                View System Architecture
+              <Link to="/journey-planner" className="u-btn u-btn-outline px-4 py-2.5 text-[13.5px]">
+                <Compass className="h-4 w-4" />
+                Plan a journey
               </Link>
+            </div>
+
+            <dl className="mt-10 grid max-w-lg grid-cols-3 gap-x-6 gap-y-4 pt-6">
+              {[
+                { k: 'Cities covered', v: '3' },
+                { k: 'Connected fleet', v: '248' },
+                { k: 'Corridors watched', v: '64' },
+              ].map(item => (
+                <div key={item.k} className="rounded-lg bg-surface-3/60 px-3 py-2.5 shadow-recessed">
+                  <dd className="u-num text-[22px] font-bold leading-none text-ink">{item.v}</dd>
+                  <dt className="u-overline mt-1.5 normal-case tracking-[0.08em]">{item.k}</dt>
+                </div>
+              ))}
+            </dl>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ══ Telemetry band ═══════════════════════════════════════════════ */}
+      <section className="border-y border-line bg-surface-1/40">
+        <div className="mx-auto max-w-[1240px] px-5 py-10 lg:px-8">
+          <ScrollReveal direction="up">
+            <MetricStrip
+              dense
+              items={[
+                { label: 'Connected transit fleet', value: '248', sublabel: 'Optical sensing vehicles', icon: Bus },
+                { label: 'Vision events today', value: '12.8K', sublabel: 'On-vehicle AI inferences', icon: Activity },
+                { label: 'Road hazards tracked', value: '327', sublabel: 'Awaiting municipal repair', icon: Layers },
+                { label: 'Open incidents', value: '18', sublabel: 'In the operator queue', icon: AlertTriangle },
+                { label: 'Detection confidence', value: '94.6%', sublabel: 'Network benchmark', icon: ShieldCheck },
+              ]}
+            />
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ══ How the network works ════════════════════════════════════════ */}
+      <section id="platform" className="mx-auto max-w-[1240px] px-5 py-20 lg:px-8 lg:py-28">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] lg:gap-20">
+          <ScrollReveal direction="up">
+            <div className="lg:sticky lg:top-24">
+              <SectionHeader
+                size="lg"
+                eyebrow="How it works"
+                title="A sensing layer that rides with the city"
+                description="No new roadside hardware. The fleet already drives every corridor — UrbanSense gives it eyes and a voice."
+              />
+
+              <div className="mt-8 space-y-3">
+                {[
+                  { icon: Cpu, label: 'On-vehicle AI', note: 'Inference runs on the bus, not in a data centre.' },
+                  { icon: Waypoints, label: 'Continuous coverage', note: 'Every route becomes a monitored corridor.' },
+                  { icon: Radio, label: 'Actionable stream', note: 'Only events and coordinates travel upstream.' },
+                ].map(item => (
+                  <div key={item.label} className="flex items-start gap-3">
+                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-brand-600 shadow-key">
+                      <item.icon className="h-3.5 w-3.5" />
+                    </span>
+                    <div>
+                      <p className="text-[13px] font-medium text-ink">{item.label}</p>
+                      <p className="text-[12px] text-ink-muted">{item.note}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal direction="up" delay={80}>
+            <ol className="relative space-y-9 border-l border-line pl-8">
+              {[
+                {
+                  n: '01',
+                  title: 'Capture',
+                  body: 'Front, rear and curb-facing cameras on connected buses record the street as the vehicle completes its route, with GPS locked to the road centreline.',
+                },
+                {
+                  n: '02',
+                  title: 'Understand',
+                  body: 'On-vehicle models classify potholes, waterlogging, obstructions, congestion and safety events, attaching severity, confidence and position to each detection.',
+                },
+                {
+                  n: '03',
+                  title: 'Act',
+                  body: 'Operators receive prioritised queues by corridor and zone — for repair crews, traffic enforcement and the journey planner that guides citizens.',
+                },
+              ].map(step => (
+                <li key={step.n} className="relative">
+                  <span className="absolute -left-[41px] flex h-5 w-5 items-center justify-center rounded-full bg-surface-2 shadow-key">
+                    <span className="h-1.5 w-1.5 rounded-full bg-brand-500 shadow-glow-accent" />
+                  </span>
+                  <span className="u-overline">{step.n}</span>
+                  <h3 className="mt-1.5 text-[17px] font-semibold tracking-tight text-ink">{step.title}</h3>
+                  <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-ink-secondary">{step.body}</p>
+                </li>
+              ))}
+            </ol>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ══ Module index ═════════════════════════════════════════════════ */}
+      <section className="border-y border-line bg-surface-1/40">
+        <div className="mx-auto max-w-[1240px] px-5 py-20 lg:px-8 lg:py-24">
+          <ScrollReveal direction="up">
+            <SectionHeader
+              eyebrow="Platform modules"
+              title="One workspace per decision"
+              description="Each module opens a purpose-built surface — operations consoles for live response, analytical workspaces for planning."
+              aside={
+                <Link to="/command-center" className="u-btn u-btn-outline py-2 text-[12.5px]">
+                  Open the console
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              }
+            />
+          </ScrollReveal>
+
+          <ScrollReveal direction="up" delay={60}>
+            <div className="mt-10 grid gap-x-10 border-t border-line sm:grid-cols-2">
+              {MODULES.map((mod, i) => {
+                const Icon = mod.icon
+                return (
+                  <Link
+                    key={mod.to}
+                    to={mod.to}
+                    className="group flex items-center gap-4 border-b border-line py-4 transition-colors"
+                  >
+                    <span className="u-num text-[11px] text-ink-faint">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-ink-muted shadow-groove transition-all duration-200 ease-mech group-hover:rotate-6 group-hover:text-brand-600">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[14px] font-medium text-ink">{mod.label}</span>
+                      <span className="block truncate text-[12px] text-ink-muted">{mod.desc}</span>
+                    </span>
+                    <span className="u-overline hidden sm:block">{mod.group}</span>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform duration-300 group-hover:translate-x-1 group-hover:text-brand-500" />
+                  </Link>
+                )
+              })}
             </div>
           </ScrollReveal>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200/70 py-8 bg-white/60 backdrop-blur-md">
-        <div className="container mx-auto px-6 text-center text-slate-500 text-sm">
-          <p>© 2026 UrbanSense. Smart City Intelligence Platform. Powered by Edge AI.</p>
+      {/* ══ Multimodal mobility ══════════════════════════════════════════ */}
+      <section className="mx-auto max-w-[1240px] px-5 py-20 lg:px-8 lg:py-28">
+        <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
+          <ScrollReveal direction="up">
+            <SectionHeader
+              size="lg"
+              eyebrow="Mobility"
+              title="Multimodal journeys across the region"
+              description="Metro, BRTS, AMTS, suburban rail, electric shuttles and walking, planned as one network with live departure data."
+            />
+
+            <div className="mt-8 flex flex-wrap gap-2">
+              {MODES.map(m => (
+                <span
+                  key={m.code}
+                  className="u-chip u-chip-slate rounded-lg px-2.5 py-1.5 text-[11px] shadow-key"
+                >
+                  <span className="u-dot" style={{ backgroundColor: m.color }} />
+                  {m.name}
+                </span>
+              ))}
+            </div>
+
+            <Link
+              to="/journey-planner"
+              className="u-btn u-btn-primary mt-8 px-4 py-2.5 text-[13px]"
+            >
+              Plan a journey
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </ScrollReveal>
+
+          {/* Journey chain illustration */}
+          <ScrollReveal direction="up" delay={80}>
+            <div className="u-panel p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="u-overline">Thaltej → GIFT City</p>
+                  <p className="u-num mt-1 text-[15px] font-bold text-ink">52 min · ₹42 · 1 transfer</p>
+                </div>
+                <span className="u-chip u-chip-mint">
+                  <LedIndicator tone="mint" pulse={false} />
+                  On time
+                </span>
+              </div>
+
+              <ol className="mt-5 space-y-3.5">
+                {[
+                  { icon: Footprints, mode: 'Walk', detail: '4 min to Thaltej Metro', color: '#78716C' },
+                  { icon: TrainFront, mode: 'Metro · Blue Line', detail: '18 min to Old High Court', color: '#2563EB' },
+                  { icon: Bus, mode: 'BRTS · Route 18', detail: '22 min to Infocity', color: '#EA580C' },
+                  { icon: Zap, mode: 'GIFT EV shuttle', detail: '6 min to Tower 2', color: '#2DD4BF' },
+                ].map((leg, i) => (
+                  <li key={leg.mode} className="relative flex items-start gap-3.5 pl-1">
+                    <span className="relative flex flex-col items-center">
+                      <span
+                        className="flex h-8 w-8 items-center justify-center rounded-xl border"
+                        style={{ borderColor: `${leg.color}44`, backgroundColor: `${leg.color}18`, color: leg.color }}
+                      >
+                        <leg.icon className="h-4 w-4" />
+                      </span>
+                      {i < 3 && <span className="mt-1 h-6 w-px bg-line" aria-hidden="true" />}
+                    </span>
+                    <span className="min-w-0 pt-1">
+                      <span className="block text-[13px] font-medium text-ink">{leg.mode}</span>
+                      <span className="block text-[11.5px] text-ink-muted">{leg.detail}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+
+              <div className="mt-5 flex items-center gap-3 border-t border-line pt-4">
+                <span className="flex items-center gap-1.5 text-[11.5px] text-ink-muted">
+                  <Waypoints className="h-3.5 w-3.5" /> Live vehicle tracking
+                </span>
+                <span className="flex items-center gap-1.5 text-[11.5px] text-ink-muted">
+                  <Gauge className="h-3.5 w-3.5" /> Departure boards
+                </span>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ══ Closing statement ════════════════════════════════════════════ */}
+      <section className="border-t border-line bg-surface-1/40">
+        <div className="mx-auto max-w-[1240px] px-5 py-16 lg:px-8 lg:py-20">
+          <ScrollReveal direction="up">
+            <div className="flex flex-wrap items-end justify-between gap-8">
+              <div className="max-w-2xl">
+                <div className="mb-5 flex items-center gap-3">
+                  <UrbanSenseMark className="h-9 w-9" gradientId="closing" />
+                  <span className="u-overline">UrbanSense</span>
+                </div>
+                <p className="text-[24px] font-semibold leading-[1.2] tracking-[-0.03em] text-ink sm:text-[30px]">
+                  Real-time intelligence from the moving city.
+                </p>
+                <p className="mt-3 max-w-xl text-[13.5px] leading-relaxed text-ink-secondary">
+                  Built for municipal operations, transport authorities and the people who move through
+                  the region every day.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Link to="/command-center" className="u-btn u-btn-primary px-4 py-2.5 text-[13.5px]">
+                  Open command center
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link to="/urban-map" className="u-btn u-btn-outline px-4 py-2.5 text-[13.5px]">
+                  View the urban map
+                </Link>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ══ Footer ═══════════════════════════════════════════════════════ */}
+      <footer className="border-t border-line">
+        <div className="mx-auto max-w-[1240px] px-5 py-10 lg:px-8">
+          <div className="flex flex-wrap items-start justify-between gap-8">
+            <div className="max-w-xs">
+              <UrbanSenseLogo size="md" subtext="Urban Intelligence OS" id="footer" />
+              <p className="mt-3 text-[12px] leading-relaxed text-ink-muted">
+                A connected-transit sensing platform for Ahmedabad, Gandhinagar and GIFT City.
+              </p>
+            </div>
+
+            <nav className="grid grid-cols-2 gap-x-12 gap-y-2 text-[12.5px]" aria-label="Footer">
+              {MODULES.map(m => (
+                <Link key={m.to} to={m.to} className="text-ink-muted transition-colors hover:text-ink">
+                  {m.label}
+                </Link>
+              ))}
+              <Link to="/architecture" className="text-ink-muted transition-colors hover:text-ink">
+                Architecture
+              </Link>
+              <Link to="/about" className="text-ink-muted transition-colors hover:text-ink">
+                About platform
+              </Link>
+            </nav>
+          </div>
+
+          <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
+            <p className="text-[11.5px] text-ink-faint">
+              © 2026 UrbanSense · Connected urban intelligence for the Ahmedabad region
+            </p>
+            <span className="flex items-center gap-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-muted">
+              <LedIndicator tone="mint" />
+              All regional services operational
+            </span>
+          </div>
         </div>
       </footer>
     </div>

@@ -3,18 +3,19 @@ import { useSearchParams, Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
 import {
   Search,
-  Filter,
-  CheckCircle,
-  XCircle,
   Camera,
-  Activity,
   Bus,
   MapPin,
-  ExternalLink,
   ChevronRight,
-  Radio,
+  Wifi,
   Gauge,
-  Wifi
+  Sliders,
+  Crosshair,
+  Activity,
+  XCircle,
+  Cpu,
+  Clock,
+  ExternalLink,
 } from 'lucide-react'
 
 import { MapContainer, Marker, Popup, Circle, useMap } from 'react-leaflet'
@@ -22,26 +23,24 @@ import { buses as defaultBuses } from '../data/buses'
 import { apiService } from '../services/api'
 import HeaderActions from '../components/HeaderActions'
 import { PageHeader } from '../components/common/PageHeader'
-import { KpiCard } from '../components/common/KpiCard'
-import { PremiumPanel } from '../components/common/PremiumPanel'
-import { AnimatedCounter } from '../components/common/AnimatedCounter'
-import { ScrollReveal } from '../components/common/ScrollReveal'
+import { MetricStrip } from '../components/common/MetricStrip'
+import { StatusBadge, StatusTone } from '../components/common/StatusBadge'
 import { TraccarGpsModal } from '../components/journey/TraccarGpsModal'
 import { traccarApi, TraccarGpsPacket } from '../services/traccarApi'
 import { MapTileLayer, MapViewToggle, type MapTileMode } from '../components/common/MapTileLayer'
+import { vehicleIcon } from '../components/common/mapIcons'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
-// Helper to smoothly pan the map as the bus moves along the road
+// Smoothly pan the mini map as the selected vehicle moves along its route
 function MapRecenter({ center }: { center: [number, number] }) {
   const map = useMap()
   useEffect(() => {
-    map.panTo(center)
+    map.panTo(center, { animate: true, duration: 0.6 })
   }, [center, map])
   return null
 }
 
-// Fix Leaflet default icon issue
 delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -54,10 +53,15 @@ L.Icon.Default.mergeOptions({
   shadowSize: [41, 41],
 })
 
+const statusTone = (status: string): StatusTone =>
+  status === 'online' ? 'emerald' : status === 'processing' ? 'blue' : 'rose'
+
+const FILTERS = ['all', 'online', 'processing', 'offline'] as const
+
 export default function LiveFleet() {
   const [buses, setBuses] = useState(defaultBuses)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [activeLens, setActiveLens] = useState<'front' | 'rear' | 'left' | 'right' | 'passenger'>('front')
   const [showTraccarModal, setShowTraccarModal] = useState(false)
 
@@ -65,7 +69,7 @@ export default function LiveFleet() {
   const busQueryParam = searchParams.get('bus')
 
   const [mapMode, setMapMode] = useState<MapTileMode>('street')
-  const [selectedBusId, setSelectedBusId] = useState<string>(busQueryParam || 'BUS-078')
+  const [selectedBusId, setSelectedBusId] = useState<string>(busQueryParam || 'BUS-104')
   const detailsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -73,316 +77,204 @@ export default function LiveFleet() {
       if (data && data.length > 0) setBuses(data)
     })
 
-    // Listen to live Traccar SSE stream
-    const unsubscribe = traccarApi.connectLiveStream(
-      (packet: TraccarGpsPacket) => {
-        setBuses(prev => prev.map(b => {
+    const unsubscribe = traccarApi.connectLiveStream((packet: TraccarGpsPacket) => {
+      setBuses(prev =>
+        prev.map(b => {
           if (b.id.toLowerCase() === packet.vehicle_id.toLowerCase()) {
             return {
               ...b,
               gps: [packet.latitude, packet.longitude],
               speed: packet.speed_kmh,
               location: packet.location_name || b.location,
-              lastUpdate: 'Just now (Live)',
-              status: 'online'
+              lastUpdate: 'Live (snapped)',
+              status: 'online',
             }
           }
           return b
-        }))
-      }
-    )
+        })
+      )
+    })
 
     return () => {
       unsubscribe()
     }
   }, [statusFilter])
 
-  // Sync with URL query parameter
   useEffect(() => {
-    if (busQueryParam) {
-      setSelectedBusId(busQueryParam)
-    }
+    if (busQueryParam) setSelectedBusId(busQueryParam)
   }, [busQueryParam])
 
   const filteredBuses = buses.filter(bus => {
-    const matchesSearch = bus.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         bus.route.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         bus.location.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch =
+      bus.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bus.route.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bus.location.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || bus.status === statusFilter
     return matchesSearch && matchesStatus
   })
 
-  // Selected bus object
   const selectedBus = buses.find(b => b.id.toLowerCase() === selectedBusId.toLowerCase()) || buses[0] || defaultBuses[0]
 
   const handleSelectBus = (busId: string) => {
     setSelectedBusId(busId)
     setSearchParams({ bus: busId })
-    // Smooth scroll down to details panel
     if (detailsRef.current) {
       detailsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'online':
-        return 'text-emerald-700 bg-emerald-50 border border-emerald-200'
-      case 'offline':
-        return 'text-rose-700 bg-rose-50 border border-rose-200'
-      case 'processing':
-        return 'text-blue-700 bg-blue-50 border border-blue-200'
-      default:
-        return 'text-slate-700 bg-slate-100 border border-slate-200'
-    }
-  }
-
   const selectedActiveCameras = Object.values(selectedBus.cameras || {}).filter(Boolean).length
-  const selectedTotalCameras = Object.values(selectedBus.cameras || {}).length || 5
+  const onlineCount = buses.filter(b => b.status === 'online').length
+  const processingCount = buses.filter(b => b.status === 'processing').length
+
+  const inferenceTimeline = [
+    { label: 'GPS lock', detail: `${selectedBus.gps[0].toFixed(4)}, ${selectedBus.gps[1].toFixed(4)}`, state: 'ok' },
+    { label: 'Optical array', detail: `${selectedActiveCameras}/5 lenses streaming`, state: selectedActiveCameras >= 4 ? 'ok' : 'warn' },
+    { label: 'Inference engine', detail: selectedBus.aiStatus || 'Idle', state: selectedBus.status === 'online' ? 'ok' : 'warn' },
+    { label: 'Uplink', detail: selectedBus.lastUpdate, state: 'ok' },
+  ]
 
   return (
     <DashboardLayout>
       <PageHeader
-        title="Live Fleet Monitoring"
-        eyebrow="Fleet Telemetry"
+        title="Live Fleet"
+        eyebrow="Connected transit fleet · 248 probes"
         icon={Bus}
-        live={{ label: 'Fleet Network Synchronized', tone: 'emerald' }}
-        subtitle="Real-time status of 248 city buses acting as mobile optical sensors"
-        actions={<HeaderActions />}
+        live={{ label: 'Telemetry streaming', tone: 'emerald' }}
+        subtitle="Kinematics, camera array health and on-vehicle inference state for every sensing vehicle"
+        actions={
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowTraccarModal(true)} className="u-btn u-btn-outline u-btn-sm">
+              <Sliders className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">NMEA config</span>
+            </button>
+            <HeaderActions />
+          </div>
+        }
       />
 
-      <div className="flex-1 overflow-auto p-6">
-        {/* Statistics */}
-        <ScrollReveal direction="up" delay={0}>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <KpiCard
-            label="Total Fleet"
-            value={<AnimatedCounter value={buses.length} />}
-            icon={Bus}
-            accent="blue"
-            hint="Instrumented vehicles"
-            trend="Registered"
-            trendTone="neutral"
-            delay={0}
-          />
+      <div className="flex-1 space-y-4 overflow-auto p-4 sm:p-5">
+        {/* Telemetry strip */}
+        <MetricStrip
+          dense
+          items={[
+            { label: 'Fleet probes', value: '248', sublabel: 'Registered vehicles', icon: Bus },
+            { label: 'Active on road', value: onlineCount || 236, sublabel: 'Transmitting live', icon: Wifi, valueTone: 'emerald' },
+            { label: 'Depot standby', value: buses.filter(b => b.status === 'offline').length, sublabel: 'Bay inspection', icon: XCircle },
+            { label: 'Vision channels', value: (onlineCount || 236) * 5, sublabel: '1080p @ 30fps', icon: Gauge, valueTone: 'brand' },
+            { label: 'Inference busy', value: processingCount, sublabel: 'Batch classification', icon: Cpu, valueTone: 'iris' },
+          ]}
+        />
 
-          <KpiCard
-            label="Online & Active"
-            value={<AnimatedCounter value={buses.filter(b => b.status === 'online').length} />}
-            icon={Wifi}
-            accent="emerald"
-            hint="95.2% fleet uptime"
-            trend="+2.1%"
-            trendTone="positive"
-            delay={70}
-          />
+        {/* ── Fleet register ────────────────────────────────────────── */}
+        <section className="u-panel overflow-hidden">
+          <span className="u-hair" aria-hidden="true" />
 
-          <KpiCard
-            label="Standby / Offline"
-            value={<AnimatedCounter value={buses.filter(b => b.status === 'offline').length} />}
-            icon={XCircle}
-            accent="rose"
-            hint="Depot maintenance"
-            trend="Attention"
-            trendTone="warning"
-            delay={140}
-          />
-
-          <KpiCard
-            label="Edge AI Streams"
-            value={<AnimatedCounter value={buses.filter(b => b.status === 'online').length * 5} />}
-            icon={Gauge}
-            accent="indigo"
-            hint="Active video channels"
-            trend="1080p"
-            trendTone="neutral"
-            delay={210}
-          />
-        </div>
-        </ScrollReveal>
-
-        {/* Selected Bus Banner Notice */}
-        <ScrollReveal direction="up" delay={80}>
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 bg-[length:200%_auto] animate-gradient-x text-white rounded-2xl p-4 mb-6 shadow-md hover:shadow-glow-md transition-shadow duration-500 flex flex-wrap items-center justify-between gap-3">
-          <span className="pointer-events-none absolute inset-0 bg-sheen opacity-25 animate-sheen" aria-hidden="true" />
-          <div className="relative z-10 flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xs border border-white/20 flex items-center justify-center font-bold text-sm transition-transform duration-500 hover:scale-105">
-              <Bus className="w-5 h-5 text-white/90" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-white/90">Active Sensor Telemetry:</span>
-                <span className="text-base font-extrabold text-white">{selectedBus.id}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-white/20 text-white`}>
-                  {selectedBus.status}
-                </span>
-              </div>
-              <p className="text-xs text-blue-100 mt-0.5 font-medium">
-                {selectedBus.route} • {selectedBus.location} • Speed: {selectedBus.speed} km/h • GPS: [{selectedBus.gps.join(', ')}]
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            className="relative z-10 group flex items-center space-x-1.5 px-3.5 py-1.5 bg-white text-blue-700 rounded-xl text-xs font-extrabold hover:bg-blue-50 transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer press-scale"
-          >
-            <span>Jump to Sensor Diagnostics</span>
-            <ChevronRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
-          </button>
-        </div>
-        </ScrollReveal>
-
-        {/* Filters */}
-        <ScrollReveal direction="up" delay={120}>
-        <div className="panel-premium p-4 mb-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex-1 min-w-[240px] relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
+          <div className="flex flex-col gap-3 border-b border-line p-3.5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative w-full lg:max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-faint" />
               <input
                 type="text"
-                placeholder="Search by bus ID or route number..."
+                placeholder="Filter by vehicle ID, route or street…"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                onChange={e => setSearchTerm(e.target.value)}
+                className="u-search u-num"
+                aria-label="Filter fleet"
               />
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Filter className="w-4 h-4 text-slate-500" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
-              >
-                <option value="all">All Operational Statuses</option>
-                <option value="online">Online Only</option>
-                <option value="offline">Offline Only</option>
-              </select>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="u-seg" role="group" aria-label="Status filter">
+                {FILTERS.map(st => (
+                  <button
+                    key={st}
+                    onClick={() => setStatusFilter(st)}
+                    aria-pressed={statusFilter === st}
+                    className={`u-seg-item capitalize ${statusFilter === st ? 'u-seg-item-active' : ''}`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+              <span className="u-num text-[11.5px] text-ink-muted">{filteredBuses.length} vehicles</span>
             </div>
           </div>
-        </div>
-        </ScrollReveal>
 
-        {/* Fleet Table */}
-        <ScrollReveal direction="up" delay={160}>
-        <PremiumPanel
-          flush
-          className="mb-8"
-          title={`Fleet Sensing Nodes (${filteredBuses.length} Vehicles)`}
-          subtitle="Select a Bus ID to inspect multi-angle camera feeds and edge diagnostics"
-          icon={Bus}
-          badge={
-            <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot" />
-              Streaming
-            </span>
-          }
-        >
-          <div className="overflow-x-auto">
-            <table className="premium-table w-full text-left">
-              <thead className="bg-slate-50/80 border-b border-slate-200/80">
+          <div className="u-scroll-x">
+            <table className="w-full min-w-[900px] text-left">
+              <thead className="bg-surface-1/60">
                 <tr>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Bus ID</th>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Route</th>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Live Position</th>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Velocity</th>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Cameras</th>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Edge Inference</th>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Heartbeat</th>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Inspect</th>
+                  <th className="u-th">Vehicle</th>
+                  <th className="u-th">Route</th>
+                  <th className="u-th">Position</th>
+                  <th className="u-th">Speed</th>
+                  <th className="u-th">Camera array</th>
+                  <th className="u-th">AI state</th>
+                  <th className="u-th">Status</th>
+                  <th className="u-th text-right">Feed</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
+              <tbody>
                 {filteredBuses.map(bus => {
-                  const activeCameras = Object.values(bus.cameras || {}).filter(Boolean).length
-                  const totalCameras = Object.values(bus.cameras || {}).length || 5
-                  const isSelected = selectedBus.id === bus.id
+                  const isSelected = selectedBusId.toLowerCase() === bus.id.toLowerCase()
+                  const activeCams = Object.values(bus.cameras || {}).filter(Boolean).length
 
                   return (
                     <tr
                       key={bus.id}
                       onClick={() => handleSelectBus(bus.id)}
-                      className={`transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-blue-50/90 font-medium ring-1 ring-inset ring-blue-400'
-                          : 'hover:bg-slate-50/70'
+                      className={`group cursor-pointer border-t border-line/70 transition-colors duration-150 ${
+                        isSelected ? 'bg-brand-50/50' : 'hover:bg-surface-3/60'
                       }`}
                     >
-                      <td className="px-6 py-4 whitespace-nowrap font-bold text-blue-600">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleSelectBus(bus.id)
-                          }}
-                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-blue-600 text-white shadow-xs'
-                              : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
-                          }`}
-                        >
-                          <Bus className="w-4 h-4 shrink-0" />
-                          <span className="font-extrabold">{bus.id}</span>
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap font-semibold text-slate-800">
-                        {bus.route}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-slate-600">
-                        <div className="flex items-center space-x-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>{bus.location}</span>
+                      <td className="u-td">
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={`u-dot ${bus.status === 'online' ? 'bg-emerald-400' : bus.status === 'processing' ? 'bg-brand-400' : 'bg-rose-400'}`}
+                          />
+                          <span className="u-num text-[12.5px] font-semibold text-ink">{bus.id}</span>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-700">
-                        {bus.speed} km/h
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                          activeCameras === totalCameras
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}>
-                          {activeCameras}/{totalCameras} Lenses
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center space-x-1.5">
-                          {bus.status === 'online' ? (
-                            <Activity className="w-4 h-4 text-emerald-600" />
-                          ) : (
-                            <XCircle className="w-4 h-4 text-rose-500" />
-                          )}
-                          <span className={bus.status === 'online' ? 'text-emerald-700 font-semibold' : 'text-rose-600 font-medium'}>
-                            {bus.aiStatus}
+                        {/* Hover reveal: connection diagnostics */}
+                        <div className="mt-1.5 hidden items-center gap-3 text-[10.5px] text-ink-faint opacity-0 transition-opacity duration-200 group-hover:opacity-100 sm:flex">
+                          <span className="flex items-center gap-1">
+                            <Radio2 /> heartbeat 1.2s
                           </span>
+                          <span>RSSI −64 dBm</span>
+                          <span>{bus.lastUpdate}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-slate-500 text-xs font-medium">
-                        {bus.lastUpdate}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold uppercase ${getStatusBadge(bus.status)}`}>
-                          {bus.status}
+                      <td className="u-td">
+                        <span className="whitespace-nowrap rounded-md border border-line bg-surface-3/70 px-2 py-0.5 text-[11.5px] text-ink-secondary">
+                          {bus.route}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleSelectBus(bus.id)
-                          }}
-                          className={`text-xs font-bold px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-blue-600 text-white shadow-xs'
-                              : 'text-slate-600 hover:text-blue-700 hover:bg-slate-200/70 border border-slate-200'
-                          }`}
-                        >
-                          {isSelected ? 'Active' : 'Inspect'}
-                        </button>
+                      <td className="u-td max-w-[240px]">
+                        <span className="flex items-center gap-1.5">
+                          <MapPin className="h-3 w-3 shrink-0 text-ink-faint" />
+                          <span className="truncate">{bus.location}</span>
+                        </span>
+                      </td>
+                      <td className="u-td u-num whitespace-nowrap text-ink">{bus.speed} km/h</td>
+                      <td className="u-td">
+                        <span className="u-num text-ink-secondary">
+                          {activeCams}
+                          <span className="text-ink-faint">/5</span>
+                        </span>
+                      </td>
+                      <td className="u-td">
+                        <span className="flex items-center gap-1.5">
+                          <span className="u-dot bg-brand-400" />
+                          <span className="truncate text-[12px]">{bus.aiStatus}</span>
+                        </span>
+                      </td>
+                      <td className="u-td">
+                        <StatusBadge status={bus.status} tone={statusTone(bus.status)} size="sm" />
+                      </td>
+                      <td className="u-td text-right">
+                        <span className="inline-flex items-center gap-1 text-[11.5px] font-medium text-brand-600 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                          Inspect
+                          <ChevronRight className="h-3 w-3" />
+                        </span>
                       </td>
                     </tr>
                   )
@@ -390,269 +282,227 @@ export default function LiveFleet() {
               </tbody>
             </table>
           </div>
-        </PremiumPanel>
-        </ScrollReveal>
 
-        {/* DYNAMIC BUS DETAILS PANEL (Ref for smooth scroll) */}
-        <div
-          ref={detailsRef}
-          key={selectedBus.id}
-          className="bg-white border-2 border-blue-400/60 rounded-2xl p-6 shadow-premium relative overflow-hidden animate-fade-in-up"
-        >
-          {/* Header */}
-          <div className="flex flex-wrap items-center justify-between pb-4 mb-5 border-b border-slate-200/80 gap-3">
-            <div className="flex items-center space-x-3">
-              <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-200/80">
-                <Bus className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="flex items-center space-x-2.5">
-                  <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                    Active Sensor Details: {selectedBus.id}
-                  </h2>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase ${getStatusBadge(selectedBus.status)}`}>
-                    {selectedBus.status}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Real-time mobile edge telemetry, multi-angle optical sensors, and geospatial telemetry
-                </p>
-              </div>
+          {filteredBuses.length === 0 && (
+            <div className="border-t border-line/70 px-4 py-10 text-center">
+              <p className="text-[13px] font-medium text-ink">No vehicles match this filter</p>
+              <p className="mt-1 text-[12px] text-ink-muted">Try a different vehicle ID, route or street.</p>
             </div>
+          )}
+        </section>
 
-            <div className="flex items-center space-x-2">
-              <Link
-                to={`/urban-map`}
-                className="flex items-center space-x-1 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
-              >
-                <span>Track on Urban GIS Map</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
+        {/* ── Selected vehicle mission control ──────────────────────── */}
+        <section ref={detailsRef} className="u-panel overflow-hidden">
+          <span className="u-hair" aria-hidden="true" />
 
-          {/* Quick Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70">
-              <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">ASSIGNED ROUTE</div>
-              <div className="text-lg font-extrabold text-slate-900">{selectedBus.route}</div>
-              <div className="text-xs text-slate-500 mt-0.5">{selectedBus.location}</div>
-            </div>
-
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70">
-              <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">VEHICLE STATE</div>
-              <div className={`text-lg font-extrabold uppercase ${
-                selectedBus.status === 'online' ? 'text-emerald-600' :
-                selectedBus.status === 'offline' ? 'text-rose-600' : 'text-blue-600'
-              }`}>
-                {selectedBus.status === 'online' ? 'IN TRANSIT (LIVE)' : selectedBus.status}
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">AI Status: {selectedBus.aiStatus}</div>
-            </div>
-
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70">
-              <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">CRUISING SPEED</div>
-              <div className="text-lg font-extrabold text-slate-900">{selectedBus.speed} km/h</div>
-              <div className="text-xs text-slate-500 mt-0.5">Updated {selectedBus.lastUpdate}</div>
-            </div>
-
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70">
-              <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">GEO POSITION</div>
-              <div className="text-sm font-extrabold font-mono text-slate-800 mt-1">
-                {selectedBus.gps[0].toFixed(4)}° N, {selectedBus.gps[1].toFixed(4)}° E
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">Ahmedabad Municipal Grid</div>
-            </div>
-          </div>
-
-          {/* Sensors & Mini Map Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Hardware Sensors */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  HARDWARE SENSORS & CAMERAS ({selectedActiveCameras}/{selectedTotalCameras} ACTIVE)
-                </h3>
-                <span className="text-[11px] font-semibold text-slate-400">
-                  5-Channel Multi-Angle Rig
-                </span>
-              </div>
-
-              <div className="space-y-2.5">
-                {[
-                  { key: 'front', name: 'Front Wide-Angle Perception Lens', active: selectedBus.cameras?.front ?? true, desc: 'Pothole detection, road obstructions & ANPR' },
-                  { key: 'rear', name: 'Rear Lane & Tailgating Observer', active: selectedBus.cameras?.rear ?? true, desc: 'Traffic trailing density & rear vehicle tracking' },
-                  { key: 'left', name: 'Left Curb & Sidewalk Scanner', active: selectedBus.cameras?.left ?? true, desc: 'Pedestrian zones & roadside waterlogging' },
-                  { key: 'right', name: 'Right Overtaking Observer', active: selectedBus.cameras?.right ?? true, desc: 'Passing vehicle plate scan & lane deviation' },
-                  { key: 'passenger', name: 'Cabin & Driver Safety Sensor', active: selectedBus.cameras?.passenger ?? true, desc: 'Driver alertness & telemetry check' },
-                ].map((camera) => (
-                  <div
-                    key={camera.name}
-                    className={`flex items-center justify-between p-3 rounded-xl border text-sm transition-all ${
-                      activeLens === camera.key
-                        ? 'bg-blue-50/70 border-blue-300 ring-1 ring-blue-300'
-                        : 'bg-slate-50 border-slate-200/70 hover:bg-slate-100/70'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-semibold text-slate-800">{camera.name}</div>
-                      <div className="text-[11px] text-slate-500">{camera.desc}</div>
-                    </div>
-                    <div className="flex items-center space-x-2 shrink-0">
-                      {camera.active ? (
-                        <span className="flex items-center text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full text-xs font-bold">
-                          <CheckCircle className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-                          Streaming
-                        </span>
-                      ) : (
-                        <span className="flex items-center text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full text-xs font-bold">
-                          <XCircle className="w-3.5 h-3.5 mr-1 text-rose-600" />
-                          Standby
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setActiveLens(camera.key as any)}
-                        className={`text-xs font-bold px-2 py-1 rounded transition-colors cursor-pointer ${
-                          activeLens === camera.key
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
-                        }`}
-                      >
-                        View Feed
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Live GPS Mini Map */}
+          {/* Vehicle identity */}
+          <div className="flex flex-wrap items-start justify-between gap-5 border-b border-line p-4 sm:p-5">
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  LIVE SENSOR LOCATION ON AHMEDABAD MAP
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="u-num text-[24px] font-semibold leading-none tracking-tight text-ink sm:text-[28px]">
+                  {selectedBus.id}
+                </h2>
+                <span className="whitespace-nowrap rounded-md border border-line bg-surface-3/70 px-2 py-0.5 text-[11.5px] text-ink-secondary">
+                  {selectedBus.route}
+                </span>
+                <StatusBadge
+                  status={selectedBus.status}
+                  tone={statusTone(selectedBus.status)}
+                  live={selectedBus.status === 'online'}
+                />
+              </div>
+              <p className="mt-2 flex items-center gap-1.5 text-[12px] text-ink-muted">
+                <MapPin className="h-3.5 w-3.5" />
+                {selectedBus.location}
+                <span className="text-ink-faint">·</span>
+                <span className="u-num">
+                  {selectedBus.gps[0].toFixed(4)}, {selectedBus.gps[1].toFixed(4)}
+                </span>
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Link to={`/vehicle-tracking`} className="u-btn u-btn-outline u-btn-sm">
+                <ExternalLink className="h-3.5 w-3.5" />
+                Track vehicle
+              </Link>
+              <button onClick={() => setShowTraccarModal(true)} className="u-btn u-btn-outline u-btn-sm">
+                <Sliders className="h-3.5 w-3.5" />
+                Telemetry config
+              </button>
+            </div>
+          </div>
+
+          {/* Vehicle health strip */}
+          <div className="grid grid-cols-2 divide-line/70 border-b border-line/70 sm:grid-cols-4 sm:divide-x lg:grid-cols-5">
+            {[
+              { k: 'Speed', v: `${selectedBus.speed} km/h`, tone: 'text-ink' },
+              { k: 'Optical array', v: `${selectedActiveCameras}/5 active`, tone: 'text-emerald-600' },
+              { k: 'AI engine', v: selectedBus.aiStatus || 'Idle', tone: 'text-brand-600' },
+              { k: 'Uplink', v: selectedBus.lastUpdate, tone: 'text-ink-secondary' },
+              { k: 'Heartbeat', v: '1.2 s · stable', tone: 'text-emerald-600' },
+            ].map(item => (
+              <div key={item.k} className="px-4 py-3">
+                <p className="u-overline">{item.k}</p>
+                <p className={`u-num mt-1.5 truncate text-[13px] font-medium ${item.tone}`}>{item.v}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Map + optical feed */}
+          <div className="grid grid-cols-1 divide-y divide-line/70 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+            {/* Mini map */}
+            <div className="p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+                  <MapPin className="h-3.5 w-3.5 text-brand-500" />
+                  Road-snapped position
                 </h3>
-                <div className="flex items-center gap-2">
-                  <MapViewToggle mode={mapMode} onChange={setMapMode} />
-                  <span className="text-xs font-bold text-blue-600 font-mono hidden sm:inline">
-                    {selectedBus.gps.join(', ')}
-                  </span>
-                </div>
+                <MapViewToggle mode={mapMode} onChange={setMapMode} />
               </div>
 
-              <div className="h-64 rounded-xl overflow-hidden border border-slate-200 shadow-sm relative">
-                <MapContainer
-                  center={selectedBus.gps}
-                  zoom={14}
-                  style={{ height: '100%', width: '100%' }}
-                  key={selectedBus.id}
-                >
+              <div className="relative h-72 overflow-hidden rounded-xl border border-line">
+                <MapContainer center={selectedBus.gps} zoom={14} style={{ height: '100%', width: '100%' }} key={selectedBus.id}>
                   <MapTileLayer mode={mapMode} />
                   <MapRecenter center={selectedBus.gps} />
                   <Circle
                     center={selectedBus.gps}
-                    radius={350}
-                    pathOptions={{ color: '#2563eb', fillColor: '#3b82f6', fillOpacity: 0.2 }}
+                    radius={300}
+                    pathOptions={{ color: '#FF4757', fillColor: '#FF4757', fillOpacity: 0.12, weight: 1.2 }}
                   />
-                  <Marker position={selectedBus.gps}>
+                  <Marker position={selectedBus.gps} icon={vehicleIcon({ tone: 'brand', speed: selectedBus.speed, selected: true })}>
                     <Popup>
-                      <div className="p-1 text-xs">
-                        <div className="font-extrabold text-blue-600">{selectedBus.id}</div>
-                        <div>{selectedBus.route}</div>
-                        <div>{selectedBus.location}</div>
-                        <div className="font-bold text-slate-700 mt-1">{selectedBus.speed} km/h • {selectedBus.status}</div>
+                      <div className="space-y-1">
+                        <p className="font-mono text-[12px] font-semibold text-ink">{selectedBus.id}</p>
+                        <p className="text-[11.5px] text-ink-secondary">{selectedBus.route}</p>
+                        <p className="text-[11.5px] text-ink-muted">{selectedBus.location}</p>
                       </div>
                     </Popup>
                   </Marker>
                 </MapContainer>
               </div>
 
-              <div className="mt-3 p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between text-xs">
-                <div className="flex items-center space-x-2 text-slate-600 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot" />
-                  <Radio className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>Transmitting real-time NMEA GPS coordinate packets</span>
-                </div>
-                <span className="font-bold text-slate-800">{selectedBus.lastUpdate}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Primary Vision Inference Stream */}
-          <div className="pt-6 border-t border-slate-200/80">
-            <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
-              <div className="flex items-center space-x-2">
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  OPTICAL INFERENCE STREAM • {selectedBus.id} ({activeLens.toUpperCase()} LENS)
-                </h3>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 border ${
-                  selectedBus.status === 'online'
-                    ? 'text-rose-600 bg-rose-50 border-rose-200'
-                    : 'text-amber-700 bg-amber-50 border-amber-200'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${selectedBus.status === 'online' ? 'bg-rose-600 animate-pulse' : 'bg-amber-600'}`}></span>
-                  {selectedBus.status === 'online' ? 'LIVE 1080p AT 30 FPS' : 'DIAGNOSTIC STANDBY FEED'}
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-line-soft bg-surface-1/60 px-3 py-2">
+                <span className="flex items-center gap-2 text-[11.5px] text-ink-muted">
+                  <span className="live-dot" />
+                  GPS locked to road centreline
                 </span>
+                <span className="u-num text-[11.5px] text-ink-secondary">{selectedBus.lastUpdate}</span>
               </div>
             </div>
 
-            {/* Video Canvas Simulation */}
-            <div className="bg-slate-950 rounded-2xl aspect-video max-h-[380px] w-full flex items-center justify-center relative overflow-hidden shadow-2xl border border-slate-800">
-              <Camera className="w-16 h-16 text-slate-700 opacity-40 animate-float-slow" />
-              {/* Inference scan sweep */}
-              <div className="scanline" aria-hidden="true" />
+            {/* Optical stream */}
+            <div className="p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+                  <Camera className="h-3.5 w-3.5 text-brand-500" />
+                  Optical stream · {activeLens} lens
+                </h3>
 
-              {/* Lens info overlay */}
-              <div className="absolute top-4 left-4 bg-slate-900/85 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-mono text-white flex items-center space-x-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>BUS: {selectedBus.id}</span>
-                <span className="text-slate-400">|</span>
-                <span className="text-cyan-300">LENS: {activeLens.toUpperCase()}</span>
-                <span className="text-slate-400">|</span>
-                <span className="text-amber-300">{selectedBus.speed} KM/H</span>
+                <div className="u-seg">
+                  {(['front', 'rear', 'left', 'right', 'passenger'] as const).map(lens => (
+                    <button
+                      key={lens}
+                      onClick={() => setActiveLens(lens)}
+                      aria-pressed={activeLens === lens}
+                      className={`u-seg-item capitalize ${activeLens === lens ? 'u-seg-item-active' : ''}`}
+                    >
+                      {lens.slice(0, 3)}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Dynamic simulated detections */}
-              {selectedBus.status === 'online' ? (
-                <>
-                  <div className="absolute top-16 left-20 border-2 border-cyan-400 bg-cyan-950/70 backdrop-blur-xs px-2.5 py-1 rounded text-xs font-mono shadow-md animate-pulse">
-                    <span className="text-cyan-300 font-bold">VEHICLE #84 • 94% CONF</span>
-                  </div>
-                  <div className="absolute bottom-24 right-36 border-2 border-emerald-400 bg-emerald-950/70 backdrop-blur-xs px-2.5 py-1 rounded text-xs font-mono shadow-md animate-bob">
-                    <span className="text-emerald-300 font-bold">PEDESTRIAN • 96% CONF</span>
-                  </div>
-                  <div className="absolute bottom-12 left-32 border-2 border-rose-400 bg-rose-950/70 backdrop-blur-xs px-2.5 py-1 rounded text-xs font-mono shadow-md animate-bob" style={{ animationDelay: '600ms' }}>
-                    <span className="text-rose-300 font-bold">ROAD HAZARD • 91% CONF</span>
-                  </div>
-                  <div className="absolute top-20 right-20 border border-indigo-400/80 bg-indigo-950/80 px-2.5 py-1 rounded text-xs font-mono text-indigo-300">
-                    ANPR SCAN: ACTIVE
-                  </div>
-                </>
-              ) : (
-                <div className="text-center p-6 bg-slate-900/80 rounded-xl border border-slate-800 backdrop-blur-sm">
-                  <div className="text-amber-400 font-bold text-sm mb-1">Optical Rig in Depot Standby</div>
-                  <div className="text-xs text-slate-400">Vehicle currently resting at depot bay. Sensors awaiting route dispatch.</div>
-                </div>
-              )}
+              {/* Camera viewport — kept dark on purpose: a live video frame is content, not chrome. */}
+              <div className="relative h-72 overflow-hidden rounded-xl border border-ink/30 bg-ink">
+                <div className="u-scanline" aria-hidden="true" />
 
-              {/* Timestamp overlay */}
-              <div className="absolute bottom-3 right-4 text-[10px] font-mono text-slate-400 bg-slate-900/80 px-2 py-1 rounded border border-slate-800">
-                EDGE FRAME: #{Math.floor(Math.random() * 8000 + 12000)} • 1080p RGB • YOLOv8
+                {/* Reticle */}
+                <div className="absolute inset-6 rounded-lg border border-dashed border-white/15" aria-hidden="true" />
+                <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full border border-brand-400/40" aria-hidden="true" />
+                <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-400" aria-hidden="true" />
+
+                <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+                  <span className="flex items-center gap-2 text-[11px] font-medium text-rose-300">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />
+                    LIVE · 1080p 30fps
+                  </span>
+                  <span className="u-num text-[11px] text-white/50">
+                    {new Date().toISOString().substring(11, 19)} UTC
+                  </span>
+                </div>
+
+                <div className="absolute inset-x-0 bottom-0 space-y-2 p-3">
+                  <div className="flex items-center justify-center">
+                    <span className="flex items-center gap-2 rounded-lg border border-brand-400/40 bg-brand-500/15 px-2.5 py-1.5 text-[11px] font-medium text-brand-200 backdrop-blur-md">
+                      <Crosshair className="h-3.5 w-3.5" />
+                      Surface analysis running · potholes & obstacles
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-white/15 pt-2 text-[10.5px] text-white/50">
+                    <span className="u-num">
+                      {selectedBus.id} // CAM-{activeLens.toUpperCase()}
+                    </span>
+                    <span className="u-num">confidence 96.4%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                {[
+                  { k: 'Lens', v: 'Online', tone: 'text-emerald-600' },
+                  { k: 'Bitrate', v: '4.2 Mbps', tone: 'text-ink' },
+                  { k: 'Pipeline', v: 'YOLOv8 edge', tone: 'text-brand-600' },
+                ].map(item => (
+                  <div key={item.k} className="rounded-xl border border-line-soft bg-surface-1/60 px-2 py-2">
+                    <p className="u-overline">{item.k}</p>
+                    <p className={`u-num mt-1 text-[12px] font-medium ${item.tone}`}>{item.v}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-        </div>
+
+          {/* Inference timeline */}
+          <div className="border-t border-line p-4 sm:p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+                <Activity className="h-3.5 w-3.5 text-brand-500" />
+                Vehicle pipeline
+              </h3>
+              <span className="flex items-center gap-1.5 text-[11px] text-ink-muted">
+                <Clock className="h-3.5 w-3.5" />
+                updated {selectedBus.lastUpdate}
+              </span>
+            </div>
+
+            <ol className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {inferenceTimeline.map((step, i) => (
+                <li key={step.label} className="relative rounded-xl border border-line bg-surface-2/60 px-3.5 py-3">
+                  <div className="flex items-center justify-between">
+                    <span className="u-overline">{String(i + 1).padStart(2, '0')}</span>
+                    <span
+                      className={`u-dot ${step.state === 'ok' ? 'bg-emerald-400' : 'bg-amber-400'}`}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <p className="mt-2 text-[12.5px] font-medium text-ink">{step.label}</p>
+                  <p className="u-num mt-1 truncate text-[11.5px] text-ink-muted">{step.detail}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
       </div>
 
-      {/* Traccar Phone & Live GPS Controller Modal */}
-      <TraccarGpsModal
-        isOpen={showTraccarModal}
-        onClose={() => setShowTraccarModal(false)}
-      />
+      <TraccarGpsModal isOpen={showTraccarModal} onClose={() => setShowTraccarModal(false)} />
     </DashboardLayout>
   )
 }
+
+/** Tiny inline heartbeat glyph used inside the hover diagnostics line. */
+const Radio2 = () => (
+  <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" aria-hidden="true">
+    <path d="M1 7h2l1-4 1.5 7L7 5l1 2h3" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+  </svg>
+)

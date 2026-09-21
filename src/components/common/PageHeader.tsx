@@ -1,5 +1,6 @@
 import React from 'react'
 import { LucideIcon } from 'lucide-react'
+import { LedIndicator } from './Industrial'
 
 type LiveTone = 'emerald' | 'blue' | 'amber' | 'rose'
 
@@ -19,99 +20,78 @@ interface PageHeaderProps {
   children?: React.ReactNode
 }
 
-const liveToneStyles: Record<LiveTone, { pill: string; dot: string }> = {
-  emerald: {
-    pill: 'text-emerald-700 bg-emerald-50/90 border-emerald-200/80',
-    dot: 'bg-emerald-500',
-  },
-  blue: {
-    pill: 'text-blue-700 bg-blue-50/90 border-blue-200/80',
-    dot: 'bg-blue-500',
-  },
-  amber: {
-    pill: 'text-amber-700 bg-amber-50/90 border-amber-200/80',
-    dot: 'bg-amber-500',
-  },
-  rose: {
-    pill: 'text-rose-700 bg-rose-50/90 border-rose-200/80',
-    dot: 'bg-rose-500',
-  },
+const LIVE_TONE: Record<LiveTone, { led: 'mint' | 'accent' | 'amber' | 'rose'; text: string }> = {
+  emerald: { led: 'mint', text: 'text-emerald-700' },
+  blue: { led: 'accent', text: 'text-iris-600' },
+  amber: { led: 'amber', text: 'text-amber-700' },
+  rose: { led: 'rose', text: 'text-rose-700' },
 }
 
 /**
- * Simplified, clean, single-row header component for dashboard modules.
+ * Module command bar — the single header used by every operations screen.
+ * A control-room masthead: embossed title, live LED plate and action keys,
+ * all mounted on a vented instrument band.
  */
 export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
   subtitle,
   eyebrow,
   icon: Icon,
-  accent = 'from-blue-600 to-indigo-600',
   live,
   meta,
   actions,
   children,
 }) => {
   const tone = live?.tone ?? 'emerald'
-  const toneStyle = liveToneStyles[tone]
+  const toneStyle = LIVE_TONE[tone]
 
   return (
-    <header className="relative bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-6 py-3 sticky top-0 z-20 shadow-2xs">
-      <div className="flex items-center justify-between gap-4">
-        {/* Left: icon + title + status/subtitle */}
-        <div className="flex items-center gap-3 min-w-0">
+    <header className="relative z-30 bg-surface-1/85 shadow-recessed backdrop-blur-xl">
+      <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-3 sm:px-6">
+        {/* Identity */}
+        <div className="flex min-w-0 items-center gap-3">
           {Icon && (
-            <div
-              className={`shrink-0 w-8 h-8 rounded-lg bg-gradient-to-tr ${accent} text-white flex items-center justify-center shadow-xs`}
-            >
-              <Icon className="w-4 h-4" />
-            </div>
+            <span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 shadow-key text-brand-600 sm:flex">
+              <Icon className="h-4 w-4" />
+            </span>
           )}
 
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-extrabold text-slate-900 tracking-tight truncate">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="truncate text-[19px] font-bold leading-tight tracking-[-0.025em] text-ink u-emboss sm:text-[21px]">
                 {title}
               </h1>
 
               {live && (
-                <span
-                  className={`inline-flex items-center gap-1.5 text-[10px] font-bold border px-2 py-0.5 rounded-full ${toneStyle.pill}`}
-                >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${toneStyle.dot} ${
-                      live.pulse === false ? '' : 'live-dot'
-                    }`}
-                  />
-                  <span>{live.label}</span>
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-surface-0 px-2 py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.08em] shadow-groove">
+                  <LedIndicator tone={toneStyle.led} pulse={live.pulse !== false} />
+                  <span className={`whitespace-nowrap ${toneStyle.text}`}>{live.label}</span>
                 </span>
               )}
 
-              {eyebrow && !live && (
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-200/70 px-1.5 py-0.5 rounded">
-                  {eyebrow}
-                </span>
-              )}
+              {eyebrow && !live && <span className="u-overline">{eyebrow}</span>}
             </div>
 
+            {eyebrow && live && <div className="u-overline mt-1 truncate">{eyebrow}</div>}
+
             {subtitle && (
-              <p className="text-[11px] text-slate-500 font-medium truncate max-w-xl">
-                {subtitle}
-              </p>
+              <p className="mt-1 max-w-2xl truncate text-[12px] font-normal text-ink-muted">{subtitle}</p>
             )}
           </div>
         </div>
 
-        {/* Right: meta info & action buttons */}
+        {/* State + actions */}
         {(meta || actions) && (
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex shrink-0 flex-wrap items-center gap-2.5">
             {meta}
             {actions}
           </div>
         )}
       </div>
 
-      {children && <div className="mt-2.5 pt-2.5 border-t border-slate-100">{children}</div>}
+      {children && (
+        <div className="border-t border-[rgba(163,177,198,0.35)] bg-surface-2/60 px-4 py-2.5 sm:px-6">{children}</div>
+      )}
     </header>
   )
 }

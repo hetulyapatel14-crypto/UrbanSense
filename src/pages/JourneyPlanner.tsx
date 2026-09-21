@@ -9,7 +9,8 @@ import {
   Database,
   Activity,
   Sparkles,
-  Map,
+  Map as MapIcon,
+  ArrowRight,
 } from 'lucide-react'
 import { JourneySearchPanel } from '../components/journey/JourneySearchPanel'
 import { RouteResultsList } from '../components/journey/RouteResultsList'
@@ -27,8 +28,25 @@ import { TraccarGpsModal } from '../components/journey/TraccarGpsModal'
 import { JourneyProgressTracker } from '../components/journey/JourneyProgressTracker'
 import { JourneyPlanResult, JourneyRouteOption, LiveVehicle } from '../types/transit'
 import { transitApi } from '../services/transitApi'
+import { PageHeader } from '../components/common/PageHeader'
+import { SectionHeader } from '../components/common/SectionHeader'
 
 type FeatureMode = 'plan' | 'ai' | 'tracker' | 'departures' | 'nearby'
+
+const FEATURES: { id: FeatureMode; label: string; icon: any; live?: boolean }[] = [
+  { id: 'plan', label: 'Plan trip', icon: Compass },
+  { id: 'ai', label: 'AI assistant', icon: Sparkles },
+  { id: 'tracker', label: 'Live tracker', icon: Radio, live: true },
+  { id: 'departures', label: 'Departures', icon: Clock },
+  { id: 'nearby', label: 'Nearby stops', icon: Navigation },
+]
+
+const CORRIDORS = [
+  { from: 'Kalupur Railway Station', to: 'GIFT City FinTech Zone', label: 'Kalupur → GIFT City', desc: 'Metro line 1 + EV shuttle' },
+  { from: 'Sardar Vallabhbhai Patel International Airport', to: 'Mahatma Mandir Convention Centre', label: 'Airport → Gandhinagar', desc: 'Express bus + BRTS' },
+  { from: 'Sabarmati Railway Station', to: 'Infocity IT Park (Gandhinagar)', label: 'Sabarmati → Infocity', desc: 'Metro phase 2 / rail' },
+  { from: 'Iskcon Cross Road (SG Highway)', to: 'Vastral Gam Metro Terminal', label: 'Iskcon → Vastral Gam', desc: 'East–west metro cross' },
+]
 
 export default function JourneyPlanner() {
   const [activeFeature, setActiveFeature] = useState<FeatureMode>('plan')
@@ -46,6 +64,7 @@ export default function JourneyPlanner() {
 
   const [searchFrom, setSearchFrom] = useState('')
   const [searchTo, setSearchTo] = useState('')
+  const [aiPreset, setAiPreset] = useState<string | undefined>(undefined)
   const [selectedDepartureStopId, setSelectedDepartureStopId] = useState('METRO-INT-01')
 
   const handleRefresh = async () => {
@@ -61,9 +80,7 @@ export default function JourneyPlanner() {
         })
         if (res) {
           setJourneyData(res)
-          if (res.routes && res.routes.length > 0) {
-            setSelectedRoute(res.routes[0])
-          }
+          if (res.routes && res.routes.length > 0) setSelectedRoute(res.routes[0])
         }
       }
     } finally {
@@ -99,9 +116,7 @@ export default function JourneyPlanner() {
       const res = await transitApi.planJourney(params)
       if (res) {
         setJourneyData(res)
-        if (res.routes && res.routes.length > 0) {
-          setSelectedRoute(res.routes[0])
-        }
+        if (res.routes && res.routes.length > 0) setSelectedRoute(res.routes[0])
       }
     } finally {
       setIsLoading(false)
@@ -110,401 +125,319 @@ export default function JourneyPlanner() {
 
   const handleAiPlan = (plan: JourneyPlanResult, _queryText?: string) => {
     setJourneyData(plan)
-    if (plan.routes && plan.routes.length > 0) {
-      setSelectedRoute(plan.routes[0])
-    }
+    if (plan.routes && plan.routes.length > 0) setSelectedRoute(plan.routes[0])
     if (plan.from?.name) setSearchFrom(plan.from.name)
     if (plan.to?.name) setSearchTo(plan.to.name)
   }
 
-  const FEATURES = [
-    { id: 'plan' as FeatureMode, label: 'Plan Trip', icon: Compass },
-    { id: 'ai' as FeatureMode, label: 'AI Assistant', icon: Sparkles },
-    { id: 'tracker' as FeatureMode, label: 'Live Tracker', icon: Radio, isLive: true },
-    { id: 'departures' as FeatureMode, label: 'Departures', icon: Clock },
-    { id: 'nearby' as FeatureMode, label: 'Nearby Stops', icon: Navigation },
-  ]
+  const featureToolbar = (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="u-seg flex-wrap" role="tablist" aria-label="Planner features">
+        {FEATURES.map(feat => {
+          const Icon = feat.icon
+          const isActive = activeFeature === feat.id
+          return (
+            <button
+              key={feat.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveFeature(feat.id)}
+              className={`u-seg-item flex items-center gap-2 ${isActive ? 'u-seg-item-active' : ''}`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {feat.label}
+              {feat.live && (
+                <span className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-emerald-500'}`} aria-hidden="true" />
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => setShowMapModal(true)} className="u-btn u-btn-primary u-btn-sm">
+          <MapIcon className="h-3.5 w-3.5" />
+          Open map
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowAdminMonitor(true)}
+          className="u-btn u-btn-outline u-btn-sm"
+          title="Live network status"
+        >
+          <Activity className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Network</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowStatusModal(true)}
+          className="u-btn u-btn-outline u-btn-sm"
+          title="Data feeds"
+        >
+          <Database className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Feeds</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowTraccarModal(true)}
+          className="u-btn u-btn-ghost u-btn-sm"
+          title="GPS telemetry configuration"
+        >
+          <Radio className="h-3.5 w-3.5" />
+          <span className="hidden lg:inline">Telemetry</span>
+        </button>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={isLoading}
+          className="u-btn u-btn-ghost u-btn-sm"
+          title="Refresh live data"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          <span className="hidden sm:inline">Refresh</span>
+        </button>
+      </div>
+    </div>
+  )
 
   return (
     <DashboardLayout>
-      <div className="h-full min-h-screen lg:min-h-0 lg:h-screen lg:max-h-screen flex flex-col p-2.5 sm:p-3 md:p-4 gap-2.5 max-w-[1900px] w-full mx-auto overflow-y-auto custom-scrollbar">
-        {/* Top Header Bar: Brand & Action Controls */}
-        <div className="relative overflow-hidden flex items-center justify-between gap-3 bg-white/90 backdrop-blur-xl px-4 py-2.5 rounded-2xl border border-slate-200/90 shadow-card flex-shrink-0 animate-fade-in-up">
-          {/* Ambient glow wash */}
-          <span className="pointer-events-none absolute -top-16 left-1/4 w-72 h-32 bg-gradient-to-tr from-blue-400/12 via-indigo-400/10 to-transparent blur-3xl rounded-full animate-aurora" aria-hidden="true" />
-          <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" aria-hidden="true" />
-          {/* Brand & Subtitle */}
-          <div className="relative flex items-center space-x-3">
-            <div className="relative overflow-hidden w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-700 flex items-center justify-center text-white shadow-xs transition-transform duration-500 hover:scale-105">
-              <Compass className="w-4 h-4 relative z-10" />
-              <span className="pointer-events-none absolute inset-0 bg-sheen opacity-60 animate-sheen" aria-hidden="true" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="text-sm font-black text-slate-900 tracking-tight">
-                  Journey Planner
-                </h1>
-                <span className="text-[9px] font-extrabold px-2 py-0.2 rounded-full bg-blue-100 text-blue-700 tracking-wide uppercase">
-                  Multimodal
-                </span>
-              </div>
-              <div className="text-[10px] text-slate-400 font-medium">
-                Ahmedabad ↔ Gandhinagar ↔ GIFT City
-              </div>
-            </div>
-          </div>
+      <PageHeader
+        title="Journey Planner"
+        eyebrow="Mobility · Ahmedabad ↔ Gandhinagar ↔ GIFT City"
+        icon={Compass}
+        live={{ label: `${liveVehicles.length || 26} vehicles reporting`, tone: 'emerald' }}
+        subtitle="Multimodal routing across metro, BRTS, AMTS, rail and electric shuttles"
+      >
+        {featureToolbar}
+      </PageHeader>
 
-          {/* Quick Action Tools with Open Map Button */}
-          <div className="relative flex items-center space-x-2 flex-shrink-0">
-            {/* Dedicated Open Map Button */}
-            <button
-              type="button"
-              onClick={() => setShowMapModal(true)}
-              title="Open Interactive Transit Map in Center"
-              className="group relative overflow-hidden flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-[length:200%_auto] hover:bg-[position:right_center] text-white text-xs font-bold shadow-sm shadow-blue-500/20 hover:shadow-glow-sm transition-all duration-300 hover:-translate-y-0.5 active:scale-95 cursor-pointer"
-            >
-              <span className="pointer-events-none absolute inset-0 bg-sheen opacity-0 group-hover:opacity-100 group-hover:animate-sheen" aria-hidden="true" />
-              <Map className="w-3.5 h-3.5" />
-              <span>Open Map</span>
-            </button>
+      <div className="flex-1 overflow-auto p-4 sm:p-5">
+        <div className="mx-auto w-full max-w-[1400px]">
+          {/* ── PLAN ─────────────────────────────────────────────────── */}
+          {activeFeature === 'plan' && (
+            <div className="space-y-4 animate-fade">
+              <ServiceAlertsBanner />
 
-            <button
-              type="button"
-              onClick={() => setShowAdminMonitor(true)}
-              title="Live Network Status"
-              className="press-scale flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 text-xs font-bold shadow-xs hover:shadow-sm transition-all duration-300 cursor-pointer"
-            >
-              <Activity className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
-              <span className="hidden sm:inline">Network</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowStatusModal(true)}
-              title="Data Feeds"
-              className="press-scale flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold transition-all duration-300 shadow-xs hover:shadow-sm cursor-pointer"
-            >
-              <Database className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="hidden sm:inline">Feeds</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={isLoading}
-              title="Refresh Data"
-              className="press-scale flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all duration-300 cursor-pointer"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 transition-transform duration-300 ${isLoading ? 'animate-spin' : 'group-hover:rotate-90'}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Dedicated Feature Navigation Portion (Plan Trip, AI Assistant, Live Tracker, Departures, Nearby Stops) */}
-        <div className="relative overflow-hidden bg-white/90 backdrop-blur-xl p-1.5 rounded-2xl border border-slate-200/90 shadow-card flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '80ms' }}>
-          <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" aria-hidden="true" />
-          <div className="relative grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5">
-            {FEATURES.map((feat) => {
-              const Icon = feat.icon
-              const isActive = activeFeature === feat.id
-              return (
-                <button
-                  key={feat.id}
-                  type="button"
-                  onClick={() => setActiveFeature(feat.id)}
-                  className={`group/tab relative overflow-hidden py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition-all duration-300 ease-silk cursor-pointer ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
-                      : 'bg-slate-50/80 hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200/60 hover:-translate-y-0.5 hover:shadow-xs'
-                  }`}
-                >
-                  <Icon
-                    className={`w-4 h-4 ${
-                      isActive
-                        ? 'text-white'
-                        : 'text-slate-500'
-                    }`}
-                  />
-                  <span>{feat.label}</span>
-                  {/* Active sheen sweep */}
-                  {isActive && (
-                    <span
-                      className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-white/25 blur-md animate-sheen"
-                      aria-hidden="true"
-                    />
-                  )}
-                  {feat.isLive && (
-                    <span
-                      className={`w-2 h-2 rounded-full ml-0.5 live-dot ${
-                        isActive ? 'bg-emerald-300' : 'bg-emerald-500'
-                      }`}
-                    />
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* FEATURE 1: PLAN TRIP */}
-        {activeFeature === 'plan' && (
-          <div className="flex-1 min-h-0 space-y-3 pb-4">
-            {/* Live Service Alerts Banner */}
-            <ServiceAlertsBanner />
-
-            {/* Search Panel */}
-            <JourneySearchPanel
-              onSearch={handleSearch}
-              isLoading={isLoading}
-              initialFrom={searchFrom}
-              initialTo={searchTo}
-            />
-
-            {/* Route Comparison Matrix Modal/Table if open */}
-            {showMatrix && journeyData && journeyData.routes && (
-              <RouteComparisonTable
-                routes={journeyData.routes}
-                selectedRouteKey={selectedRoute?.route_key || ''}
-                onSelectRoute={(key) => {
-                  const target = journeyData.routes.find((r) => r.route_key === key)
-                  if (target) setSelectedRoute(target)
-                }}
-                onClose={() => setShowMatrix(false)}
+              <JourneySearchPanel
+                onSearch={handleSearch}
+                isLoading={isLoading}
+                initialFrom={searchFrom}
+                initialTo={searchTo}
               />
-            )}
 
-            {/* If no route planned yet: Popular Express Corridors */}
-            {!journeyData ? (
-              <div className="panel-premium p-5 space-y-3.5 animate-fade-in-up">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-                      <Sparkles className="w-4 h-4 text-amber-500" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-900 text-sm">Popular Express Corridors</h3>
-                      <p className="text-xs text-slate-500">Tap any corridor to route instantly across Metro, BRTS, and Rail</p>
-                    </div>
+              {showMatrix && journeyData && journeyData.routes && (
+                <RouteComparisonTable
+                  routes={journeyData.routes}
+                  selectedRouteKey={selectedRoute?.route_key || ''}
+                  onSelectRoute={key => {
+                    const target = journeyData.routes.find(r => r.route_key === key)
+                    if (target) setSelectedRoute(target)
+                  }}
+                  onClose={() => setShowMatrix(false)}
+                />
+              )}
+
+              {!journeyData ? (
+                <section className="u-panel p-4 sm:p-5">
+                  <SectionHeader
+                    eyebrow="Suggested"
+                    title="Popular express corridors"
+                    description="Pick a corridor to route instantly across metro, BRTS and rail."
+                    aside={
+                      <button type="button" onClick={() => setShowMapModal(true)} className="u-btn u-btn-outline u-btn-sm">
+                        <MapIcon className="h-3.5 w-3.5" />
+                        Transit map
+                      </button>
+                    }
+                  />
+
+                  <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
+                    {CORRIDORS.map(item => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => {
+                          setSearchFrom(item.from)
+                          setSearchTo(item.to)
+                          handleSearch({
+                            from: item.from,
+                            to: item.to,
+                            preference: 'fastest',
+                            modes: ['METRO', 'BRTS', 'AMTS', 'RAIL', 'BUS', 'WALK'],
+                            wheelchair: false,
+                          })
+                        }}
+                        className="group flex items-center justify-between gap-4 rounded-xl border border-line bg-surface-2/60 px-3.5 py-3 text-left transition-all duration-200 ease-silk hover:border-line-strong hover:bg-surface-3/60"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-[13px] font-medium text-ink">{item.label}</span>
+                          <span className="mt-0.5 block truncate text-[11.5px] text-ink-muted">{item.desc}</span>
+                        </span>
+                        <ArrowRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-brand-500" />
+                      </button>
+                    ))}
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowMapModal(true)}
-                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 text-blue-600 text-xs font-bold border border-slate-200 hover:border-blue-300 transition-all"
-                  >
-                    <Map className="w-3.5 h-3.5" />
-                    <span>View Transit Map</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
-                  {[
-                    { from: 'Kalupur Railway Station', to: 'GIFT City FinTech Zone', label: 'Kalupur ➔ GIFT City', desc: 'Metro Line 1 + EV Shuttle' },
-                    { from: 'Sardar Vallabhbhai Patel International Airport', to: 'Mahatma Mandir Convention Centre', label: 'Airport ➔ Gandhinagar', desc: 'Express Bus + BRTS' },
-                    { from: 'Sabarmati Railway Station', to: 'Infocity IT Park (Gandhinagar)', label: 'Sabarmati ➔ Infocity', desc: 'Metro Phase 2 / Rail' },
-                    { from: 'Iskcon Cross Road (SG Highway)', to: 'Vastral Gam Metro Terminal', label: 'Iskcon ➔ Vastral Gam', desc: 'East-West Metro Cross' },
-                  ].map((item, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setSearchFrom(item.from)
-                        setSearchTo(item.to)
-                        handleSearch({
-                          from: item.from,
-                          to: item.to,
-                          preference: 'fastest',
-                          modes: ['METRO', 'BRTS', 'AMTS', 'RAIL', 'BUS', 'WALK'],
-                          wheelchair: false,
-                        })
-                      }}
-                      className="text-left p-3 rounded-xl bg-slate-50 hover:bg-blue-50/90 hover:border-blue-300 border border-slate-200/80 transition-all duration-300 ease-silk group shadow-2xs hover:shadow-card hover:-translate-y-1"
-                    >
-                      <div className="font-bold text-slate-800 text-xs group-hover:text-blue-700 flex items-center justify-between">
-                        <span>{item.label}</span>
-                        <span className="text-slate-400 group-hover:text-blue-600 transition-transform group-hover:translate-x-0.5">➔</span>
-                      </div>
-                      <div className="text-[11px] text-slate-500 mt-1">{item.desc}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              /* If journey planned: 2-Column Results List & Step-by-Step Directions */
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                {/* Route Options List */}
-                <div className="lg:col-span-6">
+                </section>
+              ) : (
+                <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
                   <RouteResultsList
                     routes={journeyData.routes}
                     selectedRouteKey={selectedRoute?.route_key || null}
-                    onSelectRoute={(r) => setSelectedRoute(r)}
+                    onSelectRoute={r => setSelectedRoute(r)}
                     onToggleMatrix={() => setShowMatrix(!showMatrix)}
-                    onOpenMap={(r) => {
+                    onOpenMap={r => {
                       if (r) setSelectedRoute(r)
                       setShowMapModal(true)
                     }}
-                    onStartCompanion={(r) => {
+                    onStartCompanion={r => {
                       setCompanionRoute(r)
                       setIsCompanionActive(true)
                     }}
                     delayCallout={journeyData.delay_alert_callout}
                     leaveBySummary={journeyData.leave_by_summary}
                   />
+
+                  <div className="xl:sticky xl:top-4">
+                    {selectedRoute && (
+                      <JourneyTimeline
+                        steps={selectedRoute.steps}
+                        fareBreakdown={selectedRoute.fare_breakdown}
+                        totalFare={selectedRoute.fare}
+                        totalDuration={selectedRoute.duration_minutes}
+                        departureTime={selectedRoute.departure_time}
+                        arrivalTime={selectedRoute.arrival_time}
+                        onOpenMap={() => setShowMapModal(true)}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── AI ASSISTANT ─────────────────────────────────────────── */}
+          {activeFeature === 'ai' && (
+            <div className="mx-auto max-w-3xl space-y-4 animate-fade">
+              <SectionHeader
+                eyebrow="Transit intelligence"
+                title="Ask the network a question"
+                description="The assistant understands corridors, landmarks, transfer windows and fares — and can route you straight from an answer."
+              />
+
+              <AiJourneyAssistantBar
+                presetQuery={aiPreset}
+                onJourneyPlanned={plan => {
+                  handleAiPlan(plan)
+                  setActiveFeature('plan')
+                }}
+                onUpdateSearchParams={(from, to) => {
+                  setSearchFrom(from)
+                  setSearchTo(to)
+                }}
+              />
+
+              <div className="u-panel p-4 sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="u-overline">Example queries</p>
+                    <p className="mt-1 text-[12px] text-ink-muted">Type naturally — no special syntax needed.</p>
+                  </div>
+                  <button type="button" onClick={() => setShowMapModal(true)} className="u-btn u-btn-outline u-btn-sm">
+                    <MapIcon className="h-3.5 w-3.5" />
+                    Open map
+                  </button>
                 </div>
 
-                {/* Step-by-Step Directions */}
-                <div className="lg:col-span-6">
-                  {selectedRoute && (
-                    <JourneyTimeline
-                      steps={selectedRoute.steps}
-                      fareBreakdown={selectedRoute.fare_breakdown}
-                      totalFare={selectedRoute.fare}
-                      totalDuration={selectedRoute.duration_minutes}
-                      departureTime={selectedRoute.departure_time}
-                      arrivalTime={selectedRoute.arrival_time}
-                      onOpenMap={() => setShowMapModal(true)}
-                    />
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Electric bus feature removed — now integrated into Plan Trip multimodal routing */}
-
-        {/* FEATURE 2: AI ASSISTANT */}
-        {activeFeature === 'ai' && (
-          <div className="flex-1 min-h-0 space-y-4 max-w-5xl mx-auto w-full pb-6">
-            <AiJourneyAssistantBar
-              onJourneyPlanned={(plan) => {
-                handleAiPlan(plan)
-                setActiveFeature('plan')
-              }}
-              onUpdateSearchParams={(from, to) => {
-                setSearchFrom(from)
-                setSearchTo(to)
-              }}
-            />
-
-            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-indigo-600" />
-                  <span>How to Use AI Transit Assistant</span>
-                </h3>
-
-                <button
-                  type="button"
-                  onClick={() => setShowMapModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 transition-colors"
-                >
-                  <Map className="w-3.5 h-3.5" />
-                  <span>Open Map</span>
-                </button>
-              </div>
-
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Type your request in natural language. The AI understands multimodal routes, departures, transfer windows, landmarks, and fares.
-              </p>
-
-              <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
-                <div className="font-bold text-slate-700">Try these prompt examples:</div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
                   {[
                     'Fastest way from Sabarmati to GIFT City before 9 AM',
                     'Cheapest route from Gandhinagar Sector 21 to Airport',
                     'Direct route from Infocity to Vastral Gam with low walking',
-                  ].map((prompt, idx) => (
-                    <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs font-medium text-slate-700 flex flex-col justify-between">
-                      <span className="text-slate-800 font-semibold">"{prompt}"</span>
-                      <span className="text-[10px] text-blue-600 font-bold mt-2">Natural Language AI</span>
-                    </div>
+                  ].map(prompt => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      onClick={() => setAiPreset(prompt)}
+                      className="rounded-xl border border-line bg-surface-2/60 px-3.5 py-3 text-left text-[12.5px] leading-relaxed text-ink-secondary transition-colors hover:border-line-strong hover:text-ink"
+                    >
+                      “{prompt}”
+                    </button>
                   ))}
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* FEATURE 3: LIVE TRACKER */}
-        {activeFeature === 'tracker' && (
-          <div className="flex-1 min-h-0 max-w-5xl mx-auto w-full pb-6 space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                Live Transit Fleet Tracker
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowMapModal(true)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all"
-              >
-                <Map className="w-3.5 h-3.5" />
-                <span>View Live Vehicles on Map</span>
-              </button>
+          {/* ── LIVE TRACKER ─────────────────────────────────────────── */}
+          {activeFeature === 'tracker' && (
+            <div className="mx-auto max-w-4xl space-y-3 animate-fade">
+              <SectionHeader
+                eyebrow="Live"
+                title="Transit fleet tracker"
+                aside={
+                  <button type="button" onClick={() => setShowMapModal(true)} className="u-btn u-btn-primary u-btn-sm">
+                    <MapIcon className="h-3.5 w-3.5" />
+                    View on map
+                  </button>
+                }
+              />
+              <LiveVehicleTrackerCard />
             </div>
-            <LiveVehicleTrackerCard />
-          </div>
-        )}
+          )}
 
-        {/* FEATURE 4: DEPARTURES */}
-        {activeFeature === 'departures' && (
-          <div className="flex-1 min-h-0 max-w-5xl mx-auto w-full pb-6 space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                Live Platform Departure Board
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowMapModal(true)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all"
-              >
-                <Map className="w-3.5 h-3.5" />
-                <span>View Station on Map</span>
-              </button>
+          {/* ── DEPARTURES ───────────────────────────────────────────── */}
+          {activeFeature === 'departures' && (
+            <div className="mx-auto max-w-4xl space-y-3 animate-fade">
+              <SectionHeader
+                eyebrow="Live"
+                title="Platform departure board"
+                aside={
+                  <button type="button" onClick={() => setShowMapModal(true)} className="u-btn u-btn-primary u-btn-sm">
+                    <MapIcon className="h-3.5 w-3.5" />
+                    View station
+                  </button>
+                }
+              />
+              <DepartureBoard initialStopId={selectedDepartureStopId} />
             </div>
-            <DepartureBoard initialStopId={selectedDepartureStopId} />
-          </div>
-        )}
+          )}
 
-        {/* FEATURE 5: NEARBY STOPS */}
-        {activeFeature === 'nearby' && (
-          <div className="flex-1 min-h-0 max-w-5xl mx-auto w-full pb-6 space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                Nearby Transport Hubs & Stops
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowMapModal(true)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all"
-              >
-                <Map className="w-3.5 h-3.5" />
-                <span>View Stops on Map</span>
-              </button>
+          {/* ── NEARBY ───────────────────────────────────────────────── */}
+          {activeFeature === 'nearby' && (
+            <div className="mx-auto max-w-4xl space-y-3 animate-fade">
+              <SectionHeader
+                eyebrow="Live"
+                title="Stops and hubs near you"
+                aside={
+                  <button type="button" onClick={() => setShowMapModal(true)} className="u-btn u-btn-primary u-btn-sm">
+                    <MapIcon className="h-3.5 w-3.5" />
+                    View on map
+                  </button>
+                }
+              />
+              <NearbyTransportFinder
+                onSelectStopDepartures={stopId => {
+                  setSelectedDepartureStopId(stopId)
+                  setActiveFeature('departures')
+                }}
+                onSelectOriginStop={name => {
+                  handleSearch({
+                    from: name,
+                    to: journeyData?.to?.name || 'GIFT City',
+                    preference: 'fastest',
+                    modes: ['METRO', 'BRTS', 'AMTS', 'RAIL', 'BUS', 'WALK'],
+                    wheelchair: false,
+                  })
+                  setActiveFeature('plan')
+                }}
+              />
             </div>
-            <NearbyTransportFinder
-              onSelectStopDepartures={(stopId) => {
-                setSelectedDepartureStopId(stopId)
-                setActiveFeature('departures')
-              }}
-              onSelectOriginStop={(name) => {
-                handleSearch({
-                  from: name,
-                  to: journeyData?.to?.name || 'GIFT City',
-                  preference: 'fastest',
-                  modes: ['METRO', 'BRTS', 'AMTS', 'RAIL', 'BUS', 'WALK'],
-                  wheelchair: false,
-                })
-                setActiveFeature('plan')
-              }}
-            />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Centered Transit Map Modal with Backdrop Blur */}
       <TransitMapModal
         isOpen={showMapModal}
         onClose={() => setShowMapModal(false)}
@@ -516,13 +449,8 @@ export default function JourneyPlanner() {
         }}
       />
 
-      {/* Data Source Status Modal */}
-      <DataSourceStatusModal
-        isOpen={showStatusModal}
-        onClose={() => setShowStatusModal(false)}
-      />
+      <DataSourceStatusModal isOpen={showStatusModal} onClose={() => setShowStatusModal(false)} />
 
-      {/* Live Turn-by-Turn Companion Mode Tracker */}
       {isCompanionActive && (companionRoute || selectedRoute) && (
         <JourneyProgressTracker
           route={companionRoute || selectedRoute!}
@@ -531,19 +459,9 @@ export default function JourneyPlanner() {
         />
       )}
 
-      {/* Admin Network Monitor Modal */}
-      <AdminNetworkMonitorModal
-        isOpen={showAdminMonitor}
-        onClose={() => setShowAdminMonitor(false)}
-      />
+      <AdminNetworkMonitorModal isOpen={showAdminMonitor} onClose={() => setShowAdminMonitor(false)} />
 
-      {/* Traccar Phone & Live GPS Controller Modal */}
-      <TraccarGpsModal
-        isOpen={showTraccarModal}
-        onClose={() => setShowTraccarModal(false)}
-      />
+      <TraccarGpsModal isOpen={showTraccarModal} onClose={() => setShowTraccarModal(false)} />
     </DashboardLayout>
   )
 }
-
-

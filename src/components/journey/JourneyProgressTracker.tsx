@@ -40,36 +40,36 @@ export const JourneyProgressTracker: React.FC<JourneyProgressTrackerProps> = ({
   const progressPct = Math.min(100, Math.round(((currentStepIndex + 0.5) / Math.max(1, steps.length)) * 100))
 
   const getStepIcon = (step: JourneyStep) => {
-    if (step.step_type === 'WALK') return <Footprints className="w-4 h-4 text-amber-400" />
+    if (step.step_type === 'WALK') return <Footprints className="h-4 w-4 text-amber-600" />
     if (step.mode === 'GANDHINAGAR_ELECTRIC_BUS' || step.mode?.includes('ELECTRIC'))
-      return <Zap className="w-4 h-4 text-emerald-400 fill-emerald-400" />
-    if (step.mode === 'METRO') return <Train className="w-4 h-4 text-red-400" />
-    if (step.mode === 'BRTS') return <Bus className="w-4 h-4 text-amber-400" />
-    return <Bus className="w-4 h-4 text-cyan-400" />
+      return <Zap className="h-4 w-4 fill-emerald-600 text-emerald-600" />
+    if (step.mode === 'METRO') return <Train className="h-4 w-4 text-red-600" />
+    if (step.mode === 'BRTS') return <Bus className="h-4 w-4 text-amber-600" />
+    return <Bus className="h-4 w-4 text-aqua-700" />
   }
 
   return (
-    <div className="fixed inset-x-4 bottom-4 md:inset-x-auto md:right-6 md:bottom-6 md:w-[460px] z-50 rounded-2xl border-2 border-emerald-500/60 bg-gradient-to-b from-slate-900/98 via-slate-900/95 to-slate-950 p-5 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom duration-300">
+    <div className="animate-slide-right fixed inset-x-4 bottom-4 z-50 rounded-2xl border-2 border-emerald-300 bg-surface-1 p-5 shadow-float md:inset-x-auto md:bottom-6 md:right-6 md:w-[460px]">
       {/* Companion Mode Header */}
-      <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3 mb-3">
+      <div className="mb-3 flex items-center justify-between gap-3 border-b border-line pb-3">
         <div className="flex items-center gap-2">
           <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            <span className="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-600"></span>
           </span>
-          <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
-            📍 LIVE COMPANION MODE
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+            Live companion mode
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono font-bold text-white bg-slate-800 px-2.5 py-0.5 rounded-full border border-white/10">
+          <span className="u-num rounded-full border border-line bg-surface-3 px-2.5 py-0.5 text-[11.5px] font-medium text-ink">
             {remainingMinutes}m remaining
           </span>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            title="Exit Companion Mode"
+            className="u-icon-btn"
+            title="Exit companion mode"
           >
             <X className="w-4 h-4" />
           </button>
@@ -78,13 +78,13 @@ export const JourneyProgressTracker: React.FC<JourneyProgressTrackerProps> = ({
 
       {/* Visual Step Progress Bar */}
       <div className="space-y-1.5 mb-4">
-        <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+        <div className="u-num flex items-center justify-between text-[11px] text-ink-muted">
           <span>Step {currentStepIndex + 1} of {steps.length}</span>
-          <span className="text-emerald-400 font-bold">{progressPct}% Completed</span>
+          <span className="font-semibold text-emerald-700">{progressPct}% completed</span>
         </div>
-        <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden border border-white/10 p-0.5">
+        <div className="h-2.5 w-full overflow-hidden rounded-full border border-line bg-surface-4 p-0.5">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 transition-all duration-500 shadow-sm shadow-emerald-500/50"
+            className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-aqua-500 transition-all duration-500"
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -92,44 +92,44 @@ export const JourneyProgressTracker: React.FC<JourneyProgressTrackerProps> = ({
 
       {/* Active Current Step Focus Card */}
       {currentStep && (
-        <div className="bg-black/40 rounded-xl p-4 border border-emerald-500/40 space-y-3 mb-4">
+        <div className="mb-4 space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="p-2 rounded-lg bg-emerald-500/20 border border-emerald-500/30">
+              <span className="rounded-lg border border-emerald-200 bg-surface-1 p-2">
                 {getStepIcon(currentStep)}
               </span>
               <div>
-                <p className="text-sm font-bold text-white leading-tight">
+                <p className="text-sm font-semibold leading-tight text-ink">
                   {currentStep.title}
                 </p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {currentStep.from_name} ➔ {currentStep.to_name}
+                <p className="mt-0.5 text-xs text-ink-muted">
+                  {currentStep.from_name} → {currentStep.to_name}
                 </p>
               </div>
             </div>
 
-            <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 shrink-0">
+            <span className="u-num shrink-0 rounded border border-emerald-200 bg-surface-1 px-2 py-1 text-xs font-semibold text-emerald-700">
               ~{currentStep.duration_mins} min
             </span>
           </div>
 
-          <p className="text-xs text-slate-300 bg-slate-900/80 p-2.5 rounded-lg border border-white/5 leading-relaxed">
+          <p className="rounded-lg border border-line bg-surface-1 p-2.5 text-[12px] leading-relaxed text-ink-secondary">
             {currentStep.instructions}
           </p>
 
           {/* Platform / Stand Reminder */}
           {(currentStep.from_platform || currentStep.platform_info) && (
-            <div className="flex items-center justify-between text-[11px] font-mono text-cyan-300 bg-cyan-950/30 px-3 py-1.5 rounded-lg border border-cyan-500/20">
-              <span>Platform / Bay:</span>
-              <strong className="text-white">{currentStep.from_platform || currentStep.platform_info}</strong>
+            <div className="u-num flex items-center justify-between rounded-lg border border-aqua-200 bg-aqua-50 px-3 py-1.5 text-[11px] text-aqua-700">
+              <span>Platform / bay</span>
+              <strong className="font-semibold text-ink">{currentStep.from_platform || currentStep.platform_info}</strong>
             </div>
           )}
 
           {/* High risk transfer warning if on tight transfer step */}
           {currentStep.is_tight && (
-            <div className="p-2.5 rounded-lg bg-rose-500/20 border border-rose-500/40 text-xs text-rose-200 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 animate-pulse" />
-              <span>{currentStep.tight_transfer_warning || 'Connection window is tight! Walk briskly to the next stand.'}</span>
+            <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-700">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
+              <span>{currentStep.tight_transfer_warning || 'Connection window is tight — walk briskly to the next stand.'}</span>
             </div>
           )}
         </div>
@@ -140,9 +140,9 @@ export const JourneyProgressTracker: React.FC<JourneyProgressTrackerProps> = ({
         <button
           onClick={() => setCurrentStepIndex(Math.max(0, currentStepIndex - 1))}
           disabled={currentStepIndex === 0}
-          className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all disabled:opacity-30 disabled:pointer-events-none"
+          className="u-btn u-btn-outline u-btn-sm"
         >
-          Previous Step
+          Previous step
         </button>
 
         {currentStepIndex < steps.length - 1 ? (
@@ -154,18 +154,18 @@ export const JourneyProgressTracker: React.FC<JourneyProgressTrackerProps> = ({
                 onFocusStepOnMap(steps[nextIdx].coordinates)
               }
             }}
-            className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-extrabold transition-all shadow-md shadow-emerald-950 flex items-center justify-center gap-1.5"
+            className="u-btn u-btn-primary u-btn-sm flex-1"
           >
-            <span>Next Step: {steps[currentStepIndex + 1]?.title?.slice(0, 20)}...</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span className="truncate">Next: {steps[currentStepIndex + 1]?.title}</span>
+            <ArrowRight className="h-3.5 w-3.5 shrink-0" />
           </button>
         ) : (
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white text-xs font-extrabold transition-all shadow-md shadow-emerald-950 flex items-center justify-center gap-1.5"
+            className="u-btn u-btn-primary u-btn-sm flex-1"
           >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Complete Journey</span>
+            <CheckCircle2 className="h-4 w-4" />
+            <span>Complete journey</span>
           </button>
         )}
       </div>

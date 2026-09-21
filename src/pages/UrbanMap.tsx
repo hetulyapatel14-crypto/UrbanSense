@@ -1,23 +1,35 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { MapContainer, Popup, Circle } from 'react-leaflet'
+import { MapContainer, Popup, Circle, Marker } from 'react-leaflet'
 import { buses as defaultBuses } from '../data/buses'
 import { alerts as defaultAlerts } from '../data/alerts'
 import { roadHazards as defaultHazards } from '../data/roadHazards'
 import { apiService } from '../services/api'
-import { Layers, Info, Map as MapIcon, Globe, ChevronDown, ChevronUp, Compass } from 'lucide-react'
+import {
+  Layers,
+  Bus,
+  AlertTriangle,
+  Sliders,
+  ChevronDown,
+  ChevronUp,
+  X,
+  MapPin,
+  Crosshair,
+  Route,
+} from 'lucide-react'
 import HeaderActions from '../components/HeaderActions'
 import { PageHeader } from '../components/common/PageHeader'
-import { AnimatedCounter } from '../components/common/AnimatedCounter'
-import { MapTileLayer, type MapTileMode } from '../components/common/MapTileLayer'
+import { MapTileLayer, MapViewToggle, type MapTileMode } from '../components/common/MapTileLayer'
+import { eventIcon, severityTone } from '../components/common/mapIcons'
+import { StatusBadge, StatusTone } from '../components/common/StatusBadge'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
+import { Link } from 'react-router-dom'
 import { MovingVehicleMarker } from '../components/journey/MovingVehicleMarker'
 import { TraccarGpsModal } from '../components/journey/TraccarGpsModal'
 import { traccarApi, TraccarGpsPacket } from '../services/traccarApi'
 import { LiveVehicle } from '../types/transit'
 
-// Fix Leaflet default icon issue
 delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -30,12 +42,20 @@ L.Icon.Default.mergeOptions({
   shadowSize: [41, 41],
 })
 
+const severityToneMap: Record<string, StatusTone> = {
+  critical: 'rose',
+  high: 'amber',
+  medium: 'blue',
+  low: 'slate',
+}
+
 export default function UrbanMap() {
   const [alerts, setAlerts] = useState(defaultAlerts)
   const [roadHazards, setRoadHazards] = useState(defaultHazards)
   const [mapMode, setMapMode] = useState<MapTileMode>('street')
   const [telemetryCollapsed, setTelemetryCollapsed] = useState(false)
   const [isTraccarModalOpen, setIsTraccarModalOpen] = useState(false)
+  const [selected, setSelected] = useState<{ kind: 'hazard' | 'incident'; id: string } | null>(null)
   const [liveVehiclesMap, setLiveVehiclesMap] = useState<Record<string, LiveVehicle>>(() => {
     const initialMap: Record<string, LiveVehicle> = {}
     defaultBuses.forEach((b: any) => {
@@ -56,7 +76,7 @@ export default function UrbanMap() {
         current_location_name: b.location,
         status: 'ON_TIME',
         telemetry_type: 'REAL_TIME',
-        data_source: 'TRACCAR_GPS',
+        data_source: 'ROAD_SNAPPED_TELEMETRY',
       }
     })
     return initialMap
@@ -85,7 +105,7 @@ export default function UrbanMap() {
               current_location_name: b.location,
               status: 'ON_TIME',
               telemetry_type: 'REAL_TIME',
-              data_source: 'TRACCAR_GPS',
+              data_source: 'ROAD_SNAPPED_TELEMETRY',
             }
           })
           return next
@@ -99,7 +119,6 @@ export default function UrbanMap() {
       if (data && data.length > 0) setRoadHazards(data)
     })
 
-    // Connect to live road-snapped stream
     const unsubscribe = traccarApi.connectLiveStream(
       (packet: TraccarGpsPacket) => {
         setLiveVehiclesMap(prev => ({
@@ -125,7 +144,7 @@ export default function UrbanMap() {
             status: 'ON_TIME',
             telemetry_type: 'REAL_TIME',
             data_source: packet.data_source || 'ROAD_SNAPPED_TELEMETRY',
-          }
+          },
         }))
       },
       (initialVehicles) => {
@@ -149,11 +168,7 @@ export default function UrbanMap() {
   const [layers, setLayers] = useState({
     buses: true,
     hazards: true,
-    traffic: true,
-    waterlogging: true,
-    infrastructure: true,
     incidents: true,
-    schoolZones: true,
   })
 
   const toggleLayer = (layer: keyof typeof layers) => {
@@ -162,257 +177,302 @@ export default function UrbanMap() {
 
   const liveVehicleArray = Object.values(liveVehiclesMap)
 
+  const selectedDetail = useMemo(() => {
+    if (!selected) return null
+    if (selected.kind === 'hazard') {
+      const h = roadHazards.find(x => String(x.id) === selected.id)
+      return h
+        ? {
+            title: h.type,
+            kindLabel: 'Road hazard',
+            severity: h.severity,
+            location: h.location,
+            meta: [
+              ['Detected by', h.busId],
+              ['Confidence', `${h.confidence}%`],
+              ['Logged', h.timestamp],
+              ['Status', h.status],
+            ] as [string, string][],
+            to: '/road-intelligence',
+            cta: 'Open road intelligence',
+          }
+        : null
+    }
+    const a = alerts.find(x => String(x.id) === selected.id)
+    return a
+      ? {
+          title: a.type,
+          kindLabel: 'Incident',
+          severity: a.severity,
+          location: a.location,
+          meta: [
+            ['Source vehicle', a.busId],
+            ['Confidence', `${a.confidence}%`],
+            ['Reported', a.timestamp],
+            ['Reference', a.id],
+          ] as [string, string][],
+          to: `/incident/${a.id}`,
+          cta: 'Open incident dossier',
+        }
+      : null
+  }, [selected, roadHazards, alerts])
+
   return (
     <DashboardLayout>
       <PageHeader
-        title="Urban GIS Map"
-        eyebrow="Geospatial"
-        icon={Compass}
-        live={{
-          label: mapMode === 'satellite' ? 'High-Resolution Satellite View' : 'Live OpenStreetMap Grid',
-          tone: mapMode === 'satellite' ? 'blue' : 'emerald'
-        }}
-        subtitle="High-resolution geospatial layers fed continuously by public transport units"
-        actions={<HeaderActions />}
+        title="Urban Map"
+        eyebrow="Spatial operations · live layers"
+        icon={Route}
+        live={{ label: 'Grid synced', tone: 'emerald' }}
+        subtitle="Fleet positions, road surface hazards and incidents on one regional canvas"
+        actions={
+          <div className="flex items-center gap-2">
+            <MapViewToggle mode={mapMode} onChange={setMapMode} className="hidden sm:inline-flex" />
+            <button onClick={() => setIsTraccarModalOpen(true)} className="u-btn u-btn-outline u-btn-sm">
+              <Sliders className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">NMEA</span>
+            </button>
+            <HeaderActions />
+          </div>
+        }
       />
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Filter Panel */}
-        <div className="w-72 bg-white/70 backdrop-blur-xl border-r border-white/70 p-5 flex flex-col justify-between shadow-clay-card z-10 overflow-y-auto">
-          <div>
-            <div className="flex items-center space-x-2 mb-4 pb-3 border-b border-slate-100">
-              <span className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center">
-                <Layers className="w-4 h-4" />
-              </span>
-              <h2 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider">Geospatial Layers</h2>
-            </div>
+      <div className="relative flex-1 overflow-hidden">
+        {/* ── Canvas ─────────────────────────────────────────────────── */}
+        <MapContainer
+          center={[23.08, 72.58]}
+          zoom={12}
+          style={{ height: '100%', width: '100%' }}
+          zoomControl={true}
+          className="min-h-[560px]"
+        >
+          <MapTileLayer mode={mapMode} />
 
-            <div className="stagger-list space-y-1.5">
-              {Object.entries(layers).map(([key, value]) => (
-                <label key={key} className="group/layer flex items-center space-x-3 p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-200/60 hover:shadow-xs hover:-translate-y-0.5 transition-all duration-300 ease-silk">
-                  <input
-                    type="checkbox"
-                    checked={value}
-                    onChange={() => toggleLayer(key as keyof typeof layers)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer transition-transform duration-300 group-hover/layer:scale-110"
-                  />
-                  <span className="text-xs font-semibold text-slate-700 capitalize group-hover/layer:text-blue-700 transition-colors">
-                    {key.replace(/([A-Z])/g, ' $1').trim()}
-                  </span>
-                </label>
-              ))}
-            </div>
+          {layers.buses &&
+            liveVehicleArray.map(v => <MovingVehicleMarker key={v.vehicle_id} vehicle={v} />)}
 
-            <div className="mt-6 pt-5 border-t border-slate-200/80">
-              <h3 className="font-extrabold text-slate-900 text-xs mb-3 uppercase tracking-wider">Map Legend</h3>
-              <div className="stagger-list space-y-2.5 text-xs font-medium">
-                <div className="flex items-center space-x-2.5 hover:translate-x-0.5 transition-transform duration-300">
-                  <div className="w-3 h-3 bg-emerald-600 rounded-full ring-2 ring-emerald-100 live-dot"></div>
-                  <span className="text-slate-700 font-bold">⚡ Electric Bus (Live)</span>
-                </div>
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-3 h-3 bg-blue-600 rounded-full ring-2 ring-blue-100"></div>
-                  <span className="text-slate-700">Active Bus Transponder</span>
-                </div>
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-3 h-3 bg-rose-500 rounded-full ring-2 ring-rose-100"></div>
-                  <span className="text-slate-700">Critical Road Alert</span>
-                </div>
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-3 h-3 bg-amber-500 rounded-full ring-2 ring-amber-100"></div>
-                  <span className="text-slate-700">High Priority Hazard</span>
-                </div>
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-3 h-3 bg-cyan-500 rounded-full ring-2 ring-cyan-100"></div>
-                  <span className="text-slate-700">Medium Traffic Density</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-slate-200/80 text-[11px] text-slate-500 flex items-center gap-1.5">
-            <Info className="w-3.5 h-3.5 text-slate-400" />
-            <span>Click any marker to inspect telemetry</span>
-          </div>
-        </div>
-
-        {/* Map Area */}
-        <div className="flex-1 relative bg-slate-200/60">
-          {/* Cinematic scan sweep across the live map */}
-          <div className="scanline z-[400]" aria-hidden="true" />
-          {/* SATELLITE & STREET VIEW MODE SWITCHER (Top-Right Floating Control) */}
-          <div className="absolute top-4 right-4 z-[1000] bg-white/90 backdrop-blur-md p-1 rounded-2xl shadow-xl border border-slate-200/80 flex items-center space-x-1">              <button
-                type="button"
-                onClick={() => setMapMode('street')}
-                className={`press-scale flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-300 cursor-pointer ${
-                mapMode === 'street'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-              }`}
-            >
-              <MapIcon className="w-3.5 h-3.5" />
-              <span>Street View</span>
-            </button>              <button
-                type="button"
-                onClick={() => setMapMode('satellite')}
-                className={`press-scale flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-300 cursor-pointer ${
-                mapMode === 'satellite'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-              }`}
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>Satellite View</span>
-            </button>
-          </div>
-
-          <MapContainer
-            center={[23.1000, 72.6000]}
-            zoom={12}
-            style={{ height: '100%', width: '100%' }}
-            zoomControl={true}
-          >
-            {/* Tile Layer: Street vs Satellite */}
-            <MapTileLayer mode={mapMode} />
-
-            {/* Smooth Moving Buses on Map */}
-            {layers.buses && liveVehicleArray.map(v => (
-              <MovingVehicleMarker
-                key={v.vehicle_id}
-                vehicle={v}
-              />
-            ))}
-
-            {/* Road Hazards */}
-            {layers.hazards && roadHazards.map(hazard => (
+          {layers.hazards &&
+            roadHazards.map(hazard => (
               <Circle
                 key={hazard.id}
                 center={hazard.gps}
-                radius={150}
+                radius={160}
                 pathOptions={{
-                  color: hazard.severity === 'critical' ? '#ef4444' : hazard.severity === 'high' ? '#f59e0b' : '#0284c7',
-                  fillColor: hazard.severity === 'critical' ? '#ef4444' : hazard.severity === 'high' ? '#f59e0b' : '#0284c7',
-                  fillOpacity: 0.35,
-                  weight: 2,
+                  color: hazard.severity === 'critical' ? '#DC2626' : hazard.severity === 'high' ? '#D97706' : '#0C8BA6',
+                  fillColor: hazard.severity === 'critical' ? '#DC2626' : hazard.severity === 'high' ? '#D97706' : '#0C8BA6',
+                  fillOpacity: 0.12,
+                  weight: 1.2,
                 }}
               >
                 <Popup>
-                  <div className="text-slate-900 font-sans min-w-[200px] p-1">
-                    <div className="font-extrabold text-base mb-2 text-rose-700">{hazard.type}</div>
-                    <div className="space-y-1 text-xs">
-                      <div><strong className="text-slate-600">Location:</strong> {hazard.location}</div>
-                      <div><strong className="text-slate-600">Severity:</strong> <span className="uppercase font-bold text-rose-600">{hazard.severity}</span></div>
-                      <div><strong className="text-slate-600">Detected By:</strong> {hazard.busId}</div>
-                      <div><strong className="text-slate-600">Confidence:</strong> {hazard.confidence}%</div>
-                      <div><strong className="text-slate-600">Status:</strong> {hazard.status}</div>
-                      <div className="text-[11px] text-slate-400 mt-2 font-mono">{hazard.timestamp}</div>
-                    </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[12px] font-semibold text-ink">{hazard.type}</p>
+                    <p className="text-[11.5px] text-ink-secondary">{hazard.location}</p>
+                    <p className="font-mono text-[11px] text-ink-muted">
+                      {hazard.busId} · {hazard.confidence}% · {hazard.timestamp}
+                    </p>
+                    <Link
+                      to="/road-intelligence"
+                      className="inline-block pt-1 text-[11.5px] font-medium text-brand-600 hover:text-brand-500"
+                    >
+                      Open road intelligence →
+                    </Link>
                   </div>
                 </Popup>
               </Circle>
             ))}
 
-            {/* Incidents */}
-            {layers.incidents && alerts.map(alert => (
+          {layers.incidents &&
+            alerts.map(alert => (
               <Circle
                 key={alert.id}
                 center={alert.gps}
-                radius={200}
+                radius={220}
                 pathOptions={{
-                  color: alert.severity === 'critical' ? '#dc2626' : alert.severity === 'high' ? '#d97706' : '#2563eb',
-                  fillColor: alert.severity === 'critical' ? '#dc2626' : alert.severity === 'high' ? '#d97706' : '#2563eb',
-                  fillOpacity: 0.25,
-                  dashArray: '8, 8',
-                  weight: 2,
+                  color: alert.severity === 'critical' ? '#DC2626' : alert.severity === 'high' ? '#D97706' : '#FF4757',
+                  fillColor: alert.severity === 'critical' ? '#DC2626' : alert.severity === 'high' ? '#D97706' : '#FF4757',
+                  fillOpacity: 0.09,
+                  dashArray: '5, 6',
+                  weight: 1.2,
                 }}
+              />
+            ))}
+
+          {layers.incidents &&
+            alerts.map(alert => (
+              <Marker
+                key={`m-${alert.id}`}
+                position={alert.gps}
+                icon={eventIcon(alert.severity, String(selected?.id) === String(alert.id) ? 22 : 16)}
+                eventHandlers={{ click: () => setSelected({ kind: 'incident', id: String(alert.id) }) }}
               >
                 <Popup>
-                  <div className="text-slate-900 font-sans p-1">
-                    <div className="font-extrabold text-base mb-2">{alert.type}</div>
-                    <div className="space-y-1 text-xs">
-                      <div><strong className="text-slate-600">Location:</strong> {alert.location}</div>
-                      <div><strong className="text-slate-600">Bus:</strong> {alert.busId}</div>
-                      <div><strong className="text-slate-600">Confidence:</strong> {alert.confidence}%</div>
-                      <div className="text-[11px] text-slate-400 mt-2 font-mono">{alert.timestamp}</div>
-                    </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[12px] font-semibold text-ink">{alert.type}</p>
+                    <p className="text-[11.5px] text-ink-secondary">{alert.location}</p>
+                    <p className="font-mono text-[11px] text-ink-muted">
+                      {alert.busId} · {alert.confidence}% · {alert.timestamp}
+                    </p>
+                    <Link
+                      to={`/incident/${alert.id}`}
+                      className="inline-block pt-1 text-[11.5px] font-medium text-brand-600 hover:text-brand-500"
+                    >
+                      Open dossier →
+                    </Link>
                   </div>
                 </Popup>
-              </Circle>
+              </Marker>
             ))}
-          </MapContainer>
 
-          {/* MAP SUMMARY TELEMETRY - SLEEK BORDERLESS FLOATING GLASS HUD */}
-          <div className="absolute bottom-6 left-6 z-[1000] min-w-[280px] max-w-[340px]">
-            <div className="bg-white/85 backdrop-blur-xl rounded-3xl p-5 shadow-premium border border-white/70 transition-all duration-500 hover:shadow-glow-md">
-              {/* Header with status pulse & minimize button */}
-              <div className="flex items-center justify-between mb-3.5">
-                <div className="flex items-center space-x-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 live-dot"></span>
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
-                    Live Map Telemetry
-                  </span>
+          {layers.hazards &&
+            roadHazards.map(hazard => (
+              <Marker
+                key={`hm-${hazard.id}`}
+                position={hazard.gps}
+                icon={eventIcon(hazard.severity, String(selected?.id) === String(hazard.id) ? 20 : 14)}
+                eventHandlers={{ click: () => setSelected({ kind: 'hazard', id: String(hazard.id) }) }}
+              />
+            ))}
+        </MapContainer>
+
+        {/* ── Floating layer selector ────────────────────────────────── */}
+        <div className="pointer-events-none absolute left-3 top-3 z-[500] flex max-w-[calc(100%-1.5rem)] flex-wrap items-start gap-2">
+          <div className="u-glass pointer-events-auto flex flex-wrap items-center gap-1 p-1.5">
+            <button
+              onClick={() => toggleLayer('buses')}
+              aria-pressed={layers.buses}
+              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-medium transition-all duration-150 ${
+                layers.buses ? 'bg-brand-500/90 text-white shadow-glow-sm' : 'text-ink-muted hover:text-ink'
+              }`}
+            >
+              <Bus className="h-3.5 w-3.5" />
+              Fleet · {liveVehicleArray.length}
+            </button>
+            <button
+              onClick={() => toggleLayer('hazards')}
+              aria-pressed={layers.hazards}
+              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-medium transition-all duration-150 ${
+                layers.hazards ? 'bg-amber-400/90 text-surface-0' : 'text-ink-muted hover:text-ink'
+              }`}
+            >
+              <Layers className="h-3.5 w-3.5" />
+              Hazards · {roadHazards.length}
+            </button>
+            <button
+              onClick={() => toggleLayer('incidents')}
+              aria-pressed={layers.incidents}
+              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-medium transition-all duration-150 ${
+                layers.incidents ? 'bg-rose-500/90 text-white' : 'text-ink-muted hover:text-ink'
+              }`}
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Incidents · {alerts.length}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Floating telemetry summary ─────────────────────────────── */}
+        <div className="pointer-events-none absolute bottom-4 left-3 z-[500] w-[260px] max-w-[calc(100%-1.5rem)]">
+          <div className="u-glass pointer-events-auto overflow-hidden">
+            <button
+              onClick={() => setTelemetryCollapsed(v => !v)}
+              className="flex w-full items-center justify-between px-3.5 py-2.5"
+              aria-expanded={!telemetryCollapsed}
+            >
+              <span className="flex items-center gap-2 text-[12px] font-medium text-ink">
+                <span className="live-dot" />
+                Spatial grid live
+              </span>
+              {telemetryCollapsed ? (
+                <ChevronUp className="h-3.5 w-3.5 text-ink-muted" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5 text-ink-muted" />
+              )}
+            </button>
+
+            {!telemetryCollapsed && (
+              <dl className="animate-fade space-y-2 border-t border-line px-3.5 py-3 text-[11.5px]">
+                {[
+                  ['Road probes', `${liveVehicleArray.length} vehicles`, 'text-ink'],
+                  ['Surface hazards', `${roadHazards.length} flagged`, 'text-amber-600'],
+                  ['Open incidents', `${alerts.length} active`, 'text-rose-600'],
+                  ['Centreline snap', 'Active', 'text-emerald-600'],
+                ].map(([k, v, tone]) => (
+                  <div key={k} className="flex items-center justify-between gap-3">
+                    <dt className="text-ink-muted">{k}</dt>
+                    <dd className={`u-num font-medium ${tone}`}>{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </div>
+        </div>
+
+        {/* ── Floating detail panel ─────────────────────────────────── */}
+        {selectedDetail && (
+          <div className="absolute right-3 top-3 z-[500] w-[320px] max-w-[calc(100%-1.5rem)] animate-slide-right">
+            <div className="u-glass overflow-hidden">
+              <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3">
+                <div className="min-w-0">
+                  <p className="u-overline">{selectedDetail.kindLabel}</p>
+                  <p className="mt-1 truncate text-[14px] font-semibold text-ink">{selectedDetail.title}</p>
                 </div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50/90 px-2 py-0.5 rounded-full">
-                    Ahmedabad • Gandhinagar
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setTelemetryCollapsed(!telemetryCollapsed)}
-                    className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100/80 transition-colors cursor-pointer"
-                    title={telemetryCollapsed ? 'Expand Telemetry' : 'Minimize Telemetry'}
-                  >
-                    {telemetryCollapsed ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
+                <button onClick={() => setSelected(null)} className="u-icon-btn h-7 w-7" aria-label="Close detail panel">
+                  <X className="h-3.5 w-3.5" />
+                </button>
               </div>
 
-              {/* 4 Clean Stats */}
-              {!telemetryCollapsed && (
-                <div className="stagger-list grid grid-cols-2 gap-x-6 gap-y-3 pt-1">
-                  <div className="hover:translate-y-[-2px] transition-transform duration-300">
-                    <div className="text-[11px] font-medium text-slate-500">Active Live Units</div>
-                    <div className="text-2xl font-black text-blue-600 tracking-tight mt-0.5 tabular-nums">
-                      <AnimatedCounter value={liveVehicleArray.length} />
-                    </div>
-                    <div className="text-[10px] text-slate-400">Live Telemetry stream</div>
-                  </div>
-
-                  <div className="hover:translate-y-[-2px] transition-transform duration-300">
-                    <div className="text-[11px] font-medium text-slate-500">Road Hazards</div>
-                    <div className="text-2xl font-black text-amber-600 tracking-tight mt-0.5 tabular-nums">
-                      <AnimatedCounter value={roadHazards.length} />
-                    </div>
-                    <div className="text-[10px] text-slate-400">Potholes & flaws</div>
-                  </div>
-
-                  <div className="hover:translate-y-[-2px] transition-transform duration-300">
-                    <div className="text-[11px] font-medium text-slate-500">Live Incidents</div>
-                    <div className="text-2xl font-black text-rose-600 tracking-tight mt-0.5 tabular-nums">
-                      <AnimatedCounter value={alerts.length} />
-                    </div>
-                    <div className="text-[10px] text-slate-400">Active events</div>
-                  </div>
-
-                  <div className="hover:translate-y-[-2px] transition-transform duration-300">
-                    <div className="text-[11px] font-medium text-slate-500">Coverage Area</div>
-                    <div className="text-2xl font-black text-emerald-600 tracking-tight mt-0.5 tabular-nums">
-                      <AnimatedCounter value={340} /> <span className="text-sm font-bold">km²</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400">Twin cities sweep</div>
-                  </div>
+              <div className="space-y-3 px-4 py-3.5">
+                <div className="flex items-center justify-between gap-2">
+                  <StatusBadge status={selectedDetail.severity} tone={severityToneMap[selectedDetail.severity] ?? 'slate'} />
+                  <span className="flex items-center gap-1.5 text-[11px] text-ink-muted">
+                    <Crosshair className="h-3.5 w-3.5" />
+                    {severityTone(selectedDetail.severity)}
+                  </span>
                 </div>
-              )}
+
+                <p className="flex items-start gap-1.5 text-[12px] text-ink-secondary">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-faint" />
+                  {selectedDetail.location}
+                </p>
+
+                <dl className="divide-y divide-line/70 border-t border-line/70">
+                  {selectedDetail.meta.map(([k, v]) => (
+                    <div key={k} className="flex items-center justify-between gap-3 py-1.5">
+                      <dt className="text-[11.5px] text-ink-muted">{k}</dt>
+                      <dd className="u-num truncate text-[11.5px] font-medium text-ink-secondary">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+
+                <Link to={selectedDetail.to} className="u-btn u-btn-outline u-btn-sm w-full">
+                  {selectedDetail.cta}
+                </Link>
+              </div>
             </div>
+          </div>
+        )}
+
+        {/* ── Floating legend ────────────────────────────────────────── */}
+        <div className="pointer-events-none absolute right-3 bottom-4 z-[500] hidden md:block">
+          <div className="u-glass pointer-events-auto space-y-1.5 px-3.5 py-3">
+            <p className="u-overline mb-1">Legend</p>
+            {[
+              { c: '#FF4757', l: 'Fleet vehicle' },
+              { c: '#DC2626', l: 'Critical incident' },
+              { c: '#D97706', l: 'High severity' },
+              { c: '#0C8BA6', l: 'Surface hazard' },
+            ].map(item => (
+              <p key={item.l} className="flex items-center gap-2 text-[11px] text-ink-secondary">
+                <span className="u-dot" style={{ backgroundColor: item.c }} />
+                {item.l}
+              </p>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Traccar Phone & GPS Modal */}
-      <TraccarGpsModal
-        isOpen={isTraccarModalOpen}
-        onClose={() => setIsTraccarModalOpen(false)}
-      />
+      <TraccarGpsModal isOpen={isTraccarModalOpen} onClose={() => setIsTraccarModalOpen(false)} />
     </DashboardLayout>
   )
 }

@@ -1,163 +1,221 @@
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Radio, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ArrowRight,
+  Radio,
+  Cpu,
+  Map as MapIcon,
+  BarChart3,
+  Target,
+  Lightbulb,
+} from 'lucide-react'
 import ScrollProgressBar from '../components/common/ScrollProgressBar'
 import { ScrollReveal } from '../components/common/ScrollReveal'
 import { ClayBlobs } from '../components/common/ClayBlobs'
+import { UrbanSenseLogo } from '../components/common/UrbanSenseLogo'
+import { SectionHeader } from '../components/common/SectionHeader'
+
+const CAPABILITIES = [
+  'Road hazard detection — potholes, cracking, standing water',
+  'Traffic density analysis and corridor delay estimation',
+  'Infrastructure monitoring — signage, dividers, crossings',
+  'Incident detection — collision, obstruction, unsafe manoeuvres',
+  'Automatic number plate recognition for enforcement',
+  'Vulnerable road user tracking around school zones',
+]
+
+const STACK = [
+  { label: 'Frontend', value: 'React 18 & Vite', note: 'TypeScript · Tailwind' },
+  { label: 'On-vehicle AI', value: 'YOLOv8 & CNNs', note: 'Onboard inference' },
+  { label: 'Mapping', value: 'Leaflet & OpenStreetMap', note: 'High-precision GIS' },
+  { label: 'Analytics', value: 'Recharts engine', note: 'Live dashboards' },
+]
 
 export default function About() {
   return (
-    <div className="min-h-screen antialiased">
+    <div className="relative min-h-screen bg-surface-0 text-ink">
       <ClayBlobs variant="display" />
       <ScrollProgressBar />
-      {/* Header */}
-      <header className="relative border-b border-slate-200/90 bg-white/85 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-6 py-4">
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/"
-                className="press-scale p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                aria-label="Back to home"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-              <div className="flex items-center space-x-3">
-                <div className="relative overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 p-2.5 rounded-xl shadow-sm text-white">
-                  <Radio className="w-5 h-5 relative z-10" />
-                  <span className="pointer-events-none absolute inset-0 bg-sheen opacity-60 animate-sheen" aria-hidden="true" />
-                </div>
-                <span className="text-xl font-extrabold text-slate-900 tracking-tight">UrbanSense</span>
-              </div>
-            </div>
 
-            <Link to="/command-center" className="btn-primary group text-xs sm:text-sm px-5 py-2.5">
-              Launch Dashboard
-              <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+      <header className="sticky top-0 z-50 border-b border-line bg-surface-1/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1120px] items-center justify-between gap-4 px-5 py-3.5 lg:px-8">
+          <div className="flex items-center gap-3">
+            <Link to="/" className="u-icon-btn" aria-label="Back to home">
+              <ArrowLeft className="h-4 w-4" />
             </Link>
+            <UrbanSenseLogo size="sm" subtext="Platform vision" id="about" />
           </div>
+
+          <Link to="/command-center" className="u-btn u-btn-primary u-btn-sm">
+            Open dashboard
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-12 relative">
-        <div className="pointer-events-none absolute inset-x-0 -top-16 h-96 overflow-hidden" aria-hidden="true">
-          <div className="absolute top-0 left-1/4 w-[32rem] h-64 bg-gradient-to-tr from-blue-400/12 via-indigo-400/10 to-transparent blur-3xl rounded-full animate-aurora" />
-          <div className="absolute top-8 right-1/4 w-[26rem] h-56 bg-gradient-to-tr from-cyan-400/12 to-transparent blur-3xl rounded-full animate-aurora" />
-        </div>
+      <main className="mx-auto max-w-[1120px] px-5 py-14 lg:px-8 lg:py-20">
+        {/* Mission */}
+        <ScrollReveal direction="up">
+          <SectionHeader
+            size="lg"
+            eyebrow="About the platform"
+            title="Public transport already covers the city. We gave it a way to observe."
+          />
+          <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-ink-secondary">
+            UrbanSense is an urban intelligence platform that turns everyday public transport vehicles into a
+            continuously moving network of sensors. Each connected bus observes the streets it already drives, so the
+            city gains coverage without installing new roadside hardware.
+          </p>
+        </ScrollReveal>
 
-        <div className="max-w-4xl mx-auto">
-          <ScrollReveal direction="up" delay={0}>
-          <div className="relative text-center mb-12">
-            <span className="section-eyebrow text-blue-600 bg-blue-50 border-blue-200">
-              <Sparkles className="w-3 h-3" />
-              Platform Vision
-            </span>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mt-3 mb-4">
-              <span className="gradient-text-live">About UrbanSense</span>
-            </h1>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              Transforming conventional public transit fleets into real-time mobile urban sensing networks.
-            </p>
-          </div>
+        {/* Challenge / solution */}
+        <div className="mt-14 grid gap-10 lg:grid-cols-2 lg:gap-14">
+          <ScrollReveal direction="up">
+            <div className="border-t border-line pt-6">
+              <div className="flex items-center gap-2.5">
+                <Target className="h-4 w-4 text-amber-500" />
+                <h2 className="u-h3">The problem</h2>
+              </div>
+              <p className="mt-3 text-[13.5px] leading-relaxed text-ink-secondary">
+                Cities manage hundreds of kilometres of road with a mix of fixed cameras that leave blind spots,
+                infrequent manual inspections, and citizen complaints that arrive after the damage is done. Coverage
+                is uneven exactly where it matters most.
+              </p>
+            </div>
           </ScrollReveal>
 
-          <div className="relative stagger-list space-y-8 text-base md:text-lg text-slate-700 leading-relaxed">
-            <div className="card-luxury accent-top p-8">
-              <h2 className="text-2xl font-extrabold text-slate-900 mb-3 tracking-tight">The Core Mission</h2>
-              <p className="text-slate-600 leading-relaxed">
-                UrbanSense is an AI-powered smart city intelligence platform that leverages everyday public transport buses as mobile sensing units for continuous, high-definition municipal observation.
+          <ScrollReveal direction="up" delay={60}>
+            <div className="border-t border-brand-200/60 pt-6">
+              <div className="flex items-center gap-2.5">
+                <Lightbulb className="h-4 w-4 text-brand-500" />
+                <h2 className="u-h3">The approach</h2>
+              </div>
+              <p className="mt-3 text-[13.5px] leading-relaxed text-ink-secondary">
+                Perception hardware rides on the fleet. As vehicles complete their normal routes, they assess road
+                quality and safety conditions locally and stream only structured, actionable events upstream — where
+                operators, engineers and enforcement teams can act on them.
               </p>
-              <p className="text-slate-600 leading-relaxed mt-4">
-                By equipping city bus fleets with high-definition optical lenses and Edge AI inferencing hardware, we create an automated, dynamically moving sensor web that detects pavement hazards, road congestion, civil infrastructure defects, and public safety occurrences in real-time.
+            </div>
+          </ScrollReveal>
+        </div>
+
+        {/* Capabilities */}
+        <ScrollReveal direction="up">
+          <section className="u-panel mt-14 overflow-hidden">
+            <span className="u-hair" aria-hidden="true" />
+            <div className="u-panel-head">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-surface-3 text-emerald-600">
+                  <Radio className="h-3.5 w-3.5" />
+                </span>
+                <div>
+                  <h2 className="text-[13px] font-semibold text-ink">What the network observes</h2>
+                  <p className="text-[11px] text-ink-muted">Six detection families running continuously</p>
+                </div>
+              </div>
+            </div>
+
+            <ul className="grid grid-cols-1 divide-line/70 sm:grid-cols-2">
+              {CAPABILITIES.map(item => (
+                <li
+                  key={item}
+                  className="flex items-start gap-3 border-t border-line/70 px-4 py-3.5 text-[13px] text-ink-secondary transition-colors hover:bg-surface-3/40 sm:px-5"
+                >
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </section>
+        </ScrollReveal>
+
+        {/* Stack */}
+        <ScrollReveal direction="up">
+          <div className="mt-14">
+            <SectionHeader eyebrow="Under the hood" title="Platform technology" />
+          </div>
+        </ScrollReveal>
+
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {STACK.map((entry, i) => (
+            <ScrollReveal key={entry.label} direction="up" delay={i * 40}>
+              <div className="u-panel u-panel-hover p-4">
+                <p className="u-overline">{entry.label}</p>
+                <p className="mt-2 text-[13.5px] font-medium text-ink">{entry.value}</p>
+                <p className="mt-1 text-[11.5px] text-ink-muted">{entry.note}</p>
+              </div>
+            </ScrollReveal>
+          ))}
+        </div>
+
+        {/* Coverage */}
+        <ScrollReveal direction="up">
+          <section className="mt-14 grid gap-8 border-t border-line pt-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <MapIcon className="h-4 w-4 text-brand-500" />
+                <h2 className="u-h3">Coverage today</h2>
+              </div>
+              <p className="mt-3 max-w-xl text-[13.5px] leading-relaxed text-ink-secondary">
+                Live across Ahmedabad, Gandhinagar and GIFT City, covering the metro, BRTS, AMTS, suburban rail and
+                electric shuttle corridors that carry the region every day.
               </p>
+
+              <dl className="mt-6 grid grid-cols-3 gap-x-8 border-t border-line/70 pt-5">
+                {[
+                  ['Cities', '3'],
+                  ['Fleet', '248'],
+                  ['Corridors', '64'],
+                ].map(([k, v]) => (
+                  <div key={k}>
+                    <dd className="u-num text-[22px] font-semibold text-ink">{v}</dd>
+                    <dt className="mt-1 text-[11.5px] text-ink-muted">{k}</dt>
+                  </div>
+                ))}
+              </dl>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="card-luxury accent-top p-7">
-                <h2 className="text-xl font-extrabold text-slate-900 mb-3 tracking-tight">The Challenge</h2>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  Modern metropolises face chronic difficulties in monitoring hundreds of kilometers of road networks. Traditional monitoring depends on static CCTV cameras with blind spots, expensive and infrequent manual inspections, and delayed citizen complaints after damages occur.
-                </p>
-              </div>
-
-              <div className="card-luxury accent-top p-7 border-blue-200 bg-gradient-to-b from-white to-blue-50/40">
-                <h2 className="text-xl font-extrabold text-slate-900 mb-3 tracking-tight">Our Solution</h2>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  UrbanSense mounts Edge AI perception computers directly onto existing buses. As buses drive their regular commuter routes, they continuously analyze road quality and safety incidents without human intervention, streaming only actionable metadata back to the command center.
-                </p>
-              </div>
+            <div className="flex flex-wrap gap-2.5">
+              <Link to="/urban-map" className="u-btn u-btn-outline px-4 py-2.5 text-[13px]">
+                <MapIcon className="h-4 w-4" />
+                View the map
+              </Link>
+              <Link to="/traffic-analytics" className="u-btn u-btn-primary px-4 py-2.5 text-[13px]">
+                <BarChart3 className="h-4 w-4" />
+                See traffic analytics
+              </Link>
             </div>
+          </section>
+        </ScrollReveal>
 
-            <div className="card-luxury accent-top p-8">
-              <h2 className="text-2xl font-extrabold text-slate-900 mb-5 tracking-tight">Key Civic Features</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-sm font-semibold text-slate-800">
-                <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/70 hover:bg-white hover:border-emerald-200 hover:shadow-xs hover:-translate-y-0.5 transition-all duration-300 ease-silk">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Real-time road hazard detection (potholes, cracks, pooling)</span>
-                </div>
-                <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/70 hover:bg-white hover:border-emerald-200 hover:shadow-xs hover:-translate-y-0.5 transition-all duration-300 ease-silk">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Traffic density analysis & corridor delay estimation</span>
-                </div>
-                <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/70 hover:bg-white hover:border-emerald-200 hover:shadow-xs hover:-translate-y-0.5 transition-all duration-300 ease-silk">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Infrastructure monitoring (signs, dividers, zebra crossings)</span>
-                </div>
-                <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/70 hover:bg-white hover:border-emerald-200 hover:shadow-xs hover:-translate-y-0.5 transition-all duration-300 ease-silk">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Incident detection (hit-and-run, lane obstruction)</span>
-                </div>
-                <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/70 hover:bg-white hover:border-emerald-200 hover:shadow-xs hover:-translate-y-0.5 transition-all duration-300 ease-silk">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Automated Number Plate Recognition (ANPR)</span>
-                </div>
-                <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/70 hover:bg-white hover:border-emerald-200 hover:shadow-xs hover:-translate-y-0.5 transition-all duration-300 ease-silk">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Pedestrian & vulnerable road user school-zone tracking</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Tech Stack */}
-            <div className="card-luxury accent-top p-8">
-              <h3 className="text-xl font-extrabold text-slate-900 mb-6 tracking-tight">Platform Technology Stack</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Frontend</div>
-                  <div className="font-extrabold text-slate-900">React 18 & Vite</div>
-                  <div className="text-xs text-slate-500 mt-1">TypeScript, Tailwind CSS</div>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Edge AI</div>
-                  <div className="font-extrabold text-slate-900">YOLOv8 & CNNs</div>
-                  <div className="text-xs text-slate-500 mt-1">Onboard Hardware Inference</div>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">GIS Mapping</div>
-                  <div className="font-extrabold text-slate-900">Leaflet & OpenStreetMap</div>
-                  <div className="text-xs text-slate-500 mt-1">High-Precision Geospatial</div>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Analytics</div>
-                  <div className="font-extrabold text-slate-900">Recharts Engine</div>
-                  <div className="text-xs text-slate-500 mt-1">Executive Live Dashboards</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-center pt-6">
-              <Link to="/command-center" className="btn-primary group text-base px-8 py-3.5 shadow-md shadow-blue-500/20 inline-flex items-center gap-2">
-                <span>Enter Command Center</span>
-                <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+        {/* Closing */}
+        <ScrollReveal direction="up">
+          <div className="mt-16 flex flex-wrap items-center justify-between gap-6 border-t border-line pt-10">
+            <p className="max-w-xl text-[15px] leading-relaxed text-ink-secondary">
+              Learn how the sensing, inference and operations layers fit together.
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              <Link to="/architecture" className="u-btn u-btn-outline px-4 py-2.5 text-[13.5px]">
+                <Cpu className="h-4 w-4" />
+                System architecture
+              </Link>
+              <Link to="/command-center" className="u-btn u-btn-primary px-4 py-2.5 text-[13.5px]">
+                Enter command center
+                <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
-        </div>
-      </div>
+        </ScrollReveal>
+      </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200/70 py-8 bg-white/60 backdrop-blur-md mt-16">
-        <div className="container mx-auto px-6 text-center text-slate-500 text-sm">
-          <p>© 2026 UrbanSense. Smart City Intelligence Platform.</p>
+      <footer className="border-t border-line">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-3 px-5 py-8 lg:px-8">
+          <p className="text-[11.5px] text-ink-faint">© 2026 UrbanSense · Urban intelligence platform</p>
+          <span className="flex items-center gap-2 text-[11.5px] text-ink-muted">
+            <span className="live-dot" />
+            All regional services operational
+          </span>
         </div>
       </footer>
     </div>

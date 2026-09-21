@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 
+/** Scroll progress: a safety-orange filament sliding along the top rail. */
 export const ScrollProgressBar = () => {
   const [scrollProgress, setScrollProgress] = useState(0)
 
@@ -12,17 +13,16 @@ export const ScrollProgressBar = () => {
         setScrollProgress(progress)
       }
     }
-
     window.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   return (
-    <div className="fixed top-0 left-0 right-0 h-[2.5px] z-[9999] pointer-events-none bg-slate-100/30 overflow-hidden">
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-[9999] h-[3px] bg-surface-3 shadow-recessed" aria-hidden="true">
       <div
-        className="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 transition-all duration-150 ease-out shadow-xs"
-        style={{ width: `${scrollProgress}%` }}
+        className="h-full rounded-r-full bg-brand-500 transition-all duration-150 ease-out"
+        style={{ width: `${scrollProgress}%`, boxShadow: '0 0 10px rgba(255,71,87,0.65), inset 0 1px 0 rgba(255,255,255,0.35)' }}
       />
     </div>
   )

@@ -64,7 +64,7 @@ const createPinIcon = (color: string, label: string) => {
 }
 
 const createStationIcon = (mode: string, isInterchange: boolean) => {
-  let bg = '#2563EB'
+  let bg = '#FF4757'
   if (mode === 'METRO') bg = '#DC2626'
   else if (mode === 'BRTS') bg = '#F97316'
   else if (mode === 'AMTS') bg = '#059669'
@@ -189,9 +189,9 @@ export const TransitMap: React.FC<TransitMapProps> = ({
   const activeVehiclesList = Object.values(liveVehiclesMap)
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-sm flex flex-col h-full min-h-[420px] relative">
+    <div className="u-panel relative flex h-full min-h-[420px] flex-col overflow-hidden">
       {/* Map Header Overlay */}
-      <div className="absolute top-3 left-3 z-[400] bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-2 text-xs font-semibold text-slate-800">
+      <div className="u-glass absolute left-3 top-3 z-[400] flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-ink">
         <Navigation className="w-3.5 h-3.5 text-indigo-600" />
         <span>Ahmedabad • Gandhinagar • GIFT City Transit GIS</span>
       </div>
@@ -199,7 +199,7 @@ export const TransitMap: React.FC<TransitMapProps> = ({
 
 
       {/* Legend Overlay with Minimize / Expand option */}
-      <div className="absolute bottom-3 left-3 z-[400] bg-white/95 backdrop-blur rounded-xl border border-slate-200 shadow-md text-[11px] overflow-hidden transition-all duration-200 max-w-[240px]">
+      <div className="u-glass absolute bottom-3 left-3 z-[400] max-w-[240px] overflow-hidden text-[11px] transition-all duration-200">
         <div
           role="button"
           tabIndex={0}
@@ -319,7 +319,7 @@ export const TransitMap: React.FC<TransitMapProps> = ({
         {originCoord && (
           <Marker
             position={originCoord}
-            icon={createPinIcon('#2563EB', 'Start')}
+            icon={createPinIcon('#FF4757', 'Start')}
           >
             <Popup>
               <div className="p-1 text-xs">
@@ -359,7 +359,7 @@ export const TransitMap: React.FC<TransitMapProps> = ({
                     <div className="font-bold text-slate-800">{step.mode} Transit Stop</div>
                     <div className="text-slate-600">{step.route_name}</div>
                     {step.platform_info && (
-                      <div className="text-[11px] font-semibold text-blue-600">{step.platform_info}</div>
+                      <div className="text-[11px] font-semibold text-iris-600">{step.platform_info}</div>
                     )}
                   </div>
                 </Popup>

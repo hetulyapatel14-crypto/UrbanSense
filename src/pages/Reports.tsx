@@ -1,11 +1,98 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { FileText, Download, Calendar, TrendingUp, AlertTriangle, Activity, Sparkles, Archive } from 'lucide-react'
+import {
+  FileText,
+  Download,
+  CalendarDays,
+  TrendingUp,
+  AlertTriangle,
+  Activity,
+  Archive,
+  ShieldCheck,
+  Route as RouteIcon,
+  Cpu,
+} from 'lucide-react'
 import { apiService } from '../services/api'
 import HeaderActions from '../components/HeaderActions'
 import { PageHeader } from '../components/common/PageHeader'
-import { PremiumPanel } from '../components/common/PremiumPanel'
-import { ScrollReveal } from '../components/common/ScrollReveal'
+import { SectionHeader } from '../components/common/SectionHeader'
+import { StatusBadge } from '../components/common/StatusBadge'
+
+const ARCHIVE = [
+  { title: 'Daily intelligence report', date: '7 September 2026', type: 'Daily brief' },
+  { title: 'Weekly corridor congestion & delay summary', date: '1–7 September 2026', type: 'Weekly' },
+  { title: 'Pavement maintenance priority ranking', date: '5 September 2026', type: 'Civil works' },
+  { title: 'Incident investigation evidence dossier', date: '4 September 2026', type: 'Enforcement' },
+  { title: 'AI performance & sensor uptime audit', date: 'August 2026', type: 'Monthly' },
+]
+
+const BRIEF = [
+  {
+    icon: Activity,
+    tone: 'text-brand-500',
+    title: 'Traffic patterns & flow density',
+    body: (
+      <>
+        Congestion increased by <strong className="text-amber-600">12%</strong> along the SG Highway corridor
+        between 08:00 and 10:00. Peak density was recorded at{' '}
+        <strong className="text-brand-600">09:15</strong> with roughly{' '}
+        <strong className="text-brand-600">8,500 vehicles per hour</strong>. Route 18 carried the largest delay,
+        averaging <strong className="text-rose-600">14 minutes</strong>.
+      </>
+    ),
+  },
+  {
+    icon: AlertTriangle,
+    tone: 'text-amber-500',
+    title: 'Road surface & infrastructure integrity',
+    body: (
+      <>
+        <strong className="text-amber-600">24 road segments</strong> now need civil maintenance based on repeated
+        optical detections. Critical work is queued for{' '}
+        <strong className="text-rose-600">SG Highway sectors 5–8</strong> (18 potholes flagged),{' '}
+        <strong className="text-rose-600">Ring Road junctions 12–15</strong> (14 hazards) and{' '}
+        <strong className="text-amber-600">Ashram Road segment A</strong> (12 hazards).
+      </>
+    ),
+  },
+  {
+    icon: TrendingUp,
+    tone: 'text-emerald-500',
+    title: 'Pedestrian safety & crossings',
+    body: (
+      <>
+        <strong className="text-emerald-600">Seven vulnerable road user events</strong> were detected in school
+        zones during the morning drop-off window, all logged with a mean confidence of{' '}
+        <strong className="text-emerald-600">93.2%</strong>. No collisions were reported across instrumented routes.
+      </>
+    ),
+  },
+  {
+    icon: Cpu,
+    tone: 'text-iris-500',
+    title: 'Fleet telemetry & inference uptime',
+    body: (
+      <>
+        <strong className="text-brand-600">236 of 248 vehicles</strong> streamed with on-vehicle inference active.
+        Total detections today: <strong className="text-brand-600">12,846 events</strong>, with camera feed
+        availability sustained at <strong className="text-emerald-600">98.2%</strong>.
+      </>
+    ),
+  },
+  {
+    icon: ShieldCheck,
+    tone: 'text-rose-500',
+    title: 'Critical incident summary',
+    body: (
+      <>
+        <strong className="text-rose-600">One hit-and-run</strong> was recorded on SG Highway at 14:32. The plate was
+        resolved as <strong className="u-num text-brand-600">GJ 01 XX 4821</strong> at{' '}
+        <strong className="text-emerald-600">96.4% confidence</strong> and the dossier was assigned to traffic
+        enforcement.
+      </>
+    ),
+  },
+]
 
 export default function Reports() {
   const [liveInsights, setLiveInsights] = useState<string[]>([])
@@ -19,74 +106,66 @@ export default function Reports() {
   return (
     <DashboardLayout>
       <PageHeader
-        title="Executive Reports & Intelligence Insights"
-        eyebrow="AI Synthesis"
+        title="Reports"
+        eyebrow="Briefings · evidence & exports"
         icon={FileText}
-        live={{ label: 'AI Daily Briefing Ready', tone: 'emerald' }}
-        subtitle="Automated daily civic summaries, pavement degradation audits, and safety analytics"
+        live={{ label: 'Daily briefing ready', tone: 'emerald' }}
+        subtitle="Automated civic summaries, pavement audits and safety analytics for the region"
         actions={<HeaderActions />}
       />
 
-      <div className="flex-1 overflow-auto p-6">
-        {/* Quick Actions */}
-        <ScrollReveal direction="up" delay={0}>
-        <div className="stagger-list grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <button className="panel-premium accent-top sheen-sweep p-6 hover:border-blue-300 hover:shadow-card-hover hover:-translate-y-1 text-left group cursor-pointer">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-              <FileText className="w-6 h-6" />
-            </div>
-            <div className="font-extrabold text-slate-900 text-base mb-1">Generate Custom Dossier</div>
-            <div className="text-xs text-slate-500">Filter by sector, bus route, or time interval</div>
-          </button>
+      <div className="flex-1 space-y-4 overflow-auto p-4 sm:p-5">
+        {/* ── Action bar ────────────────────────────────────────────── */}
+        <section className="u-panel flex flex-wrap items-center justify-between gap-4 p-3.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <button className="u-btn u-btn-primary u-btn-sm">
+              <Download className="h-3.5 w-3.5" />
+              Download intelligence PDF
+            </button>
+            <button className="u-btn u-btn-outline u-btn-sm">
+              <Download className="h-3.5 w-3.5" />
+              Export CSV dataset
+            </button>
+            <button className="u-btn u-btn-outline u-btn-sm">
+              <FileText className="h-3.5 w-3.5" />
+              Generate custom dossier
+            </button>
+          </div>
 
-          <button className="panel-premium accent-top sheen-sweep p-6 hover:border-emerald-300 hover:shadow-card-hover hover:-translate-y-1 text-left group cursor-pointer">
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-              <Download className="w-6 h-6" />
-            </div>
-            <div className="font-extrabold text-slate-900 text-base mb-1">Export Telemetry Data</div>
-            <div className="text-xs text-slate-500">Download formatted CSV, GIS Shapefile, or PDF</div>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button className="u-btn u-btn-ghost u-btn-sm">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Schedule automated briefing
+            </button>
+            <button className="u-btn u-btn-ghost u-btn-sm">
+              <RouteIcon className="h-3.5 w-3.5" />
+              Dispatch to municipal leadership
+            </button>
+          </div>
+        </section>
 
-          <button className="panel-premium accent-top sheen-sweep p-6 hover:border-indigo-300 hover:shadow-card-hover hover:-translate-y-1 text-left group cursor-pointer">
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-              <Calendar className="w-6 h-6" />
-            </div>
-            <div className="font-extrabold text-slate-900 text-base mb-1">Schedule Automated Briefings</div>
-            <div className="text-xs text-slate-500">Recurring daily emails to municipal engineers</div>
-          </button>
-        </div>
-        </ScrollReveal>
+        {/* ── Daily brief ───────────────────────────────────────────── */}
+        <section className="u-panel overflow-hidden">
+          <span className="u-hair" aria-hidden="true" />
 
-        {/* Daily Intelligence */}
-        <ScrollReveal direction="up" delay={60}>
-        <div className="panel-premium p-6 mb-6">
-          <div className="relative flex flex-wrap items-center justify-between pb-4 mb-6 border-b border-slate-100 gap-2">
+          <div className="u-panel-head">
             <div>
-              <span className="text-[11px] font-extrabold text-blue-600 uppercase tracking-wider block">Autonomous Synthesis</span>
-              <h2 className="text-2xl font-extrabold text-clay-ink tracking-tight">Daily City Intelligence Brief</h2>
+              <p className="u-overline">City intelligence brief · 08 Sep 2026 · 06:00–15:30</p>
+              <h2 className="u-h2 mt-1.5">What changed in the network today</h2>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot" />
-                Live Synthesis
-              </span>
-              <div className="text-xs font-semibold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                September 8, 2026 • 06:00 to 15:30 Window
-              </div>
-            </div>
+            <span className="u-chip u-chip-mint">
+              <span className="live-dot" />
+              Live synthesis
+            </span>
           </div>
 
           {liveInsights.length > 0 && (
-
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-xl p-5 mb-5 shadow-sm">
-              <div className="flex items-center space-x-2 text-blue-700 font-bold text-xs uppercase tracking-wider mb-2">
-                <Sparkles className="w-4 h-4 text-blue-600" />
-                <span>Real-time Dynamic AI Correlated Insights</span>
-              </div>
-              <ul className="space-y-1.5 text-sm text-slate-700">
+            <div className="border-b border-line bg-brand-50/40 px-4 py-3.5 sm:px-5">
+              <p className="u-overline mb-2">Correlated insights from live telemetry</p>
+              <ul className="space-y-1.5">
                 {liveInsights.map((insight, idx) => (
-                  <li key={idx} className="flex items-start space-x-2">
-                    <span className="text-blue-500 font-bold">•</span>
+                  <li key={idx} className="flex items-start gap-2.5 text-[12.5px] leading-relaxed text-ink-secondary">
+                    <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-brand-400" />
                     <span>{insight}</span>
                   </li>
                 ))}
@@ -94,153 +173,79 @@ export default function Reports() {
             </div>
           )}
 
-          <div className="relative stagger-list space-y-4">
-            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:shadow-card hover:-translate-y-0.5 hover:border-blue-200 transition-all duration-300 ease-silk">
-
-              <div className="flex items-start space-x-3.5">
-                <div className="p-2 rounded-lg bg-blue-100 text-blue-600 shrink-0 mt-0.5">
-                  <Activity className="w-5 h-5" />
+          <ol className="divide-y divide-line/70">
+            {BRIEF.map(item => (
+              <li key={item.title} className="group flex gap-4 px-4 py-4 transition-colors hover:bg-surface-3/40 sm:px-5">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-line bg-surface-2">
+                  <item.icon className={`h-4 w-4 ${item.tone}`} />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-[13.5px] font-semibold text-ink">{item.title}</h3>
+                  <p className="mt-1.5 max-w-3xl text-[12.5px] leading-relaxed text-ink-secondary">{item.body}</p>
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-base mb-1.5">Traffic Patterns & Flow Density</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    Traffic congestion increased by <span className="text-amber-600 font-bold">12%</span> along the SG Highway corridor between 08:00 and 10:00.
-                    Peak density recorded at <span className="text-blue-700 font-bold">09:15 AM</span> with approximately <span className="text-blue-700 font-bold">8,500 vehicles/hour</span>.
-                    Route 18 experienced maximum delays averaging <span className="text-rose-600 font-bold">14 minutes</span>.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:shadow-card hover:-translate-y-0.5 hover:border-blue-200 transition-all duration-300 ease-silk">
-              <div className="flex items-start space-x-3.5">
-                <div className="p-2 rounded-lg bg-amber-100 text-amber-700 shrink-0 mt-0.5">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-base mb-1.5">Road Surface & Infrastructure Integrity</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    <span className="text-amber-700 font-bold">24 road segments</span> require civil maintenance based on repeated optical defect detections.
-                    Critical repair needed on <span className="text-rose-600 font-bold">SG Highway Sector 5-8</span> (18 potholes flagged),
-                    <span className="text-rose-600 font-bold"> Ring Road Junction 12-15</span> (14 hazards), and
-                    <span className="text-amber-700 font-bold"> Ashram Road Segment A</span> (12 hazards).
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:shadow-card hover:-translate-y-0.5 hover:border-blue-200 transition-all duration-300 ease-silk">
-              <div className="flex items-start space-x-3.5">
-                <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700 shrink-0 mt-0.5">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-base mb-1.5">Pedestrian Safety & Crossings</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    <span className="text-emerald-700 font-bold">7 vulnerable pedestrian events</span> were detected in school zones during morning drop-off hours.
-                    All events were logged with an average confidence rating of <span className="text-emerald-700 font-bold">93.2%</span>.
-                    Zero collisions reported across all instrumented routes.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:shadow-card hover:-translate-y-0.5 hover:border-blue-200 transition-all duration-300 ease-silk">
-              <div className="flex items-start space-x-3.5">
-                <div className="p-2 rounded-lg bg-indigo-100 text-indigo-700 shrink-0 mt-0.5">
-                  <Activity className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-base mb-1.5">Sensor Fleet Telemetry & Edge AI Uptime</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    <span className="text-blue-700 font-bold">236 out of 248 buses</span> are actively streaming with edge inference active.
-                    Total AI detections today: <span className="text-blue-700 font-bold">12,846 events</span>.
-                    Overall camera feed availability sustained at <span className="text-emerald-700 font-bold">98.2%</span>.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:shadow-card hover:-translate-y-0.5 hover:border-blue-200 transition-all duration-300 ease-silk">
-              <div className="flex items-start space-x-3.5">
-                <div className="p-2 rounded-lg bg-rose-100 text-rose-600 shrink-0 mt-0.5">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-base mb-1.5">Critical Incident Summary</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    <span className="text-rose-600 font-bold">1 hit-and-run incident</span> recorded on SG Highway at 14:32.
-                    License plate successfully resolved: <span className="text-blue-700 font-bold font-mono">GJ 01 XX 4821</span> with <span className="text-emerald-700 font-bold">96.4% confidence</span>.
-                    Investigation dossier automatically assigned to Traffic Enforcement.
-                  </p>
-                </div>
-              </div>            </div>
-          </div>
-        </div>
-        </ScrollReveal>
-
-        {/* Report Actions */}
-        <ScrollReveal direction="up" delay={60}>
-        <div className="flex flex-wrap items-center gap-3 mb-8">
-          <button className="btn-primary flex items-center gap-2 text-sm px-6 py-2.5">
-            <Download className="w-4 h-4" />
-            <span>Download Intelligence PDF</span>
-          </button>
-          <button className="btn-secondary flex items-center gap-2 text-sm px-6 py-2.5">
-            <Download className="w-4 h-4" />
-            <span>Export CSV Dataset</span>
-          </button>
-          <button className="btn-secondary flex items-center gap-2 text-sm px-6 py-2.5">
-            <FileText className="w-4 h-4" />
-            <span>Dispatch to Municipal Leadership</span>
-          </button>
-        </div>
-        </ScrollReveal>
-
-        {/* Historical Reports */}
-        <ScrollReveal direction="up" delay={60}>
-        <PremiumPanel
-          flush
-          title="Historical City Intelligence Archives"
-          subtitle="Signed briefs, audits and evidence dossiers"
-          icon={Archive}
-          badge={
-            <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
-              Past 30 Days
-            </span>
-          }
-        >
-          <div className="p-6 stagger-list space-y-3">
-            {[
-              { title: 'Daily Intelligence Report', date: 'September 7, 2026', type: 'Daily Brief' },
-              { title: 'Weekly Corridor Congestion & Delay Summary', date: 'September 1-7, 2026', type: 'Weekly' },
-              { title: 'Municipal Pavement Maintenance Priority Ranking', date: 'September 5, 2026', type: 'Civil Works' },
-              { title: 'Incident Investigation Evidence Dossier', date: 'September 4, 2026', type: 'Enforcement' },
-              { title: 'Monthly AI Performance & Sensor Uptime Audit', date: 'August 2026', type: 'Monthly' },
-            ].map((report, index) => (
-              <div key={index} className="group/row flex flex-wrap items-center justify-between p-4 bg-slate-50/70 border border-slate-200/70 rounded-xl hover:bg-white hover:border-blue-200 hover:shadow-card hover:-translate-y-0.5 transition-all duration-300 ease-silk cursor-pointer shadow-sm">
-                <div className="flex items-center space-x-3.5">
-                  <div className="p-2 rounded-lg bg-blue-50 text-blue-600 border border-blue-200">
-                    <FileText className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900 text-sm">{report.title}</div>
-                    <div className="text-xs text-slate-500">{report.date}</div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold border border-blue-200">
-                    {report.type}
-                  </span>
-                  <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors press-scale">
-                    <Download className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+              </li>
             ))}
+          </ol>
+        </section>
+
+        {/* ── Archive ───────────────────────────────────────────────── */}
+        <section className="u-panel overflow-hidden">
+          <span className="u-hair" aria-hidden="true" />
+
+          <div className="u-panel-head">
+            <SectionHeader
+              eyebrow="Archive"
+              title="Historical briefings and audits"
+              className="!gap-0"
+            />
+            <span className="u-chip u-chip-slate">Past 30 days</span>
           </div>
-        </PremiumPanel>
-        </ScrollReveal>
+
+          <div className="u-scroll-x">
+            <table className="w-full min-w-[640px] text-left">
+              <thead className="bg-surface-1/60">
+                <tr>
+                  <th className="u-th">Document</th>
+                  <th className="u-th">Period</th>
+                  <th className="u-th">Type</th>
+                  <th className="u-th text-right">Export</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ARCHIVE.map(report => (
+                  <tr key={report.title} className="u-row group">
+                    <td className="u-td">
+                      <span className="flex items-center gap-2.5">
+                        <FileText className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
+                        <span className="font-medium text-ink">{report.title}</span>
+                      </span>
+                    </td>
+                    <td className="u-td u-num text-ink-muted">{report.date}</td>
+                    <td className="u-td">
+                      <StatusBadge status={report.type} tone="slate" dot={false} size="sm" />
+                    </td>
+                    <td className="u-td text-right">
+                      <button
+                        className="inline-flex items-center gap-1 text-[11.5px] font-medium text-brand-600 opacity-0 transition-opacity duration-200 hover:text-brand-500 group-hover:opacity-100"
+                        aria-label={`Download ${report.title}`}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex items-center gap-2 border-t border-line px-4 py-2.5">
+            <Archive className="h-3.5 w-3.5 text-ink-faint" />
+            <span className="text-[11.5px] text-ink-muted">
+              Signed briefs are retained for 24 months and can be re-issued on request.
+            </span>
+          </div>
+        </section>
       </div>
     </DashboardLayout>
   )

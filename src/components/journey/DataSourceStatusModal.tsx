@@ -36,17 +36,17 @@ export const DataSourceStatusModal: React.FC<DataSourceStatusModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-surface-0/75 p-4 backdrop-blur-sm animate-fade"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150"
+        className="u-glass w-full max-w-lg overflow-hidden animate-pop"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-iris-50 text-iris-600 flex items-center justify-center">
               <Database className="w-5 h-5" />
             </div>
             <div>
@@ -67,9 +67,9 @@ export const DataSourceStatusModal: React.FC<DataSourceStatusModalProps> = ({
         {/* Modal Content */}
         <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
           {/* Transparency Callout Banner */}
-          <div className="bg-blue-50/80 rounded-xl p-3.5 border border-blue-200 text-blue-900 space-y-1">
+          <div className="bg-iris-50/80 rounded-xl p-3.5 border border-iris-200 text-iris-900 space-y-1">
             <div className="font-bold flex items-center gap-1.5 text-xs">
-              <Info className="w-4 h-4 text-blue-600" />
+              <Info className="w-4 h-4 text-iris-600" />
               <span>Data Authenticity & Transparency</span>
             </div>
             <p className="text-[11px] text-blue-800 leading-relaxed">
@@ -133,7 +133,7 @@ export const DataSourceStatusModal: React.FC<DataSourceStatusModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors"
+            className="u-btn u-btn-primary u-btn-sm"
           >
             Close Inspector
           </button>

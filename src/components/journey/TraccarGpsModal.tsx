@@ -142,28 +142,28 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-surface-0/75 p-4 backdrop-blur-sm animate-fade">
       <div
-        className="bg-white rounded-3xl shadow-2xl border border-slate-200/90 w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="u-glass flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+        <div className="flex items-center justify-between border-b border-line bg-surface-2 px-6 py-4">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400">
-              <Radio className="w-5 h-5 animate-pulse" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-600">
+              <Radio className="h-5 w-5 animate-pulse-soft" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-lg font-black tracking-tight text-white">
-                  Traccar Live GPS Ingestion & Telemetry
+                <h2 className="text-lg font-semibold tracking-tight text-ink">
+                  GPS ingestion & telemetry
                 </h2>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  REAL-TIME PIPELINE
+                <span className="u-chip u-chip-mint">
+                  Real-time pipeline
                 </span>
               </div>
-              <p className="text-xs text-slate-300 mt-0.5 font-medium">
-                GPS Device / Phone → Traccar Protocol → UrbanSense Backend → Live Moving Map
+              <p className="mt-0.5 text-xs font-medium text-ink-muted">
+                GPS device / phone → Traccar protocol → UrbanSense backend → live moving map
               </p>
             </div>
           </div>
@@ -171,14 +171,15 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            aria-label="Close"
+            className="u-icon-btn cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 bg-slate-50 px-6 pt-3 gap-2 overflow-x-auto">
+        <div className="u-scroll-x flex gap-2 border-b border-line bg-surface-2 px-6 pt-3">
           {[
             { id: 'simulator', label: 'Route Simulator', icon: Play },
             { id: 'phone', label: 'Smartphone (Traccar App)', icon: Smartphone },
@@ -194,7 +195,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`flex items-center space-x-2 px-4 py-2.5 rounded-t-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'bg-white text-indigo-700 border-t-2 border-x border-indigo-600 shadow-xs'
+                    ? 'bg-white text-brand-700 border-t-2 border-x border-brand-500 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
@@ -270,7 +271,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                       type="button"
                       onClick={handleStepSimulation}
                       disabled={isSending}
-                      className="flex items-center space-x-1.5 py-3 px-4 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                      className="u-btn u-btn-outline u-btn-sm cursor-pointer disabled:opacity-50"
                     >
                       <RotateCw className={`w-3.5 h-3.5 ${isSending ? 'animate-spin' : ''}`} />
                       <span>Single Step</span>
@@ -296,7 +297,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                         onClick={() => handleSpeedChange(s)}
                         className={`flex-1 py-2 rounded-xl text-xs font-extrabold border transition-all cursor-pointer ${
                           simSpeed === s
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            ? 'bg-brand-500 text-white border-brand-500 shadow-xs'
                             : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                         }`}
                       >
@@ -329,7 +330,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                     <div className="text-[11px] text-slate-600">Akshardham Temple ↔ GIFT City SEZ</div>
                   </div>
 
-                  <div className="p-3 bg-blue-50/60 border border-blue-200 rounded-xl">
+                  <div className="p-3 bg-iris-50/60 border border-iris-200 rounded-xl">
                     <div className="flex items-center justify-between text-xs mb-1">
                       <span className="font-extrabold text-blue-800">🚌 BUS-078</span>
                       <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">SG Highway</span>
@@ -360,7 +361,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
               <div className="space-y-4">
                 <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl space-y-3">
                   <div className="flex items-center space-x-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">1</span>
+                    <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px]">1</span>
                     <span>Download Traccar Client</span>
                   </div>
                   <p className="text-xs text-slate-600 pl-7">
@@ -370,7 +371,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
 
                 <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl space-y-3">
                   <div className="flex items-center space-x-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">2</span>
+                    <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px]">2</span>
                     <span>Configure Server URL in App Settings</span>
                   </div>
                   <div className="pl-7 space-y-2">
@@ -379,12 +380,12 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                         type="text"
                         readOnly
                         value={clientEndpointUrl}
-                        className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono text-slate-800 font-bold"
+                        className="u-input u-num flex-1 py-2 text-[12px]"
                       />
                       <button
                         type="button"
                         onClick={() => copyToClipboard(clientEndpointUrl)}
-                        className="flex items-center space-x-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                        className="flex items-center space-x-1.5 px-3 py-2 bg-brand-500 hover:bg-brand-400 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
                       >
                         {copiedUrl ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                         <span>{copiedUrl ? 'Copied' : 'Copy URL'}</span>
@@ -398,7 +399,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
 
                 <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl space-y-3">
                   <div className="flex items-center space-x-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">3</span>
+                    <span className="w-5 h-5 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px]">3</span>
                     <span>Set Device Identifier & Start Service</span>
                   </div>
                   <div className="pl-7 space-y-2 text-xs text-slate-600">
@@ -431,7 +432,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                       type="text"
                       value={manualId}
                       onChange={(e) => setManualId(e.target.value)}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+                      className="u-input py-2 text-[12px] font-medium"
                     />
                   </div>
 
@@ -441,7 +442,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                       type="number"
                       value={manualSpeed}
                       onChange={(e) => setManualSpeed(Number(e.target.value))}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+                      className="u-input py-2 text-[12px] font-medium"
                     />
                   </div>
 
@@ -452,7 +453,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                       step="0.0001"
                       value={manualLat}
                       onChange={(e) => setManualLat(Number(e.target.value))}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 font-mono"
+                      className="u-input u-num py-2 text-[12px] font-medium"
                     />
                   </div>
 
@@ -463,7 +464,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                       step="0.0001"
                       value={manualLon}
                       onChange={(e) => setManualLon(Number(e.target.value))}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 font-mono"
+                      className="u-input u-num py-2 text-[12px] font-medium"
                     />
                   </div>
 
@@ -473,7 +474,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                       type="number"
                       value={manualBearing}
                       onChange={(e) => setManualBearing(Number(e.target.value))}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+                      className="u-input py-2 text-[12px] font-medium"
                     />
                   </div>
 
@@ -483,7 +484,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                       type="number"
                       value={manualBatt}
                       onChange={(e) => setManualBatt(Number(e.target.value))}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+                      className="u-input py-2 text-[12px] font-medium"
                     />
                   </div>
                 </div>
@@ -497,7 +498,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                         setManualLon(72.6369)
                         setManualBearing(180)
                       }}
-                      className="px-2.5 py-1 text-[11px] font-bold bg-white border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-100"
+                      className="u-btn u-btn-outline u-btn-sm text-[11px]"
                     >
                       Gandhinagar Sec 10
                     </button>
@@ -508,7 +509,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                         setManualLon(72.6840)
                         setManualBearing(90)
                       }}
-                      className="px-2.5 py-1 text-[11px] font-bold bg-white border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-100"
+                      className="u-btn u-btn-outline u-btn-sm text-[11px]"
                     >
                       GIFT City Diamond Tower
                     </button>
@@ -526,7 +527,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                 </div>
 
                 {sendSuccessMsg && (
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+                  <div className="rounded-xl border border-line bg-surface-2/60 p-3 text-[12px] font-medium text-ink">
                     {sendSuccessMsg}
                   </div>
                 )}
@@ -547,7 +548,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                 </span>
               </div>
 
-              <div className="bg-slate-950 rounded-2xl p-4 font-mono text-xs text-slate-300 max-h-80 overflow-y-auto space-y-2 border border-slate-800 shadow-inner">
+              <div className="u-scroll max-h-80 space-y-2 overflow-y-auto rounded-2xl border border-line bg-surface-0 p-4 u-num text-[11.5px] text-ink-secondary">
                 {recentPackets.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
                     Awaiting GPS packets... (Start simulation or transmit a manual GPS fix)
@@ -556,7 +557,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
                   recentPackets.map((pkt, idx) => (
                     <div
                       key={idx}
-                      className="p-2 bg-slate-900/80 rounded-xl border border-slate-800/80 hover:border-slate-700 transition-colors flex items-center justify-between"
+                      className="flex items-center justify-between rounded-xl border border-line/70 bg-surface-1/80 p-2 transition-colors hover:border-line-strong"
                     >
                       <div className="flex items-center space-x-3">
                         <span className="text-emerald-400 font-bold">{pkt.vehicle_id}</span>
@@ -594,7 +595,7 @@ export const TraccarGpsModal: React.FC<TraccarGpsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-xl font-bold transition-colors cursor-pointer"
+            className="u-btn u-btn-outline u-btn-sm cursor-pointer"
           >
             Close Dashboard
           </button>

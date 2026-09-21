@@ -1,20 +1,35 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { Search, Camera, AlertCircle, Car, Route, ScanLine, Clock } from 'lucide-react'
-import { MapContainer, Polyline, Marker } from 'react-leaflet'
+import { Search, Camera, AlertCircle, Car, Route, ScanLine, Clock, Layers } from 'lucide-react'
+import { MapContainer, Polyline, Marker, Circle } from 'react-leaflet'
 import { apiService } from '../services/api'
 import HeaderActions from '../components/HeaderActions'
 import { PageHeader } from '../components/common/PageHeader'
 import { PremiumPanel } from '../components/common/PremiumPanel'
-import { ScrollReveal } from '../components/common/ScrollReveal'
+import { StatusBadge } from '../components/common/StatusBadge'
 import { MapTileLayer, MapViewToggle, type MapTileMode } from '../components/common/MapTileLayer'
+import { eventIcon } from '../components/common/mapIcons'
+import { Link } from 'react-router-dom'
+import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
 
+delete (L.Icon.Default.prototype as any)._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  tooltipAnchor: [16, -28],
+  shadowSize: [41, 41],
+})
 
 const defaultDetections = [
-  { id: 1, busId: 'BUS-104', location: 'SG Highway', timestamp: '14:32:18', direction: 'Northbound', confidence: 96.4, gps: [23.0395, 72.5667] },
-  { id: 2, busId: 'BUS-087', location: 'Ashram Road', timestamp: '14:28:45', direction: 'Southbound', confidence: 94.2, gps: [23.0225, 72.5714] },
-  { id: 3, busId: 'BUS-121', location: 'Ring Road', timestamp: '14:25:12', direction: 'Eastbound', confidence: 92.8, gps: [23.0300, 72.5800] },
-  { id: 4, busId: 'BUS-156', location: 'CG Road', timestamp: '14:20:33', direction: 'Westbound', confidence: 89.5, gps: [23.0350, 72.5550] },
+  { id: 1, busId: 'BUS-104', location: 'SG Highway', timestamp: '14:32:18', direction: 'Northbound', confidence: 96.4, gps: [23.0395, 72.5667] as [number, number] },
+  { id: 2, busId: 'BUS-087', location: 'Ashram Road', timestamp: '14:28:45', direction: 'Southbound', confidence: 94.2, gps: [23.0225, 72.5714] as [number, number] },
+  { id: 3, busId: 'BUS-121', location: 'Ring Road', timestamp: '14:25:12', direction: 'Eastbound', confidence: 92.8, gps: [23.03, 72.58] as [number, number] },
+  { id: 4, busId: 'BUS-156', location: 'CG Road', timestamp: '14:20:33', direction: 'Westbound', confidence: 89.5, gps: [23.035, 72.555] as [number, number] },
 ]
 
 export default function VehicleTracking() {
@@ -23,8 +38,8 @@ export default function VehicleTracking() {
   const [vehicleDetections, setVehicleDetections] = useState(defaultDetections)
   const [vehiclePath, setVehiclePath] = useState<[number, number][]>([
     [23.0395, 72.5667],
-    [23.0350, 72.5650],
-    [23.0300, 72.5630],
+    [23.035, 72.565],
+    [23.03, 72.563],
     [23.0225, 72.5714],
   ])
 
@@ -35,239 +50,259 @@ export default function VehicleTracking() {
         setVehiclePath(res.route)
       }
       if (res && res.sightings && res.sightings.length > 0) {
-        setVehicleDetections(res.sightings.map((s: any) => ({
-          id: s.id,
-          busId: s.bus_id || 'BUS-104',
-          location: s.location,
-          timestamp: s.timestamp.substring(11, 19),
-          direction: s.direction,
-          confidence: s.confidence * 100,
-          gps: s.gps
-        })))
+        setVehicleDetections(
+          res.sightings.map((s: any) => ({
+            id: s.id,
+            busId: s.bus_id || 'BUS-104',
+            location: s.location,
+            timestamp: s.timestamp.substring(11, 19),
+            direction: s.direction,
+            confidence: s.confidence * 100,
+            gps: s.gps,
+          }))
+        )
       }
     })
   }
 
   useEffect(() => {
     handleSearch()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const meanConfidence = (
+    vehicleDetections.reduce((sum, d) => sum + d.confidence, 0) / Math.max(vehicleDetections.length, 1)
+  ).toFixed(1)
 
   return (
     <DashboardLayout>
       <PageHeader
-        title="ANPR Vehicle Tracking System"
-        eyebrow="Optical Enforcement"
+        title="Vehicle Tracking"
+        eyebrow="Optical enforcement · ANPR correlation"
         icon={ScanLine}
-        live={{ label: 'Multi-Bus Cross-Correlation', tone: 'blue' }}
-        subtitle="Automated Number Plate Recognition and cross-fleet spatial reconstruction"
+        live={{ label: 'Cross-fleet correlation active', tone: 'blue' }}
+        subtitle="Number plate recognition and movement reconstruction across the sensing fleet"
         actions={<HeaderActions />}
-      />
-
-      <div className="flex-1 overflow-auto p-6">
-        {/* Search */}
-        <ScrollReveal direction="up" delay={0}>
-        <div className="panel-premium p-6 mb-6">
-          <div className="flex items-center space-x-2 mb-3 relative">
-            <span className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center">
-              <Car className="w-4 h-4" />
-            </span>
-            <h2 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider">Search Vehicle by Registration</h2>
+      >
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+          <div className="relative w-full sm:max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-faint" />
+            <input
+              type="text"
+              placeholder="Registration plate (e.g. GJ 01 XX 4821)"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleSearch()
+              }}
+              className="u-search u-num uppercase"
+              aria-label="Search vehicle registration"
+            />
           </div>
-
-          <div className="flex flex-wrap items-center gap-3 relative">
-            <div className="flex-1 min-w-[260px] relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Enter registration (e.g. GJ 01 XX 4821)..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono"
-              />
-            </div>
-            <button onClick={handleSearch} className="btn-primary group text-sm px-8 py-3">
-              <Search className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
-              Search Fleet Detections
-            </button>
-          </div>
+          <button onClick={handleSearch} className="u-btn u-btn-primary u-btn-sm">
+            <Search className="h-3.5 w-3.5" />
+            Search fleet detections
+          </button>
         </div>
-        </ScrollReveal>
+      </PageHeader>
 
-        {/* Results */}
-        {searchQuery && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Vehicle Info & Detections */}
-            <div className="lg:col-span-2 space-y-6">
-              <ScrollReveal direction="up" delay={40}>
-              <div className="panel-premium p-6 animate-fade-in-up">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100 relative">
-                  <div>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Identified Target</span>
-                    <h2 className="text-2xl font-extrabold text-blue-700 font-mono tracking-wider">
-                      {searchQuery}
-                    </h2>
-                  </div>
-                  <span className="bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold px-3 py-1 rounded-full">
-                    Flagged For Investigation
-                  </span>
+      <div className="flex-1 overflow-auto p-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+          {/* ── Identified target ────────────────────────────────────── */}
+          <div className="space-y-4">
+            <section className="u-panel overflow-hidden">
+              <span className="u-hair" aria-hidden="true" />
+
+              <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line p-4 sm:p-5">
+                <div>
+                  <p className="u-overline">Identified target</p>
+                  <p className="u-num mt-2 text-[24px] font-semibold tracking-[0.06em] text-ink sm:text-[28px]">
+                    {searchQuery || 'No plate selected'}
+                  </p>
+                  <p className="mt-1.5 text-[12px] text-ink-muted">
+                    Correlated across {vehicleDetections.length} fleet sightings · mean confidence {meanConfidence}%
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                    <div className="text-xs font-bold text-slate-500 mb-1">REGISTRATION</div>
-                    <div className="text-base font-extrabold font-mono text-slate-900">{searchQuery}</div>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                    <div className="text-xs font-bold text-slate-500 mb-1">VEHICLE TYPE</div>
-                    <div className="text-base font-extrabold text-slate-900">White Sedan</div>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                    <div className="text-xs font-bold text-slate-500 mb-1">OPTICAL COLOR</div>
-                    <div className="text-base font-extrabold text-slate-900">White Pearl</div>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                    <div className="text-xs font-bold text-slate-500 mb-1">TOTAL SIGHTINGS</div>
-                    <div className="text-base font-extrabold text-emerald-600">4 Bus Sightings</div>
-                  </div>
-                </div>
-
-                <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start space-x-3">
-                  <AlertCircle className="w-5 h-5 text-rose-600 mt-0.5 shrink-0" />
-                  <div>
-                    <div className="font-bold text-rose-700 text-sm mb-0.5">Associated Incident Escalation</div>
-                    <div className="text-xs text-rose-800 leading-relaxed">
-                      This vehicle matches incident <strong>INC-1042</strong> (Hit-and-Run occurrence detected on SG Highway). All subsequent sightings are automatically reported to Traffic Control.
-                    </div>
-                  </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge status="Flagged for investigation" tone="rose" />
+                  <Link to="/incident/INC-1042" className="u-btn u-btn-outline u-btn-sm">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    Linked case
+                  </Link>
                 </div>
               </div>
 
-              {/* Detection History */}
-              <PremiumPanel
-                flush
-                title="Detection Timeline & Sightings"
-                subtitle="Cross-fleet ANPR correlation of the target plate"
-                icon={Clock}
-                badge={
-                  <span className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
-                    {vehicleDetections.length} Sightings
-                  </span>
-                }
-              >
-                <div className="overflow-x-auto">
-                  <table className="premium-table w-full text-left">
-                    <thead className="bg-slate-50/80 border-b border-slate-200/80">
-                      <tr>
-                        <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Bus Unit</th>
-                        <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Street Location</th>
-                        <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Time</th>
-                        <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Direction</th>
-                        <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">ANPR Confidence</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
-                      {vehicleDetections.map(detection => (
-                        <tr key={detection.id}>
-                          <td className="px-6 py-4 whitespace-nowrap font-bold text-blue-600">
+              <div className="grid grid-cols-2 divide-line/70 sm:grid-cols-4 sm:divide-x">
+                {[
+                  { icon: Car, k: 'Registration', v: searchQuery || '—' },
+                  { icon: Car, k: 'Vehicle type', v: 'White sedan' },
+                  { icon: Layers, k: 'Optical colour', v: 'White pearl' },
+                  { icon: Clock, k: 'Sightings', v: `${vehicleDetections.length} sightings` },
+                ].map(item => (
+                  <div key={item.k} className="px-4 py-3.5">
+                    <p className="u-overline flex items-center gap-1.5">
+                      <item.icon className="h-3 w-3" />
+                      {item.k}
+                    </p>
+                    <p className="u-num mt-1.5 truncate text-[13px] font-medium text-ink">{item.v}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-start gap-3 border-t border-line/70 bg-rose-50/60 px-4 py-3.5 sm:px-5">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+                <div>
+                  <p className="text-[12.5px] font-medium text-ink">Associated incident escalation</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-ink-secondary">
+                    This vehicle matches case <span className="u-num font-medium text-rose-600">INC-1042</span> — a
+                    hit-and-run detected on SG Highway. Subsequent sightings are reported to traffic control
+                    automatically.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* Timeline */}
+            <PremiumPanel
+              flush
+              title="Detection timeline"
+              subtitle="Cross-fleet ANPR correlation of the target plate"
+              icon={Clock}
+              badge={<span className="u-chip u-chip-brand">{vehicleDetections.length} sightings</span>}
+            >
+              <div className="u-scroll-x">
+                <table className="w-full min-w-[680px] text-left">
+                  <thead className="bg-surface-1/60">
+                    <tr>
+                      <th className="u-th">Sensing bus</th>
+                      <th className="u-th">Street location</th>
+                      <th className="u-th">Time</th>
+                      <th className="u-th">Direction</th>
+                      <th className="u-th">ANPR confidence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vehicleDetections.map(detection => (
+                      <tr key={detection.id} className="u-row">
+                        <td className="u-td">
+                          <Link to="/live-fleet" className="u-num font-medium text-brand-600 hover:text-brand-500">
                             {detection.busId}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap font-semibold text-slate-800">
-                            {detection.location}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-slate-500 text-xs font-mono">
-                            {detection.timestamp}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-slate-600 font-medium">
-                            {detection.direction}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                              {detection.confidence}%
+                          </Link>
+                        </td>
+                        <td className="u-td text-ink">{detection.location}</td>
+                        <td className="u-td u-num text-ink-muted">{detection.timestamp}</td>
+                        <td className="u-td">{detection.direction}</td>
+                        <td className="u-td">
+                          <span className="flex items-center gap-2">
+                            <span className="u-progress w-16">
+                              <span
+                                className="block h-full rounded-full bg-emerald-400"
+                                style={{ width: `${detection.confidence}%` }}
+                              />
                             </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </PremiumPanel>
-              </ScrollReveal>
-
-              {/* Evidence Frames */}
-              <ScrollReveal direction="up" delay={80}>
-              <div className="panel-premium p-6">
-                <div className="flex items-center justify-between mb-4 relative">
-                  <h3 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase">Extracted Evidence Frames</h3>
-                  <span className="flex items-center gap-1.5 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 live-dot" />
-                    Captured
-                  </span>
-                </div>
-
-                <div className="stagger-list grid grid-cols-2 gap-4">
-                  {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="group/frame bg-slate-900 rounded-xl aspect-video flex items-center justify-center relative overflow-hidden shadow-inner border border-slate-800 transition-all duration-500 hover:shadow-2xl">
-                      <div className="scanline opacity-70" aria-hidden="true" />
-                      <Camera className="w-10 h-10 text-slate-600 opacity-40 transition-all duration-500 group-hover/frame:opacity-70 group-hover/frame:scale-110" />
-                      <div className="absolute top-2 left-2 bg-slate-900/80 text-white px-2 py-0.5 rounded text-[10px] font-bold border border-slate-700 backdrop-blur-xs">
-                        BUS-{100 + i}
-                      </div>
-                      <div className="absolute bottom-2 right-2 bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold shadow-sm">
-                        {95 + i}% ANPR MATCH
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                            <span className="u-num text-ink">{detection.confidence}%</span>
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              </ScrollReveal>
-            </div>
+            </PremiumPanel>
 
-            {/* Path Map */}
-            <div>
-              <ScrollReveal direction="up" delay={60}>
+            {/* Evidence frames */}
+            <section className="u-panel p-4 sm:p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="u-overline">Evidence</p>
+                  <h2 className="u-h3 mt-1">Extracted capture frames</h2>
+                </div>
+                <span className="u-chip u-chip-rose">
+                  <span className="live-dot" />
+                  Captured
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[1, 2, 3, 4].map(i => (
+                  <figure
+                    key={i}
+                    className="group relative aspect-video overflow-hidden rounded-xl border border-line bg-surface-0"
+                  >
+                    <div className="u-scanline" aria-hidden="true" />
+                    <Camera className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 text-ink-faint transition-transform duration-500 group-hover:scale-110" />
+                    <figcaption className="absolute left-2 top-2 rounded border border-line bg-surface-1/80 px-1.5 py-0.5 backdrop-blur-md">
+                      <span className="u-num text-[10px] text-ink-secondary">BUS-{100 + i}</span>
+                    </figcaption>
+                    <span className="absolute bottom-2 right-2 rounded border border-brand-200/60 bg-brand-50/90 px-1.5 py-0.5">
+                      <span className="u-num text-[10px] font-medium text-brand-600">{95 + i}% match</span>
+                    </span>
+                  </figure>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          {/* ── Reconstructed path ───────────────────────────────────── */}
+          <div>
+            <div className="sticky top-4">
               <PremiumPanel
                 flush
-                className="sticky top-24"
-                title="Reconstructed Movement Path"
-                subtitle="GPS-interpolated trajectory across bus sightings"
+                title="Reconstructed path"
+                subtitle="GPS-interpolated trajectory across sightings"
                 icon={Route}
                 actions={<MapViewToggle mode={mapMode} onChange={setMapMode} />}
               >
-                <div className="h-[450px]">
-                  <MapContainer
-                    center={[23.0300, 72.5650]}
-                    zoom={12}
-                    style={{ height: '100%', width: '100%' }}
-                  >
+                <div className="relative h-[420px]">
+                  <MapContainer center={[23.03, 72.565]} zoom={12} style={{ height: '100%', width: '100%' }}>
                     <MapTileLayer mode={mapMode} />
-                    <Polyline positions={vehiclePath as [number, number][]} color="#2563eb" weight={4} dashArray="6, 6" />
+                    <Polyline
+                      positions={vehiclePath as [number, number][]}
+                      pathOptions={{ color: '#FF4757', weight: 3, dashArray: '6 7' }}
+                    />
                     {vehicleDetections.map(detection => (
-                      <Marker key={detection.id} position={detection.gps as [number, number]} />
+                      <Circle
+                        key={`c-${detection.id}`}
+                        center={detection.gps}
+                        radius={120}
+                        pathOptions={{ color: '#0C8BA6', fillColor: '#0C8BA6', fillOpacity: 0.1, weight: 1 }}
+                      />
+                    ))}
+                    {vehicleDetections.map(detection => (
+                      <Marker
+                        key={detection.id}
+                        position={detection.gps}
+                        icon={eventIcon(detection.confidence >= 95 ? 'high' : 'medium', 14)}
+                      />
                     ))}
                   </MapContainer>
-                </div>
 
-                <div className="p-4 bg-slate-50 border-t border-slate-200/80 text-xs font-medium">
-                  <div className="stagger-list space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">First Sighting:</span>
-                      <span className="font-bold text-slate-800">14:20:33 (CG Road)</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Last Sighting:</span>
-                      <span className="font-bold text-slate-800">14:32:18 (SG Highway)</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Estimated Transit Distance:</span>
-                      <span className="font-bold text-blue-600">4.2 km</span>
-                    </div>
+                  <div className="pointer-events-none absolute left-3 top-3 rounded-lg border border-line bg-surface-1/80 px-2.5 py-1.5 backdrop-blur-md">
+                    <p className="u-overline">Path</p>
+                    <p className="u-num mt-0.5 text-[11px] text-ink-secondary">{vehiclePath.length} GPS nodes</p>
                   </div>
                 </div>
+
+                <dl className="divide-y divide-line/70 border-t border-line px-4 py-1">
+                  {[
+                    ['First sighting', `${vehicleDetections[vehicleDetections.length - 1]?.timestamp ?? '—'} · ${
+                      vehicleDetections[vehicleDetections.length - 1]?.location ?? '—'
+                    }`],
+                    ['Last sighting', `${vehicleDetections[0]?.timestamp ?? '—'} · ${vehicleDetections[0]?.location ?? '—'}`],
+                    ['Estimated distance', '4.2 km'],
+                    ['Mean confidence', `${meanConfidence}%`],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex items-center justify-between gap-3 py-2.5">
+                      <dt className="text-[11.5px] text-ink-muted">{k}</dt>
+                      <dd className="u-num truncate text-[11.5px] font-medium text-ink-secondary">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
               </PremiumPanel>
-              </ScrollReveal>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </DashboardLayout>
   )

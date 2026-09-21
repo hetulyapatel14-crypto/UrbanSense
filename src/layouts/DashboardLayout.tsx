@@ -1,35 +1,178 @@
-import { Link, useLocation } from 'react-router-dom'
-import { ReactNode, useState, useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ReactNode, useState, useEffect, useMemo, useRef } from 'react'
 import {
-  Map,
+  LayoutDashboard,
   Bus,
+  Map,
+  Layers,
   Activity,
   AlertTriangle,
-  BarChart3,
-  Radio,
-  MapPin,
-  Layers,
-  ArrowLeft,
   Compass,
-  Sparkles,
+  ScanLine,
+  ArrowLeft,
   Menu,
   X,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Search,
+  Bell,
+  BellOff,
+  ChevronRight,
+  Radar,
+  FileText,
+  Cpu,
+  Info,
+  CornerDownLeft,
 } from 'lucide-react'
-import ScrollProgressBar from '../components/common/ScrollProgressBar'
 import { ClayBlobs } from '../components/common/ClayBlobs'
+import { UrbanSenseLogo, UrbanSenseMark } from '../components/common/UrbanSenseLogo'
+import { apiService } from '../services/api'
 
 interface DashboardLayoutProps {
   children: ReactNode
 }
 
+interface NavItem {
+  to: string
+  icon: any
+  label: string
+  hint?: string
+  badge?: string
+}
+
+interface NavSection {
+  title: string
+  items: NavItem[]
+}
+
+const SECTIONS: NavSection[] = [
+  {
+    title: 'Operations',
+    items: [
+      { to: '/command-center', icon: LayoutDashboard, label: 'Command Center', hint: 'City operations console' },
+      { to: '/live-fleet', icon: Bus, label: 'Live Fleet', hint: 'Vehicle telemetry' },
+      { to: '/urban-map', icon: Map, label: 'Urban Map', hint: 'Spatial intelligence' },
+    ],
+  },
+  {
+    title: 'Intelligence',
+    items: [
+      { to: '/road-intelligence', icon: Layers, label: 'Road Intelligence', hint: 'Pavement condition' },
+      { to: '/traffic-analytics', icon: Activity, label: 'Traffic Analytics', hint: 'Corridor flows' },
+      { to: '/incident-center', icon: AlertTriangle, label: 'Incident Center', hint: 'Case queue' },
+      { to: '/reports', icon: FileText, label: 'Reports', hint: 'Briefings & exports' },
+    ],
+  },
+  {
+    title: 'Mobility',
+    items: [
+      { to: '/journey-planner', icon: Compass, label: 'Journey Planner', hint: 'Multimodal routing', badge: 'AI' },
+      { to: '/vehicle-tracking', icon: ScanLine, label: 'Vehicle Tracking', hint: 'Live kinematics' },
+    ],
+  },
+  {
+    title: 'Platform',
+    items: [
+      { to: '/architecture', icon: Cpu, label: 'Architecture', hint: 'System topology' },
+      { to: '/about', icon: Info, label: 'About', hint: 'Platform vision' },
+    ],
+  },
+]
+
+/** Simple command palette over the module list (⌘K / Ctrl+K). */
+const CommandPalette: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+  const [query, setQuery] = useState('')
+  const [active, setActive] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const navigate = useNavigate()
+  const flat = useMemo(() => SECTIONS.flatMap(s => s.items.map(i => ({ ...i, section: s.title }))), [])
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return flat
+    return flat.filter(i => `${i.label} ${i.section} ${i.hint ?? ''}`.toLowerCase().includes(q))
+  }, [flat, query])
+
+  useEffect(() => {
+    if (open) {
+      setQuery('')
+      setActive(0)
+      const id = window.setTimeout(() => inputRef.current?.focus(), 30)
+      return () => window.clearTimeout(id)
+    }
+  }, [open])
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-[9000] flex items-start justify-center px-4 pt-[12vh]">
+      <div className="absolute inset-0 bg-surface-0/70 backdrop-blur-sm animate-fade" onClick={onClose} aria-hidden="true" />
+      <div
+        role="dialog"
+        aria-label="Module search"
+        className="u-glass relative z-10 w-full max-w-lg overflow-hidden animate-pop"
+      >
+        <span className="u-hair" aria-hidden="true" />
+        <div className="flex items-center gap-2.5 border-b border-[rgba(163,177,198,0.35)] px-3.5 py-3">
+          <Search className="h-4 w-4 text-ink-faint" />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={e => {
+              setQuery(e.target.value)
+              setActive(0)
+            }}
+            onKeyDown={e => {
+              if (e.key === 'ArrowDown') { e.preventDefault(); setActive(a => Math.min(a + 1, results.length - 1)) }
+              if (e.key === 'ArrowUp') { e.preventDefault(); setActive(a => Math.max(a - 1, 0)) }
+              if (e.key === 'Enter' && results[active]) { navigate(results[active].to); onClose() }
+              if (e.key === 'Escape') onClose()
+            }}
+            placeholder="Search modules, layers and tools…"
+            className="w-full bg-transparent font-mono text-[13px] text-ink placeholder:text-ink-faint/70 focus:outline-none"
+          />
+          <span className="u-chip u-chip-slate">ESC</span>
+        </div>
+
+        <div className="max-h-80 overflow-y-auto p-1.5 u-scroll">
+          {results.length === 0 && <p className="px-3 py-6 text-center text-[12px] text-ink-muted">No module matches “{query}”.</p>}
+          {results.map((item, idx) => {
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={onClose}
+                onMouseEnter={() => setActive(idx)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-150 ease-mech ${
+                  idx === active ? 'bg-surface-2 shadow-key' : 'hover:bg-surface-3/50'
+                }`}
+              >
+                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${idx === active ? 'bg-surface-0 shadow-groove text-brand-600' : 'bg-surface-3/70 text-ink-muted'}`}>
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-bold text-ink">{item.label}</span>
+                  <span className="block truncate font-mono text-[10.5px] text-ink-faint">{item.hint}</span>
+                </span>
+                <span className="u-overline hidden sm:block">{item.section}</span>
+                {idx === active && <CornerDownLeft className="h-3.5 w-3.5 text-brand-600" />}
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation()
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    return localStorage.getItem('urbansense_sidebar_collapsed') === 'true'
-  })
+  const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('urbansense_sidebar_collapsed') === 'true')
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [clock, setClock] = useState(() => new Date())
+  const [openIncidents, setOpenIncidents] = useState<number | null>(null)
 
   const toggleSidebar = () => {
     setIsCollapsed(prev => {
@@ -39,202 +182,243 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     })
   }
 
-  // Close mobile drawer on route change
   useEffect(() => {
     setIsMobileOpen(false)
   }, [location.pathname])
 
-  const navItems = [
-    { to: '/command-center', icon: Map, label: 'Command Center' },
-    { to: '/live-fleet', icon: Bus, label: 'Live Fleet' },
-    { to: '/urban-map', icon: MapPin, label: 'Urban Map' },
-    { to: '/journey-planner', icon: Compass, label: 'Journey Planner', highlight: true },
-    { to: '/road-intelligence', icon: Layers, label: 'Road Intelligence' },
-    { to: '/traffic-analytics', icon: Activity, label: 'Traffic Analytics' },
-    { to: '/incident-center', icon: AlertTriangle, label: 'Incident Center' },
-    { to: '/vehicle-tracking', icon: BarChart3, label: 'Vehicle Tracking' },
-  ]
+  // Live operations clock in the topbar
+  useEffect(() => {
+    const id = window.setInterval(() => setClock(new Date()), 1000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  // Global ⌘K / Ctrl+K module search
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPaletteOpen(o => !o)
+      }
+      if (e.key === 'Escape') {
+        setPaletteOpen(false)
+        setIsMobileOpen(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  useEffect(() => {
+    apiService.getIncidents().then(data => {
+      if (data && data.length > 0) setOpenIncidents(data.filter(i => i.status !== 'resolved').length)
+    })
+  }, [])
+
+  const isItemActive = (to: string) =>
+    location.pathname === to || (to === '/incident-center' && location.pathname.startsWith('/incident/'))
+
+  const clockLabel = clock.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const dateLabel = clock.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
 
   return (
-    <div className="min-h-screen flex flex-col antialiased">
+    <div className="flex min-h-screen flex-col bg-surface-0 text-ink antialiased">
       <ClayBlobs />
-      <ScrollProgressBar />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
 
-      <div className="flex-1 flex relative">
-        {/* Mobile Backdrop Overlay */}
+      <div className="relative flex flex-1">
+        {/* Mobile backdrop */}
         {isMobileOpen && (
           <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 lg:hidden transition-opacity"
+            className="fixed inset-0 z-40 bg-surface-0/70 backdrop-blur-sm lg:hidden"
             onClick={() => setIsMobileOpen(false)}
             aria-hidden="true"
           />
         )}
 
-        {/* Premium Light Sidebar (Collapsible on Desktop, Slide-over on Mobile) */}
+        {/* ══ Navigation rail ══════════════════════════════════════════════ */}
         <aside
-          className={`bg-white/85 backdrop-blur-xl border-r border-slate-200/90 flex flex-col shadow-sm z-30 sticky top-0 h-screen transition-all duration-500 ease-silk ${
-            isCollapsed ? 'w-20' : 'w-64'
-          } ${
-            isMobileOpen
-              ? 'fixed inset-y-0 left-0 w-64 max-w-[85vw] flex shadow-2xl z-40'
-              : 'hidden lg:flex'
-          }`}
+          aria-label="Primary navigation"
+          className={`sticky top-0 z-40 flex h-screen flex-col border-r border-[rgba(163,177,198,0.35)] bg-surface-2/90 backdrop-blur-xl transition-[width,transform] duration-300 ease-mech select-none ${
+            isCollapsed ? 'w-[68px]' : 'w-[248px]'
+          } ${isMobileOpen ? 'fixed inset-y-0 left-0 z-50 flex w-[264px] max-w-[86vw] shadow-float' : 'hidden lg:flex'}`}
         >
-          {/* Sidebar Top Header */}
-          <div className={`p-4 border-b border-slate-200/80 bg-gradient-to-b from-slate-50/50 to-transparent flex items-center ${
-            isCollapsed ? 'justify-center' : 'justify-between'
-          }`}>
-            <Link to="/" className={`flex items-center space-x-3 group ${isCollapsed ? 'hidden' : 'flex'}`}>
-              <div className="relative bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-700 p-2.5 rounded-xl shadow-md shadow-blue-500/15 text-white group-hover:scale-105 group-hover:shadow-blue-500/25 transition-all duration-300 overflow-hidden">
-                <Radio className="w-5 h-5 text-white relative z-10" />
-                <span className="pointer-events-none absolute inset-0 bg-sheen opacity-60 animate-sheen" aria-hidden="true" />
-              </div>
-              <div>
-                <span className="text-lg font-extrabold text-slate-900 tracking-tight block group-hover:text-blue-600 transition-colors">UrbanSense</span>
-                <span className="text-[10px] font-bold text-blue-600 tracking-widest uppercase block flex items-center gap-1">
-                  <span>GovTech AI Platform</span>
-                </span>
-              </div>
+          {/* Brand block */}
+          <div className={`flex h-14 items-center border-b border-[rgba(163,177,198,0.35)] ${isCollapsed ? 'justify-center px-2' : 'justify-between px-3.5'}`}>
+            <Link to="/" className="min-w-0" aria-label="UrbanSense home">
+              {isCollapsed ? (
+                <UrbanSenseMark className="h-7 w-7" gradientId="rail-mark" />
+              ) : (
+                <UrbanSenseLogo size="md" subtext="Mobility OS" id="rail" />
+              )}
             </Link>
 
-            {/* Collapsed Logo Icon */}
-            {isCollapsed && (
-              <Link to="/" title="UrbanSense Home" className="bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-700 p-2.5 rounded-xl shadow-md text-white hover:scale-105 transition-transform">
-                <Radio className="w-5 h-5 text-white animate-pulse" />
-              </Link>
-            )}
-
-            {/* Desktop Hamburger Toggle Button */}
             <button
               onClick={toggleSidebar}
-              className="hidden lg:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              title={isCollapsed ? "Expand Sidebar (Hamburger Menu)" : "Collapse Sidebar"}
-              aria-label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              className="hidden h-7 w-7 items-center justify-center rounded-lg bg-surface-2 text-ink-faint shadow-key transition-all duration-150 ease-mech hover:text-ink active:translate-y-[1px] active:shadow-groove lg:flex"
+              aria-label={isCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+              title={isCollapsed ? 'Expand navigation' : 'Collapse navigation'}
             >
-              {isCollapsed ? (
-                <PanelLeftOpen className="w-4 h-4 text-blue-600" />
-              ) : (
-                <PanelLeftClose className="w-4 h-4" />
-              )}
+              {isCollapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
             </button>
 
-            {/* Mobile Close Button */}
             <button
               onClick={() => setIsMobileOpen(false)}
-              className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-              aria-label="Close Mobile Menu"
+              className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-2 text-ink-faint shadow-key transition-all duration-150 ease-mech hover:text-ink active:translate-y-[1px] active:shadow-groove lg:hidden"
+              aria-label="Close navigation"
             >
-              <X className="w-5 h-5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
 
-          {/* Nav items list */}
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto custom-scrollbar">
-            {!isCollapsed && (
-              <div className="px-3 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center justify-between">
-                <span>Platform Modules</span>
-                <span className="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-mono font-bold">{navItems.length}</span>
+          {/* Grouped modules */}
+          <nav className="u-scroll flex-1 space-y-5 overflow-y-auto px-2.5 py-3.5">
+            {SECTIONS.map(section => (
+              <div key={section.title}>
+                {!isCollapsed && <div className="u-overline px-2.5 pb-1.5">{section.title}</div>}
+                {isCollapsed && <div className="mx-auto mb-1.5 h-px w-5 bg-line" aria-hidden="true" />}
+
+                <div className="space-y-0.5">
+                  {section.items.map(item => {
+                    const Icon = item.icon
+                    const active = isItemActive(item.to)
+                    const showBadge = item.badge === 'AI'
+
+                    return (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        title={isCollapsed ? item.label : undefined}
+                        aria-current={active ? 'page' : undefined}
+                        className={`u-nav-item group ${active ? 'u-nav-item-active' : ''} ${isCollapsed ? 'justify-center px-0 py-2.5' : ''}`}
+                      >
+                        {/* Sliding active indicator */}
+                        <span
+                          className={`absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-brand-500 transition-all duration-300 ease-silk ${
+                            active ? 'opacity-100' : 'scale-y-0 opacity-0'
+                          }`}
+                          aria-hidden="true"
+                        />
+
+                        <Icon
+                          className={`u-nav-icon ${active ? 'text-brand-500' : 'text-ink-faint group-hover:text-ink-secondary'} ${isCollapsed ? 'mx-auto' : ''}`}
+                        />
+
+                        {!isCollapsed && (
+                          <>
+                            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                            {showBadge && (
+                              <span className="rounded border border-iris-200/70 bg-iris-50 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.08em] text-iris-600 uppercase">
+                                AI
+                              </span>
+                            )}
+                            {active && !showBadge && <ChevronRight className="h-3.5 w-3.5 text-ink-faint" />}
+                          </>
+                        )}
+                      </Link>
+                    )
+                  })}
+                </div>
               </div>
-            )}
-
-            {navItems.map((item) => {
-              const Icon = item.icon
-              const isActive = location.pathname === item.to || 
-                (item.to === '/incident-center' && location.pathname.startsWith('/incident/'))
-
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  title={isCollapsed ? item.label : undefined}
-                  style={{ animation: 'slide-in-left 0.5s cubic-bezier(0.22, 1, 0.36, 1) both', animationDelay: `${navItems.indexOf(item) * 45}ms` }}
-                  className={`group relative overflow-hidden flex items-center rounded-xl text-sm font-semibold transition-all duration-300 ease-silk ${
-                    isCollapsed
-                      ? 'justify-center p-3'
-                      : 'justify-between px-3.5 py-2.5'
-                  } ${
-                    isActive
-                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50/60 text-blue-700 border border-blue-200/80 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 hover:translate-x-0.5 hover:shadow-xs'
-                  }`}
-                >
-                  <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
-                    <Icon className={`w-4 h-4 transition-transform duration-200 group-hover:scale-110 shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-700'}`} />
-                    {!isCollapsed && <span>{item.label}</span>}
-                  </div>
-
-                  {!isCollapsed && item.highlight && (
-                    <span className="flex items-center gap-1 px-1.5 py-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[9px] font-extrabold rounded-md uppercase tracking-wider shadow-xs">
-                      <Sparkles className="w-2.5 h-2.5" />
-                      <span>AI</span>
-                    </span>
-                  )}
-
-                  {/* Hover wash */}
-                  <span
-                    className="pointer-events-none absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    aria-hidden="true"
-                  />
-
-                  {isActive && (
-                    <>
-                      <span className="absolute left-0 top-2 bottom-2 w-1 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-r-full shadow-[0_0_12px_rgba(37,99,235,0.5)]" />
-                      <span className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-transparent to-transparent animate-fade-in" aria-hidden="true" />
-                    </>
-                  )}
-                </Link>
-              )
-            })}
+            ))}
           </nav>
 
-          {/* Footer Area */}
-          <div className={`border-t border-slate-200/80 bg-slate-50/70 transition-all ${
-            isCollapsed ? 'p-2 text-center' : 'p-3.5'
-          }`}>
+          {/* Rail footer — live network state */}
+          <div className={`border-t border-line ${isCollapsed ? 'px-2 py-3' : 'px-3 py-3'}`}>
             {!isCollapsed ? (
-              <Link
-                to="/"
-                className="flex items-center justify-center space-x-2 w-full py-2 px-3 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100/80 border border-slate-200 rounded-lg transition-all duration-200 shadow-xs hover:shadow-sm"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back to Portal Home</span>
-              </Link>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between rounded-lg bg-surface-0 px-2.5 py-2 shadow-recessed">
+                  <span className="flex items-center gap-2 text-[11px] font-medium text-ink-secondary">                  <span className="u-led" style={{ '--led-c': '#22c55e', '--led-glow': 'rgba(34,197,94,0.55)' } as React.CSSProperties} />
+                  Telemetry stream
+                  </span>
+                  <span className="u-num text-[10.5px] font-semibold text-emerald-600">100%</span>
+                </div>
+
+                <Link
+                  to="/"
+                  className="u-btn u-btn-outline w-full py-1.5 text-[12px]"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Public portal
+                </Link>
+              </div>
             ) : (
-              <div className="flex flex-col items-center">
-                <Link to="/" title="Back to Portal Home" className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors">
-                  <ArrowLeft className="w-4 h-4" />
+              <div className="flex flex-col items-center gap-2">
+                <span className="u-led" title="Telemetry stream active" style={{ '--led-c': '#22c55e', '--led-glow': 'rgba(34,197,94,0.55)' } as React.CSSProperties} />
+                <Link
+                  to="/"
+                  title="Public portal"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-2 text-ink-faint shadow-key transition-all duration-150 ease-mech hover:text-ink active:translate-y-[1px] active:shadow-groove"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
                 </Link>
               </div>
             )}
           </div>
         </aside>
 
-        {/* Main Content Area */}
-        <main className="relative flex-1 flex flex-col min-w-0 bg-tech-grid">
-          {/* Ambient aurora wash behind dashboard content */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-72 overflow-hidden opacity-60" aria-hidden="true">
-            <div className="absolute -top-28 left-1/4 w-[34rem] h-56 bg-gradient-to-tr from-blue-400/12 via-indigo-400/10 to-transparent blur-3xl rounded-full animate-aurora" />
-            <div className="absolute -top-20 right-1/4 w-[26rem] h-48 bg-gradient-to-tr from-cyan-400/12 to-transparent blur-3xl rounded-full animate-aurora" />
+        {/* ══ Workspace ═══════════════════════════════════════════════════ */}
+        <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-surface-0">
+          {/* Command topbar */}
+          <div className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-[rgba(163,177,198,0.35)] bg-surface-1/85 px-3 backdrop-blur-xl sm:px-5">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <button
+                onClick={() => setIsMobileOpen(true)}
+                className="u-icon-btn lg:hidden"
+                aria-label="Open navigation"
+              >
+                <Menu className="h-4 w-4" />
+              </button>
+
+              <span className="hidden items-center gap-2 text-[11.5px] text-ink-muted sm:flex">
+                <Radar className="h-3.5 w-3.5 text-brand-500" />
+                <span className="font-medium text-ink-secondary">Ahmedabad · Gandhinagar · GIFT City</span>
+              </span>
+              <span className="u-overline sm:hidden">UrbanSense</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPaletteOpen(true)}
+                className="u-btn u-btn-sm hidden md:inline-flex text-[11px]"
+                aria-label="Search modules"
+              >
+                <Search className="h-3.5 w-3.5" />
+                <span>Search modules</span>
+                <kbd className="u-num rounded border border-line bg-surface-3 px-1.5 py-0.5 text-[10px] text-ink-faint">⌘K</kbd>
+              </button>
+
+              <button
+                onClick={() => setPaletteOpen(true)}
+                className="u-icon-btn md:hidden"
+                aria-label="Search modules"
+              >
+                <Search className="h-4 w-4" />
+              </button>
+
+              <Link
+                to="/incident-center"
+                className="u-icon-btn relative"
+                aria-label="Open incident queue"
+                title="Open incident queue"
+              >
+                {openIncidents ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                {openIncidents ? (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-surface-1 bg-brand-500 px-1 font-mono text-[9px] font-bold text-white shadow-glow-accent">
+                    {openIncidents}
+                  </span>
+                ) : null}
+              </Link>
+
+              <div className="hidden items-center gap-2 rounded-lg bg-surface-0 px-2.5 py-1.5 shadow-recessed sm:flex">
+                <span className="live-dot" />
+                <span className="u-num text-[11.5px] font-medium text-ink-secondary">{clockLabel}</span>
+                <span className="text-[10.5px] text-ink-faint">{dateLabel}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Mobile floating hamburger button if drawer closed */}
-          <div className="relative z-10 lg:hidden p-3 bg-white border-b border-slate-200 flex items-center justify-between">
-            <button
-              onClick={() => setIsMobileOpen(true)}
-              className="p-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 flex items-center space-x-2 font-bold text-xs"
-              aria-label="Open Platform Navigation Menu"
-            >
-              <Menu className="w-4 h-4 text-blue-600" />
-              <span>Platform Modules</span>
-            </button>
-            <span className="text-xs font-extrabold text-slate-800 tracking-tight">UrbanSense AI</span>
-          </div>
-
-          {/* Route content with a soft cross-fade between modules */}
-          <div
-            key={location.pathname}
-            className="page-enter relative flex-1 flex flex-col min-w-0 min-h-0"
-          >
+          {/* Route content with shared page transition */}
+          <div key={location.pathname} className="relative flex min-h-0 flex-1 animate-page-in flex-col">
             {children}
           </div>
         </main>
@@ -242,4 +426,3 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     </div>
   )
 }
-

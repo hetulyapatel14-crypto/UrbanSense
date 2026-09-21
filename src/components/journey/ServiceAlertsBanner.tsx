@@ -32,14 +32,14 @@ export const ServiceAlertsBanner: React.FC = () => {
   const Icon = badge.icon
 
   return (
-    <div className={`${badge.bg} border rounded-2xl p-3.5 flex items-start justify-between gap-3 shadow-xs transition-all`}>
-      <div className="flex items-start space-x-2.5">
-        <Icon className={`w-4 h-4 ${badge.iconColor} flex-shrink-0 mt-0.5`} />
-        <div className="text-xs">
-          <div className="font-bold flex items-center gap-2">
+    <div className={`${badge.bg} flex items-start justify-between gap-3 rounded-2xl border p-3.5 transition-all animate-fade`}>
+      <div className="flex items-start gap-2.5">
+        <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${badge.iconColor}`} />
+        <div className="text-[12.5px]">
+          <div className="flex flex-wrap items-center gap-2 font-medium">
             <span>{activeAlert.title}</span>
             {activeAlert.delay_impact_mins > 0 && (
-              <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-amber-200/80 text-amber-900">
+              <span className="u-num rounded border border-amber-200/70 bg-amber-50 px-1.5 py-0.5 text-[10.5px] font-medium text-amber-600">
                 +{activeAlert.delay_impact_mins} min delay
               </span>
             )}
@@ -51,10 +51,11 @@ export const ServiceAlertsBanner: React.FC = () => {
       <button
         type="button"
         onClick={() => setIsDismissed(true)}
-        className="text-slate-400 hover:text-slate-600 p-1 rounded-lg text-xs flex items-center justify-center"
+        className="u-icon-btn h-7 w-7 shrink-0"
         title="Dismiss alert"
+        aria-label="Dismiss service alert"
       >
-        <X className="w-3.5 h-3.5" />
+        <X className="h-3.5 w-3.5" />
       </button>
     </div>
   )

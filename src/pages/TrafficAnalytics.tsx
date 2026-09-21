@@ -1,13 +1,25 @@
+import { useMemo, useState } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts'
-import { Clock, Activity, Gauge, Car, Flame } from 'lucide-react'
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts'
+import { Activity, Car, Gauge, Flame, Clock, TrendingUp, TrendingDown, Filter } from 'lucide-react'
 import HeaderActions from '../components/HeaderActions'
 import { PageHeader } from '../components/common/PageHeader'
-import { KpiCard } from '../components/common/KpiCard'
-import { PremiumPanel } from '../components/common/PremiumPanel'
+import { MetricStrip } from '../components/common/MetricStrip'
 import { AnimatedCounter } from '../components/common/AnimatedCounter'
-import { ScrollReveal } from '../components/common/ScrollReveal'
-
+import { CHART, axisTick, gridProps, tooltipStyle } from '../components/common/chartTheme'
 
 const hourlyTraffic = [
   { hour: '00:00', vehicles: 1200 },
@@ -21,263 +33,298 @@ const hourlyTraffic = [
 ]
 
 const vehicleTypes = [
-  { name: 'Cars', value: 24850, color: '#2563eb' },
-  { name: 'Buses', value: 3420, color: '#f59e0b' },
-  { name: 'Trucks', value: 2180, color: '#ef4444' },
-  { name: 'Two Wheelers', value: 15240, color: '#8b5cf6' },
-  { name: 'Auto Rickshaws', value: 2604, color: '#10b981' },
+  { name: 'Cars', value: 24850, color: CHART.brand },
+  { name: 'Buses', value: 3420, color: CHART.amber },
+  { name: 'Trucks', value: 2180, color: CHART.rose },
+  { name: 'Two wheelers', value: 15240, color: CHART.iris },
+  { name: 'Auto rickshaws', value: 2604, color: CHART.emerald },
 ]
 
 const congestionZones = [
-  { area: 'SG Highway', level: 89, status: 'Critical' },
-  { area: 'Ashram Road', level: 78, status: 'High' },
-  { area: 'Ring Road', level: 72, status: 'High' },
-  { area: 'CG Road', level: 65, status: 'Medium' },
-  { area: 'Naroda Road', level: 54, status: 'Medium' },
+  { area: 'SG Highway', level: 89, status: 'Critical', trend: 12 },
+  { area: 'Ashram Road', level: 78, status: 'High', trend: 5 },
+  { area: 'Ring Road', level: 72, status: 'High', trend: -3 },
+  { area: 'CG Road', level: 65, status: 'Medium', trend: 2 },
+  { area: 'Naroda Road', level: 54, status: 'Medium', trend: -8 },
 ]
 
 const routeDelays = [
-  { route: 'Route 18', avgDelay: 14, status: 'High' },
-  { route: 'Route 22', avgDelay: 11, status: 'Medium' },
-  { route: 'Route 45', avgDelay: 9, status: 'Medium' },
-  { route: 'Route 12', avgDelay: 7, status: 'Low' },
-  { route: 'Route 8', avgDelay: 5, status: 'Low' },
+  { route: 'Rt 18', avgDelay: 14, status: 'High' },
+  { route: 'Rt 22', avgDelay: 11, status: 'Medium' },
+  { route: 'Rt 45', avgDelay: 9, status: 'Medium' },
+  { route: 'Rt 12', avgDelay: 7, status: 'Low' },
+  { route: 'Rt 8', avgDelay: 5, status: 'Low' },
 ]
 
+type Focus = 'all' | 'critical'
+
 export default function TrafficAnalytics() {
+  const [focus, setFocus] = useState<Focus>('all')
+
+  const visibleZones = useMemo(
+    () => (focus === 'critical' ? congestionZones.filter(z => z.status === 'Critical' || z.status === 'High') : congestionZones),
+    [focus]
+  )
+
+  const visibleDelays = useMemo(
+    () => (focus === 'critical' ? routeDelays.filter(r => r.status !== 'Low') : routeDelays),
+    [focus]
+  )
+
+  const meanCongestion = Math.round(visibleZones.reduce((sum, z) => sum + z.level, 0) / Math.max(visibleZones.length, 1))
+  const meanDelay = (
+    visibleDelays.reduce((sum, r) => sum + r.avgDelay, 0) / Math.max(visibleDelays.length, 1)
+  ).toFixed(1)
+
   return (
     <DashboardLayout>
       <PageHeader
-        title="Traffic Flow & Density Analytics"
-        eyebrow="Traffic Intelligence"
+        title="Traffic Analytics"
+        eyebrow="Mobility analytics · rolling 24h window"
         icon={Activity}
-        live={{ label: 'Real-Time Feed', tone: 'blue' }}
-        subtitle="Real-time edge vehicle counting, congestion indices, and public corridor delays"
+        live={{ label: 'Live counting active', tone: 'blue' }}
+        subtitle="Vehicle counting, congestion indices and transit corridor delay patterns"
         actions={<HeaderActions />}
-      />
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="h-3.5 w-3.5 text-ink-faint" />
+            <span className="u-overline">Corridor focus</span>
+            <div className="u-seg ml-1" role="group" aria-label="Corridor focus">
+              <button
+                onClick={() => setFocus('all')}
+                aria-pressed={focus === 'all'}
+                className={`u-seg-item ${focus === 'all' ? 'u-seg-item-active' : ''}`}
+              >
+                All corridors
+              </button>
+              <button
+                onClick={() => setFocus('critical')}
+                aria-pressed={focus === 'critical'}
+                className={`u-seg-item ${focus === 'critical' ? 'u-seg-item-active' : ''}`}
+              >
+                Critical only
+              </button>
+            </div>
+          </div>
 
-      <div className="flex-1 overflow-auto p-6">
-        {/* Statistics */}
-        <ScrollReveal direction="up" delay={0}>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <KpiCard
-            label="Vehicles Sensed"
-            value={<AnimatedCounter value="48,294" />}
-            icon={Car}
-            accent="blue"
-            hint="Rolling 24h window"
-            trend="+8.4% today"
-            trendTone="positive"
-            delay={0}
-          />
-
-          <KpiCard
-            label="Avg Fleet Speed"
-            value={<AnimatedCounter value="34 km/h" />}
-            icon={Gauge}
-            accent="emerald"
-            hint="City-wide average velocity"
-            trend="Steady"
-            trendTone="positive"
-            delay={70}
-          />
-
-          <KpiCard
-            label="Congestion Index"
-            value={<AnimatedCounter value="67%" />}
-            icon={Flame}
-            accent="amber"
-            hint="Elevated peak traffic"
-            trend="Elevated"
-            trendTone="warning"
-            delay={140}
-          />
-
-          <KpiCard
-            label="Avg Corridor Delay"
-            value={<AnimatedCounter value="11 min" />}
-            icon={Clock}
-            accent="rose"
-            hint="Across instrumented corridors"
-            trend="+3m vs normal"
-            trendTone="critical"
-            delay={210}
-          />
+          <span className="u-num text-[11.5px] text-ink-muted">
+            {visibleZones.length} corridors · mean congestion {meanCongestion}% · mean delay {meanDelay} min
+          </span>
         </div>
-        </ScrollReveal>
+      </PageHeader>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Hourly Traffic */}
-          <ScrollReveal direction="up" delay={40}>
-          <div className="panel-premium hover-lift p-6 h-full">
-            <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase mb-4">Hourly Traffic Density (Today)</h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={hourlyTraffic}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="hour" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
-                <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  labelStyle={{ color: '#0f172a', fontWeight: 700 }}
-                  itemStyle={{ color: '#2563eb' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="vehicles"
-                  stroke="#2563eb"
-                  strokeWidth={3}
-                  dot={{ fill: '#2563eb', r: 4 }}
-                  activeDot={{ r: 7 }}
-                  animationDuration={1400}
-                  animationEasing="ease-out"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+      <div className="flex-1 space-y-4 overflow-auto p-4 sm:p-5">
+        <MetricStrip
+          dense
+          items={[
+            { label: 'Vehicles sensed', value: '48,294', sublabel: 'Rolling 24h window', icon: Car },
+            { label: 'Mean fleet speed', value: '34 km/h', sublabel: 'City-wide average', icon: Gauge, valueTone: 'emerald' },
+            { label: 'Congestion index', value: `${meanCongestion}%`, sublabel: 'Elevated at peak', icon: Flame, valueTone: 'amber' },
+            { label: 'Corridor delay', value: `${meanDelay} min`, sublabel: 'Instrumented corridors', icon: Clock, valueTone: 'rose' },
+            { label: 'Probes reporting', value: '236', sublabel: 'Sensing vehicles online', icon: Activity },
+          ]}
+        />
+
+        {/* ── Volume + mix ──────────────────────────────────────────── */}
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="u-panel p-4 sm:p-5">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="u-overline">Density over time</p>
+                <h2 className="u-h3 mt-1">Hourly traffic volume — today</h2>
+              </div>
+              <span className="u-chip u-chip-brand">
+                <span className="live-dot" />
+                Streaming
+              </span>
+            </div>
+
+            <div className="u-recharts">
+              <ResponsiveContainer width="100%" height={280}>
+                <AreaChart data={hourlyTraffic} margin={{ top: 6, right: 8, left: -16, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="volumeGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART.brand} stopOpacity={0.35} />
+                      <stop offset="100%" stopColor={CHART.brand} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid {...gridProps} />
+                  <XAxis dataKey="hour" tick={axisTick} axisLine={false} tickLine={false} />
+                  <YAxis tick={axisTick} axisLine={false} tickLine={false} />
+                  <Tooltip {...tooltipStyle} />
+                  <Area
+                    type="monotone"
+                    dataKey="vehicles"
+                    stroke={CHART.brand}
+                    strokeWidth={2.2}
+                    fill="url(#volumeGrad)"
+                    animationDuration={1500}
+                    animationEasing="ease-out"
+                    dot={{ fill: CHART.brand, r: 2.5, strokeWidth: 0 }}
+                    activeDot={{ r: 5, strokeWidth: 0 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="mt-4 grid grid-cols-3 divide-x divide-line/70 border-t border-line/70 pt-3">
+              {[
+                ['Peak hour', '18:00'],
+                ['Peak volume', '9,200 / h'],
+                ['Quiet hour', '03:00'],
+              ].map(([k, v]) => (
+                <div key={k} className="px-3 first:pl-0">
+                  <p className="u-overline">{k}</p>
+                  <p className="u-num mt-1 text-[17px] font-semibold text-ink">{v}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          </ScrollReveal>
 
-          {/* Vehicle Classification */}
-          <ScrollReveal direction="up" delay={90}>
-          <div className="panel-premium hover-lift p-6 h-full">
-            <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase mb-4">Vehicle Classification Breakdown</h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={vehicleTypes}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  dataKey="value"
-                  animationDuration={1200}
-                  animationBegin={150}
-                >
-                  {vehicleTypes.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="u-panel p-4 sm:p-5">
+            <p className="u-overline">Fleet mix</p>
+            <h2 className="u-h3 mt-1">Vehicle classification</h2>
+
+            <div className="u-recharts relative mt-2 flex justify-center">
+              <ResponsiveContainer width={168} height={168}>
+                <PieChart>
+                  <Pie
+                    data={vehicleTypes}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={54}
+                    outerRadius={79}
+                    paddingAngle={2}
+                    dataKey="value"
+                    strokeWidth={0}
+                    animationDuration={1100}
+                  >
+                    {vehicleTypes.map(entry => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip {...tooltipStyle} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="u-num text-[19px] font-semibold text-ink">48.3K</span>
+                <span className="u-overline mt-0.5">sensed</span>
+              </div>
+            </div>
+
+            <ul className="mt-3 space-y-2">
+              {vehicleTypes.map(t => (
+                <li key={t.name} className="flex items-center justify-between gap-3 text-[12px]">
+                  <span className="flex items-center gap-2 text-ink-secondary">
+                    <span className="u-dot" style={{ backgroundColor: t.color }} />
+                    {t.name}
+                  </span>
+                  <span className="u-num font-medium text-ink">
+                    <AnimatedCounter value={t.value.toLocaleString()} />
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
-          </ScrollReveal>
+        </section>
 
-          {/* Congestion by Zone */}
-          <ScrollReveal direction="up" delay={40}>
-          <div className="panel-premium hover-lift p-6 h-full">
-            <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase mb-4">Congestion by Major Corridors</h2>
-            <div className="stagger-list space-y-4">
-              {congestionZones.map(zone => (
-                <div key={zone.area}>
-                  <div className="flex items-center justify-between mb-1.5 text-xs font-semibold">
-                    <span className="text-slate-800">{zone.area}</span>
-                    <span className={`font-extrabold ${
-                      zone.status === 'Critical' ? 'text-rose-600' :
-                      zone.status === 'High' ? 'text-amber-600' : 'text-blue-600'
-                    }`}>
-                      {zone.level}% • {zone.status}
+        {/* ── Congestion + route delays ─────────────────────────────── */}
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="u-panel p-4 sm:p-5">
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <div>
+                <p className="u-overline">Live congestion</p>
+                <h2 className="u-h3 mt-1">Corridor congestion index</h2>
+              </div>
+              <span className="u-chip u-chip-rose">{visibleZones.length} corridors</span>
+            </div>
+
+            <ul className="space-y-3.5">
+              {visibleZones.map(zone => (
+                <li key={zone.area}>
+                  <div className="mb-1.5 flex items-center justify-between gap-2 text-[12px]">
+                    <span className="text-ink-secondary">{zone.area}</span>
+                    <span className="flex items-center gap-2">
+                      <span className={`u-num flex items-center gap-1 text-[11px] ${zone.trend > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        {zone.trend > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                        {Math.abs(zone.trend)}%
+                      </span>
+                      <span className="u-num font-medium text-ink">{zone.level}%</span>
                     </span>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div className="u-progress">
                     <div
-                      className={`bar-fill h-2 rounded-full ${
-                        zone.status === 'Critical' ? 'bg-rose-500' :
-                        zone.status === 'High' ? 'bg-amber-500' : 'bg-blue-500'
+                      className={`h-full rounded-full transition-[width] duration-700 ease-silk ${
+                        zone.status === 'Critical' ? 'bg-rose-400' : zone.status === 'High' ? 'bg-amber-400' : 'bg-brand-400'
                       }`}
                       style={{ width: `${zone.level}%` }}
-                    ></div>
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="u-panel p-4 sm:p-5">
+            <p className="u-overline">Transit impact</p>
+            <h2 className="u-h3 mt-1">Average route delay</h2>
+
+            <div className="u-recharts mt-4">
+              <ResponsiveContainer width="100%" height={230}>
+                <BarChart data={visibleDelays} barSize={38} margin={{ top: 4, right: 6, left: -18, bottom: 0 }}>
+                  <CartesianGrid {...gridProps} vertical={false} />
+                  <XAxis dataKey="route" tick={axisTick} axisLine={false} tickLine={false} />
+                  <YAxis tick={axisTick} axisLine={false} tickLine={false} />
+                  <Tooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                  <Bar dataKey="avgDelay" radius={[6, 6, 0, 0]} animationDuration={1200}>
+                    {visibleDelays.map(entry => (
+                      <Cell
+                        key={entry.route}
+                        fill={entry.status === 'High' ? CHART.rose : entry.status === 'Medium' ? CHART.amber : CHART.emerald}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Composition row ───────────────────────────────────────── */}
+        <section className="u-panel p-4 sm:p-5">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="u-overline">Fleet composition</p>
+              <h2 className="u-h3 mt-1">Vehicle type distribution — 24h window</h2>
+            </div>
+            <span className="u-num text-[11.5px] text-ink-muted">Total 48,294</span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {vehicleTypes.map(type => {
+              const share = (type.value / 48294) * 100
+              return (
+                <div key={type.name} className="rounded-xl border border-line bg-surface-2/60 px-3.5 py-3">
+                  <div className="flex items-center justify-between">
+                    <p className="u-overline truncate">{type.name}</p>
+                    <span className="u-dot" style={{ backgroundColor: type.color }} />
+                  </div>
+                  <p className="u-num mt-2 text-[20px] font-semibold text-ink">
+                    <AnimatedCounter value={type.value.toLocaleString()} />
+                  </p>
+                  <p className="u-meta mt-1">{share.toFixed(1)}% of total</p>
+                  <div className="u-progress mt-2">
+                    <div
+                      className="h-full rounded-full transition-[width] duration-700 ease-silk"
+                      style={{ width: `${share}%`, backgroundColor: type.color }}
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
+              )
+            })}
           </div>
-          </ScrollReveal>
-
-          {/* Average Route Delay */}
-          <ScrollReveal direction="up" delay={90}>
-          <div className="panel-premium hover-lift p-6 h-full">
-            <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase mb-4">Average Public Bus Route Delay</h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={routeDelays}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="route" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
-                <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  labelStyle={{ color: '#0f172a', fontWeight: 700 }}
-                />
-                <Bar dataKey="avgDelay" fill="#f59e0b" radius={[6, 6, 0, 0]} animationDuration={1300} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          </ScrollReveal>
-        </div>
-
-        {/* Top Congested Areas */}
-        <ScrollReveal direction="up" delay={40}>
-        <PremiumPanel
-          className="mb-6"
-          title="Bottleneck Zones Ranking"
-          subtitle="Live congestion density across monitored corridors"
-          icon={Flame}
-          badge={
-            <span className="flex items-center gap-1.5 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 live-dot" />
-              Live
-            </span>
-          }
-        >
-          <div className="relative">
-            <div className="stagger-list grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-              {congestionZones.map((zone, index) => (
-                <div key={zone.area} className="bg-slate-50/80 rounded-xl p-4 border border-slate-200/70 hover:border-blue-300 hover:bg-white hover:shadow-card hover:-translate-y-1 transition-all duration-300 ease-silk cursor-default">
-                  <div className="text-2xl font-black text-blue-600 mb-1 tabular-nums">#{index + 1}</div>
-                  <div className="text-sm font-bold text-slate-900 mb-2 truncate">{zone.area}</div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500">Density</span>
-                    <span className={`font-extrabold ${
-                      zone.status === 'Critical' ? 'text-rose-600' :
-                      zone.status === 'High' ? 'text-amber-600' : 'text-blue-600'
-                    }`}>
-                      {zone.level}%
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </PremiumPanel>
-        </ScrollReveal>
-
-        {/* Vehicle Stats Grid */}
-        <ScrollReveal direction="up" delay={40}>
-        <div className="stagger-list grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          {vehicleTypes.map(type => (
-            <div
-              key={type.name}
-              className="stat-card accent-top sheen-sweep hover-lift"
-            >
-              <div className="text-[11px] font-bold text-slate-500 mb-1 uppercase tracking-wider">{type.name}</div>
-              <div className="text-2xl font-black mb-1 tabular-nums" style={{ color: type.color }}>
-                <AnimatedCounter value={type.value.toLocaleString()} />
-              </div>
-              <div className="text-xs text-slate-500 font-medium mb-2">
-                {((type.value / 48294) * 100).toFixed(1)}% of detected total
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                <div
-                  className="bar-fill h-1.5 rounded-full"
-                  style={{ width: `${(type.value / 48294) * 100}%`, backgroundColor: type.color }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-        </ScrollReveal>
+        </section>
       </div>
     </DashboardLayout>
   )

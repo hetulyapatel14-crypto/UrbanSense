@@ -1,341 +1,269 @@
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Camera, Cpu, Database, Map, Radio, ArrowDown, Zap, Server, Shield, Sparkles, ArrowRight } from 'lucide-react'
+import {
+  ArrowLeft,
+  Camera,
+  Cpu,
+  Database,
+  Map as MapIcon,
+  ArrowDown,
+  Zap,
+  Server,
+  Shield,
+  ArrowRight,
+  Satellite,
+  Gauge,
+} from 'lucide-react'
 import ScrollProgressBar from '../components/common/ScrollProgressBar'
 import { ScrollReveal } from '../components/common/ScrollReveal'
 import { ClayBlobs } from '../components/common/ClayBlobs'
+import { UrbanSenseLogo } from '../components/common/UrbanSenseLogo'
+import { SectionHeader } from '../components/common/SectionHeader'
+
+const LAYERS = [
+  {
+    n: '01',
+    title: 'Mobile sensing',
+    subtitle: 'Multi-perspective capture from moving transit vehicles',
+    nodes: [
+      { icon: Camera, label: 'Bus camera array', value: '5 synchronised HD lenses', note: 'Front · rear · left · right · cabin' },
+      { icon: Satellite, label: 'GNSS receiver', value: '10 Hz positioning', note: 'Sub-metre urban precision' },
+      { icon: Gauge, label: 'Vehicle telemetry', value: 'CAN-bus stream', note: 'Speed, heading, braking context' },
+    ],
+  },
+  {
+    n: '02',
+    title: 'On-vehicle AI',
+    subtitle: 'Inference runs on the vehicle, not in a data centre',
+    groups: [
+      {
+        tone: 'text-brand-500',
+        label: 'Object classification',
+        items: ['Vehicles, auto-rickshaws, buses, trucks', 'Pedestrians in roadways and school zones', 'Traffic signals, signage and zebra crossings'],
+      },
+      {
+        tone: 'text-rose-500',
+        label: 'Road hazard detection',
+        items: ['Pothole depth and surface disintegration', 'Waterlogging and drain overflow pooling', 'Missing physical lane dividers'],
+      },
+      {
+        tone: 'text-iris-500',
+        label: 'Advanced perception',
+        items: ['Optical number plate recognition', 'Sudden deceleration and collision anomalies', 'Cross-vehicle trajectory association'],
+      },
+    ],
+  },
+  {
+    n: '03',
+    title: 'Data & telemetry hub',
+    subtitle: 'High-throughput ingestion, spatial aggregation and analytics',
+    nodes: [
+      { icon: Server, label: 'Event ingestion', value: 'MQTT / gRPC', note: 'Live event messaging' },
+      { icon: Database, label: 'Geospatial store', value: 'Spatial indexing', note: 'Corridor and zone geometry' },
+      { icon: Cpu, label: 'Analytics engine', value: 'Flow prediction', note: 'Congestion and delay models' },
+      { icon: Zap, label: 'Alert dispatcher', value: 'Push delivery', note: 'Operator notification' },
+    ],
+  },
+  {
+    n: '04',
+    title: 'Operations surfaces',
+    subtitle: 'Where authorities act on what the network observes',
+    nodes: [
+      { icon: MapIcon, label: 'Command canvas', value: 'Fleet & hazard layers', note: 'Live regional picture' },
+      { icon: Zap, label: 'Traffic hub', value: 'Corridor density', note: 'Flow and delay metrics' },
+      { icon: Shield, label: 'Incident control', value: 'Case escalation', note: 'Triage and evidence' },
+      { icon: Database, label: 'Briefings', value: 'Daily synthesis', note: 'Signed civic reports' },
+    ],
+  },
+]
+
+const SPECS = [
+  {
+    title: 'Data transmission',
+    rows: [
+      ['Video processing', 'On-vehicle hardware'],
+      ['Transmission mode', 'Event telemetry only'],
+      ['Bandwidth savings', '~95% efficiency'],
+      ['End-to-end latency', '< 1 second'],
+    ],
+  },
+  {
+    title: 'Inference stack',
+    rows: [
+      ['Object detection', 'YOLOv8 edge nano'],
+      ['Plate recognition', 'Dual CNN OCR'],
+      ['Mean precision', '94.6% mAP'],
+      ['Processing rate', '30+ FPS on board'],
+    ],
+  },
+  {
+    title: 'Fleet scalability',
+    rows: [
+      ['Active fleet', '248 vehicles'],
+      ['Network capacity', '10,000+ vehicles'],
+      ['Daily events handled', '1,000,000+'],
+      ['Deployment', 'Multi-region redundant'],
+    ],
+  },
+]
 
 export default function Architecture() {
   return (
-    <div className="min-h-screen antialiased">
+    <div className="relative min-h-screen bg-surface-0 text-ink">
       <ClayBlobs variant="display" />
       <ScrollProgressBar />
-      {/* Header */}
-      <header className="relative border-b border-slate-200/90 bg-white/85 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-6 py-4">
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/"
-                className="press-scale p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                aria-label="Back to home"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-              <div className="flex items-center space-x-3">
-                <div className="relative overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 p-2.5 rounded-xl shadow-sm text-white">
-                  <Radio className="w-5 h-5 relative z-10" />
-                  <span className="pointer-events-none absolute inset-0 bg-sheen opacity-60 animate-sheen" aria-hidden="true" />
-                </div>
-                <span className="text-xl font-extrabold text-slate-900 tracking-tight">UrbanSense</span>
-              </div>
-            </div>
 
-            <Link to="/command-center" className="btn-primary group text-xs sm:text-sm px-5 py-2.5">
-              Launch Dashboard
-              <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-line bg-surface-1/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1120px] items-center justify-between gap-4 px-5 py-3.5 lg:px-8">
+          <div className="flex items-center gap-3">
+            <Link to="/" className="u-icon-btn" aria-label="Back to home">
+              <ArrowLeft className="h-4 w-4" />
             </Link>
+            <UrbanSenseLogo size="sm" subtext="System architecture" id="arch" />
           </div>
+
+          <Link to="/command-center" className="u-btn u-btn-primary u-btn-sm">
+            Open dashboard
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-12 relative">
-        {/* Ambient wash behind the hero */}
-        <div className="pointer-events-none absolute inset-x-0 -top-16 h-96 overflow-hidden" aria-hidden="true">
-          <div className="absolute top-0 left-1/4 w-[32rem] h-64 bg-gradient-to-tr from-blue-400/12 via-indigo-400/10 to-transparent blur-3xl rounded-full animate-aurora" />
-          <div className="absolute top-8 right-1/4 w-[26rem] h-56 bg-gradient-to-tr from-cyan-400/12 to-transparent blur-3xl rounded-full animate-aurora" />
-        </div>
-
-        {/* Title */}
-        <ScrollReveal direction="up" delay={0}>
-        <div className="relative text-center mb-16 max-w-3xl mx-auto">
-          <span className="section-eyebrow text-blue-600 bg-blue-50 border-blue-200">
-            <Sparkles className="w-3 h-3" />
-            Technical Specification
-          </span>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mt-3 mb-4">
-            <span className="gradient-text-live">SYSTEM ARCHITECTURE</span>
-          </h1>
-          <p className="text-base md:text-lg text-slate-600 leading-relaxed">
-            End-to-end urban intelligence architecture connecting on-vehicle Edge AI computer vision models with centralized spatial telemetry.
-          </p>
-        </div>
+      <main className="mx-auto max-w-[1120px] px-5 py-14 lg:px-8 lg:py-20">
+        {/* Hero */}
+        <ScrollReveal direction="up">
+          <SectionHeader
+            size="lg"
+            eyebrow="Technical specification"
+            title="How UrbanSense works, end to end"
+            description="Five moving parts: capture on the vehicle, understand it locally, aggregate it spatially, and surface it where decisions are made."
+          />
         </ScrollReveal>
 
-        {/* Architecture Diagram */}
-        <div className="relative max-w-5xl mx-auto mb-16 space-y-6 stagger-list">
-          {/* Layer 1: Mobile Sensing */}
-          <div className="panel-premium accent-top p-8">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-50 border border-blue-200 text-blue-700 font-extrabold text-lg rounded-full mb-3 shadow-sm">
-                1
-              </div>
-              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">MOBILE SENSING LAYER</h2>
-              <p className="text-slate-500 text-sm mt-1">Multi-perspective data capture from moving public transit fleets</p>
-            </div>
+        {/* Layers */}
+        <div className="mt-14 space-y-3">
+          {LAYERS.map((layer, idx) => (
+            <ScrollReveal key={layer.n} direction="up" delay={idx * 40}>
+              <section className="u-panel overflow-hidden">
+                <span className="u-hair" aria-hidden="true" />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 text-center hover:border-blue-300 hover:bg-white hover:shadow-card hover:-translate-y-1 transition-all duration-300 ease-silk">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-3">
-                  <Camera className="w-5 h-5" />
+                <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line px-4 py-3.5 sm:px-5">
+                  <div className="flex items-baseline gap-4">
+                    <span className="u-num text-[12px] text-brand-600">{layer.n}</span>
+                    <div>
+                      <h2 className="u-h2">{layer.title}</h2>
+                      <p className="mt-1 text-[12px] text-ink-muted">{layer.subtitle}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="font-bold text-slate-900 mb-1">Bus Camera Array</div>
-                <div className="text-xs text-slate-500">5 Synchronized HD lenses</div>
-                <div className="text-[11px] text-slate-400 mt-2">Front, Rear, Left, Right, Cabin</div>
-              </div>                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 text-center hover:border-emerald-300 hover:bg-white hover:shadow-card hover:-translate-y-1 transition-all duration-300 ease-silk">
-                <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3">
-                  <Map className="w-5 h-5" />
+
+                {layer.nodes && (
+                  <div className="grid grid-cols-1 divide-line/70 sm:grid-cols-2 sm:divide-x lg:grid-cols-4">
+                    {layer.nodes.map(node => (
+                      <div key={node.label} className="border-t border-line/70 px-4 py-4 sm:border-t-0 lg:first:border-t-0">
+                        <node.icon className="h-4 w-4 text-ink-muted" />
+                        <p className="mt-3 text-[13px] font-medium text-ink">{node.label}</p>
+                        <p className="u-num mt-1 text-[11.5px] text-brand-600">{node.value}</p>
+                        <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-muted">{node.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {layer.groups && (
+                  <>
+                    <div className="grid grid-cols-1 divide-line/70 md:grid-cols-3 md:divide-x">
+                      {layer.groups.map(group => (
+                        <div key={group.label} className="border-t border-line/70 px-4 py-4 md:border-t-0">
+                          <p className={`text-[12.5px] font-medium ${group.tone}`}>{group.label}</p>
+                          <ul className="mt-3 space-y-2">
+                            {group.items.map(item => (
+                              <li key={item} className="flex items-start gap-2.5 text-[12px] leading-relaxed text-ink-secondary">
+                                <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-ink-faint" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border-t border-line bg-brand-50/40 px-4 py-3.5 sm:px-5">
+                      <p className="text-[12.5px] font-medium text-ink">Why inference runs on the vehicle</p>
+                      <p className="mt-1.5 max-w-3xl text-[12px] leading-relaxed text-ink-secondary">
+                        Processing frames on board removes over <strong className="text-brand-600">95%</strong> of
+                        bandwidth cost — only structured telemetry and small evidence crops leave the bus — and keeps
+                        response time inside <strong className="text-brand-600">50 ms</strong>.
+                      </p>
+                    </div>
+                  </>
+                )}
+              </section>
+
+              {idx < LAYERS.length - 1 && (
+                <div className="flex justify-center py-2" aria-hidden="true">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-surface-2 text-ink-faint">
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </span>
                 </div>
-                <div className="font-bold text-slate-900 mb-1">GNSS / GPS Receiver</div>
-                <div className="text-xs text-slate-500">Real-time coordinates (10Hz)</div>
-                <div className="text-[11px] text-slate-400 mt-2">Sub-meter urban precision</div>
-              </div>                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 text-center hover:border-amber-300 hover:bg-white hover:shadow-card hover:-translate-y-1 transition-all duration-300 ease-silk">
-                <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-3">
-                  <Zap className="w-5 h-5" />
-                </div>
-                <div className="font-bold text-slate-900 mb-1">Bus Telemetry CAN-Bus</div>
-                <div className="text-xs text-slate-500">Speed, heading, braking</div>
-                <div className="text-[11px] text-slate-400 mt-2">Vehicle dynamic context</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-center">
-            <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-sm animate-bob">
-              <ArrowDown className="w-5 h-5" />
-            </div>
-          </div>
-
-          {/* Layer 2: Edge AI */}
-          <div className="panel-premium accent-top p-8">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-50 border border-indigo-200 text-indigo-700 font-extrabold text-lg rounded-full mb-3 shadow-sm">
-                2
-              </div>
-              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">EDGE AI INFERENCE LAYER</h2>
-              <p className="text-slate-500 text-sm mt-1">Local deep learning execution directly onboard each vehicle</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:shadow-card hover:-translate-y-1 transition-all duration-300 ease-silk">
-                <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3">
-                  <Cpu className="w-5 h-5" />
-                </div>
-                <div className="font-bold text-slate-900 mb-2">Object Classification</div>
-                <div className="text-xs text-slate-600 space-y-1.5">
-                  <div>• Vehicles (Cars, Auto-rickshaws, Buses, Trucks)</div>
-                  <div>• Pedestrians in roadways & school zones</div>
-                  <div>• Traffic lights, road signs, and zebra lanes</div>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:shadow-card hover:-translate-y-1 transition-all duration-300 ease-silk">
-                <div className="w-10 h-10 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center mb-3">
-                  <Cpu className="w-5 h-5" />
-                </div>
-                <div className="font-bold text-slate-900 mb-2">Road Hazard Detection</div>
-                <div className="text-xs text-slate-600 space-y-1.5">
-                  <div>• Pothole depth & surface disintegration</div>
-                  <div>• Waterlogging & drain overflow pooling</div>
-                  <div>• Missing physical lane dividers</div>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:shadow-card hover:-translate-y-1 transition-all duration-300 ease-silk">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mb-3">
-                  <Cpu className="w-5 h-5" />
-                </div>
-                <div className="font-bold text-slate-900 mb-2">Advanced Perception</div>
-                <div className="text-xs text-slate-600 space-y-1.5">
-                  <div>• High-accuracy optical ANPR plate OCR</div>
-                  <div>• Sudden deceleration & collision anomalies</div>
-                  <div>• Cross-bus spatial trajectory tracking</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 bg-blue-50/70 border border-blue-200/80 rounded-xl p-4.5 flex items-start gap-3">
-              <Sparkles className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-              <div>
-                <div className="font-bold text-blue-900 text-sm mb-0.5">Why Edge Inference Over Cloud Streaming?</div>
-                <p className="text-xs text-blue-800 leading-relaxed">
-                  Executing computer vision directly on bus hardware minimizes bandwidth overhead by over <strong>95%</strong> (transmitting JSON telemetry and micro-crops rather than raw HD streams), providing instantaneous response times under 50ms.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-center">
-            <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-sm animate-bob" style={{ animationDelay: '300ms' }}>
-              <ArrowDown className="w-5 h-5" />
-            </div>
-          </div>
-
-          {/* Layer 3: Data & Intelligence */}
-          <div className="panel-premium accent-top p-8">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-cyan-50 border border-cyan-200 text-cyan-700 font-extrabold text-lg rounded-full mb-3 shadow-sm">
-                3
-              </div>
-              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">DATA & TELEMETRY HUB</h2>
-              <p className="text-slate-500 text-sm mt-1">High-throughput ingestion, spatial aggregation, and predictive analytics</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 text-center hover:bg-white hover:shadow-card hover:-translate-y-1 hover:border-blue-200 transition-all duration-300 ease-silk">
-                <Server className="w-6 h-6 text-emerald-600 mx-auto mb-2" />
-                <div className="font-bold text-slate-900 text-sm mb-1">Event Ingestion</div>
-                <div className="text-xs text-slate-500">MQTT / gRPC live messaging</div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 text-center hover:bg-white hover:shadow-card hover:-translate-y-1 hover:border-blue-200 transition-all duration-300 ease-silk">
-                <Database className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                <div className="font-bold text-slate-900 text-sm mb-1">Geospatial GIS DB</div>
-                <div className="text-xs text-slate-500">PostGIS spatial indexing</div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 text-center hover:bg-white hover:shadow-card hover:-translate-y-1 hover:border-blue-200 transition-all duration-300 ease-silk">
-                <Cpu className="w-6 h-6 text-indigo-600 mx-auto mb-2" />
-                <div className="font-bold text-slate-900 text-sm mb-1">Analytics Engine</div>
-                <div className="text-xs text-slate-500">Congestion & flow prediction</div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 text-center hover:bg-white hover:shadow-card hover:-translate-y-1 hover:border-blue-200 transition-all duration-300 ease-silk">
-                <Zap className="w-6 h-6 text-rose-600 mx-auto mb-2" />
-                <div className="font-bold text-slate-900 text-sm mb-1">Alert Dispatcher</div>
-                <div className="text-xs text-slate-500">Real-time push notifications</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-center">
-            <div className="w-10 h-10 rounded-full bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600 shadow-sm animate-bob" style={{ animationDelay: '600ms' }}>
-              <ArrowDown className="w-5 h-5" />
-            </div>
-          </div>
-
-          {/* Layer 4: Command Center */}
-          <div className="panel-premium accent-top p-8">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-50 border border-emerald-200 text-emerald-700 font-extrabold text-lg rounded-full mb-3 shadow-sm">
-                4
-              </div>
-              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">CIVIC COMMAND CENTER</h2>
-              <p className="text-slate-500 text-sm mt-1">Operational interfaces for municipal authorities and emergency response</p>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 text-center hover:bg-white hover:shadow-card hover:-translate-y-1 hover:border-blue-200 transition-all duration-300 ease-silk">
-                <Map className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                <div className="text-sm font-bold text-slate-900 mb-1">GIS Command Map</div>
-                <div className="text-xs text-slate-500">Live fleet & hazard layer</div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 text-center hover:bg-white hover:shadow-card hover:-translate-y-1 hover:border-blue-200 transition-all duration-300 ease-silk">
-                <Zap className="w-6 h-6 text-amber-600 mx-auto mb-2" />
-                <div className="text-sm font-bold text-slate-900 mb-1">Traffic Hub</div>
-                <div className="text-xs text-slate-500">Corridor density metrics</div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 text-center hover:bg-white hover:shadow-card hover:-translate-y-1 hover:border-blue-200 transition-all duration-300 ease-silk">
-                <Shield className="w-6 h-6 text-rose-600 mx-auto mb-2" />
-                <div className="text-sm font-bold text-slate-900 mb-1">Incident Control</div>
-                <div className="text-xs text-slate-500">Civil priority escalation</div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 text-center hover:bg-white hover:shadow-card hover:-translate-y-1 hover:border-blue-200 transition-all duration-300 ease-silk">
-                <Database className="w-6 h-6 text-emerald-600 mx-auto mb-2" />
-                <div className="text-sm font-bold text-slate-900 mb-1">Civil Reports</div>
-                <div className="text-xs text-slate-500">Daily synthesis briefings</div>
-              </div>
-            </div>
-          </div>
+              )}
+            </ScrollReveal>
+          ))}
         </div>
 
-        {/* Technical Specifications */}
-        <ScrollReveal direction="up" delay={0}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-16 stagger-list">
-          <div className="panel-premium hover-lift p-6">
-            <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Data Transmission</h3>
-            <div className="space-y-3 text-xs font-medium">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Video Processing:</span>
-                <span className="font-bold text-slate-900">Edge Hardware</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Transmission Mode:</span>
-                <span className="font-bold text-slate-900">Event Telemetry Only</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Bandwidth Savings:</span>
-                <span className="font-bold text-emerald-600">~95% Efficiency</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">End-to-End Latency:</span>
-                <span className="font-bold text-blue-600">&lt;1 Second</span>
-              </div>
-            </div>
+        {/* Specs */}
+        <ScrollReveal direction="up">
+          <div className="mt-16">
+            <SectionHeader eyebrow="Reference" title="Operational specification" />
           </div>
-
-          <div className="panel-premium hover-lift p-6">
-            <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">AI Inference Stack</h3>
-            <div className="space-y-3 text-xs font-medium">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Object Detection:</span>
-                <span className="font-bold text-slate-900">YOLOv8 Edge Nano</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">ANPR OCR:</span>
-                <span className="font-bold text-slate-900">Custom Dual CNN</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Mean Precision:</span>
-                <span className="font-bold text-emerald-600">94.6% mAP</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Processing Rate:</span>
-                <span className="font-bold text-blue-600">30+ FPS Onboard</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="panel-premium hover-lift p-6">
-            <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Fleet Scalability</h3>
-            <div className="space-y-3 text-xs font-medium">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Current Active Fleet:</span>
-                <span className="font-bold text-slate-900">248 Units</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Max Network Capacity:</span>
-                <span className="font-bold text-slate-900">10,000+ Buses</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Daily Events Handled:</span>
-                <span className="font-bold text-blue-600">1,000,000+</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Cloud Architecture:</span>
-                <span className="font-bold text-slate-900">Multi-Region Redundant</span>
-              </div>
-            </div>
-          </div>
-        </div>
         </ScrollReveal>
+
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          {SPECS.map(spec => (
+            <ScrollReveal key={spec.title} direction="up" delay={40}>
+              <section className="u-panel p-4">
+                <h3 className="u-overline">{spec.title}</h3>
+                <dl className="mt-3 divide-y divide-line/70 border-t border-line/70">
+                  {spec.rows.map(([k, v]) => (
+                    <div key={k} className="flex items-center justify-between gap-3 py-2.5">
+                      <dt className="text-[12px] text-ink-muted">{k}</dt>
+                      <dd className="u-num text-[12px] font-medium text-ink-secondary">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            </ScrollReveal>
+          ))}
+        </div>
 
         {/* CTA */}
-        <ScrollReveal direction="up" delay={0}>
-        <div className="text-center">
-          <Link to="/command-center" className="btn-primary group text-base px-8 py-3.5 shadow-md shadow-blue-500/20">
-            Launch Urban Command Center
-            <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-          </Link>
-        </div>
+        <ScrollReveal direction="up">
+          <div className="mt-16 flex flex-wrap items-center justify-between gap-6 border-t border-line pt-10">
+            <p className="max-w-xl text-[15px] leading-relaxed text-ink-secondary">
+              The architecture is live today across the Ahmedabad region — inspect it in the operations console.
+            </p>
+            <Link to="/command-center" className="u-btn u-btn-primary px-4 py-2.5 text-[13.5px]">
+              Open command center
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         </ScrollReveal>
-      </div>
+      </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200/70 py-8 bg-white/60 backdrop-blur-md mt-16">
-        <div className="container mx-auto px-6 text-center text-slate-500 text-sm">
-          <p>© 2026 UrbanSense. Smart City Intelligence Platform.</p>
+      <footer className="border-t border-line">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-3 px-5 py-8 lg:px-8">
+          <p className="text-[11.5px] text-ink-faint">© 2026 UrbanSense · Urban intelligence platform</p>
+          <div className="flex items-center gap-5 text-[12px]">
+            <Link to="/about" className="text-ink-muted transition-colors hover:text-ink">
+              About
+            </Link>
+            <Link to="/reports" className="text-ink-muted transition-colors hover:text-ink">
+              Reports
+            </Link>
+            <Link to="/" className="text-ink-muted transition-colors hover:text-ink">
+              Portal
+            </Link>
+          </div>
         </div>
       </footer>
     </div>

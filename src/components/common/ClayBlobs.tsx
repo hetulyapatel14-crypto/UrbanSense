@@ -1,49 +1,44 @@
 import React from 'react'
 
 interface ClayBlobsProps {
-  /**
-   * `app`     — subtler wash for dense operational screens.
-   * `display` — richer wash for landing / marketing surfaces.
-   */
   variant?: 'app' | 'display'
 }
 
 /**
- * Ambient clay lighting.
- *
- * Four large, slowly drifting colour blobs sit behind the entire UI. They are
- * what makes the glass-clay surfaces (`bg-white/70` + `backdrop-blur`) read as
- * translucent clay rather than flat panels, so this layer must be mounted once
- * per page, above the canvas colour but behind all content (`-z-10`).
+ * Ambient canvas layer — the workshop bench under a single top-left light.
+ * A blueprint grid, a lighting hotspot from the top-left corner, a faint
+ * safety-orange bloom and a matte-plastic noise grain. Purely decorative.
  */
 export const ClayBlobs: React.FC<ClayBlobsProps> = ({ variant = 'app' }) => {
-  const opacity = variant === 'display' ? 'opacity-100' : 'opacity-70'
-
   return (
-    <div
-      aria-hidden="true"
-      className={`pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-clay-canvas ${opacity}`}
-    >
-      {/* Violet — primary accent, top-left */}
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-surface-0">
+      {/* Blueprint / schematic grid */}
+      <div className="absolute inset-0 bg-grid-fine opacity-80" />
+
+      {/* Lighting hotspot — reinforces the 45° top-left light source */}
       <div
-        className="clay-blob clay-blob-float -left-[10%] -top-[10%] h-[60vh] w-[60vh] bg-blue-500/10"
-        style={{ animationDelay: '0ms' }}
+        className="absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(1100px 700px at 12% -5%, rgba(255,255,255,0.5), transparent 60%), radial-gradient(900px 600px at 105% 110%, rgba(163,177,198,0.25), transparent 60%)',
+        }}
       />
-      {/* Hot pink — secondary accent, right */}
+
+      {/* Faint accent bloom */}
       <div
-        className="clay-blob clay-blob-float-delayed -right-[10%] top-[20%] h-[55vh] w-[55vh] bg-indigo-500/10"
-        style={{ animationDelay: '2000ms' }}
+        className="absolute -right-52 top-1/4 h-[560px] w-[560px] rounded-full opacity-[0.35] blur-[130px]"
+        style={{ background: 'radial-gradient(closest-side, rgba(255,71,87,0.12), transparent 72%)' }}
       />
-      {/* Sky — tertiary, bottom-left */}
-      <div
-        className="clay-blob clay-blob-float-slow -left-[5%] bottom-[-10%] h-[50vh] w-[50vh] bg-cyan-500/10"
-        style={{ animationDelay: '4000ms' }}
-      />
-      {/* Mint — subtle balance, bottom-right */}
-      <div
-        className="clay-blob clay-blob-float bottom-[-15%] right-[5%] h-[45vh] w-[45vh] bg-emerald-500/10"
-        style={{ animationDelay: '6000ms' }}
-      />
+
+      {variant === 'display' && (
+        <div
+          className="absolute -bottom-56 left-1/4 h-[520px] w-[720px] rounded-full opacity-40 blur-[130px]"
+          style={{ background: 'radial-gradient(closest-side, rgba(163,177,198,0.3), transparent 75%)' }}
+        />
+      )}
+
+      {/* Matte plastic noise grain */}
+      <div className="u-noise absolute inset-0 opacity-[0.18] mix-blend-overlay" />
     </div>
   )
 }

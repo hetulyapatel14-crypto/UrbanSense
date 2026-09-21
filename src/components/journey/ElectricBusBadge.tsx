@@ -40,18 +40,18 @@ export const ElectricBusBadge: React.FC<ElectricBusBadgeProps> = ({
           sizeClasses[size]
         } ${
           isGift
-            ? 'bg-gradient-to-r from-teal-950/80 to-emerald-950/80 border-teal-500/40 text-teal-300 shadow-teal-950/50'
-            : 'bg-gradient-to-r from-emerald-950/90 via-emerald-900/70 to-teal-950/90 border-emerald-500/40 text-emerald-300 shadow-emerald-950/50'
+            ? 'bg-teal-50 border-teal-200 text-teal-700'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
         }`}
       >
         <span className="relative flex items-center justify-center">
-          <Zap className={`${iconSizes[size]} text-emerald-400 fill-emerald-400 animate-pulse`} />
+          <Zap className={`${iconSizes[size]} text-emerald-600 fill-emerald-600`} />
         </span>
-        <span className="font-extrabold text-white">
-          {routeNumber ? `🚌⚡ ${routeNumber}` : '🚌⚡ Gandhinagar Electric Bus'}
+        <span className="font-semibold text-emerald-700">
+          {routeNumber ? routeNumber : 'Gandhinagar electric bus'}
         </span>
         {showOperator && (
-          <span className="opacity-80 text-[10px] font-mono px-1.5 py-0.2 rounded bg-black/40 border border-white/10 ml-0.5">
+          <span className="u-num ml-0.5 rounded border border-line bg-surface-3/70 px-1.5 py-px text-[10px] font-medium text-ink-muted">
             {isGift ? 'GIFT City EV' : 'GGTSL PM-eBus'}
           </span>
         )}
@@ -59,9 +59,9 @@ export const ElectricBusBadge: React.FC<ElectricBusBadgeProps> = ({
 
       {/* Zero Emission Tag */}
       {showZeroEmission && (
-        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400/90 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-          <Leaf className="w-2.5 h-2.5 text-emerald-400" />
-          <span>100% Electric (Zero Emission)</span>
+        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+          <Leaf className="h-2.5 w-2.5 text-emerald-600" />
+          <span>Zero emission</span>
         </span>
       )}
     </div>

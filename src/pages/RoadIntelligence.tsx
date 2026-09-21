@@ -1,288 +1,324 @@
 import DashboardLayout from '../layouts/DashboardLayout'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
-import { AlertTriangle, TrendingUp, MapPin, Route, Gauge, Wrench, ListOrdered } from 'lucide-react'
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts'
+import { AlertTriangle, Route, Wrench, ListOrdered, MapPin } from 'lucide-react'
 import HeaderActions from '../components/HeaderActions'
 import { PageHeader } from '../components/common/PageHeader'
-import { KpiCard } from '../components/common/KpiCard'
-import { PremiumPanel } from '../components/common/PremiumPanel'
-import { AnimatedCounter } from '../components/common/AnimatedCounter'
-import { ScrollReveal } from '../components/common/ScrollReveal'
-
+import { MetricStrip } from '../components/common/MetricStrip'
+import { StatusBadge, StatusTone } from '../components/common/StatusBadge'
+import { CHART, axisTick, gridProps, tooltipStyle } from '../components/common/chartTheme'
 
 const hazardsByCategory = [
-  { name: 'Potholes', value: 142, color: '#ef4444' },
-  { name: 'Road Damage', value: 89, color: '#f59e0b' },
-  { name: 'Waterlogging', value: 54, color: '#0284c7' },
-  { name: 'Missing Dividers', value: 28, color: '#8b5cf6' },
-  { name: 'Other Hazards', value: 14, color: '#64748b' },
+  { name: 'Potholes', value: 142, color: CHART.rose },
+  { name: 'Road damage', value: 89, color: CHART.amber },
+  { name: 'Waterlogging', value: 54, color: CHART.brand },
+  { name: 'Missing dividers', value: 28, color: CHART.iris },
+  { name: 'Other hazards', value: 14, color: CHART.slate },
 ]
 
 const trendData = [
-  { month: 'Jan', hazards: 245 },
-  { month: 'Feb', hazards: 289 },
-  { month: 'Mar', hazards: 312 },
-  { month: 'Apr', hazards: 298 },
-  { month: 'May', hazards: 327 },
+  { month: 'Jan', hazards: 245, repaired: 180 },
+  { month: 'Feb', hazards: 289, repaired: 210 },
+  { month: 'Mar', hazards: 312, repaired: 265 },
+  { month: 'Apr', hazards: 298, repaired: 280 },
+  { month: 'May', hazards: 327, repaired: 290 },
 ]
 
 const confidenceData = [
-  { range: '90-100%', count: 248 },
-  { range: '80-89%', count: 56 },
-  { range: '70-79%', count: 18 },
-  { range: '<70%', count: 5 },
+  { range: '90–100%', count: 248, fill: CHART.emerald },
+  { range: '80–89%', count: 56, fill: CHART.brand },
+  { range: '70–79%', count: 18, fill: CHART.amber },
+  { range: '<70%', count: 5, fill: CHART.rose },
 ]
 
 const maintenancePriority = [
-  { road: 'SG Highway, Sector 5-8', hazards: 18, severity: 'Critical', lastDetection: '2 hours ago', priority: 'HIGH' },
-  { road: 'Ring Road, Junction 12-15', hazards: 14, severity: 'High', lastDetection: '4 hours ago', priority: 'HIGH' },
-  { road: 'Ashram Road, Segment A', hazards: 12, severity: 'High', lastDetection: '6 hours ago', priority: 'MEDIUM' },
-  { road: 'CG Road, Section 3-5', hazards: 9, severity: 'Medium', lastDetection: '8 hours ago', priority: 'MEDIUM' },
-  { road: 'Naroda Road, Zone B', hazards: 7, severity: 'Medium', lastDetection: '12 hours ago', priority: 'LOW' },
+  { road: 'SG Highway, Sector 5–8', hazards: 18, severity: 'Critical', lastDetection: '2 hours ago', priority: 'HIGH', pci: 34 },
+  { road: 'Ring Road, Junction 12–15', hazards: 14, severity: 'High', lastDetection: '4 hours ago', priority: 'HIGH', pci: 41 },
+  { road: 'Ashram Road, Segment A', hazards: 12, severity: 'High', lastDetection: '6 hours ago', priority: 'MEDIUM', pci: 53 },
+  { road: 'CG Road, Section 3–5', hazards: 9, severity: 'Medium', lastDetection: '8 hours ago', priority: 'MEDIUM', pci: 62 },
+  { road: 'Naroda Road, Zone B', hazards: 7, severity: 'Medium', lastDetection: '12 hours ago', priority: 'LOW', pci: 71 },
 ]
 
+const zoneDefects = [
+  { zone: 'Central Ahmedabad', count: 89, color: CHART.rose },
+  { zone: 'West Ahmedabad', count: 76, color: CHART.amber },
+  { zone: 'East Ahmedabad', count: 68, color: CHART.brand },
+  { zone: 'North Ahmedabad', count: 54, color: CHART.emerald },
+  { zone: 'South Ahmedabad', count: 40, color: CHART.iris },
+]
+
+const priorityTone: Record<string, StatusTone> = { HIGH: 'rose', MEDIUM: 'amber', LOW: 'blue' }
+
+const pciTone = (pci: number) => (pci < 50 ? 'bg-rose-400' : pci < 65 ? 'bg-amber-400' : 'bg-emerald-400')
+
 export default function RoadIntelligence() {
+  const totalHazards = hazardsByCategory.reduce((sum, c) => sum + c.value, 0)
+
   return (
     <DashboardLayout>
       <PageHeader
-        title="Road Condition Intelligence"
-        eyebrow="Pavement Analytics"
+        title="Road Intelligence"
+        eyebrow="Infrastructure workspace · pavement condition"
         icon={Route}
-        live={{ label: '24 Segments Prioritized', tone: 'amber' }}
-        subtitle="Automated pavement defect detection, surface quality indices, and civil repair dispatching"
+        live={{ label: '24 segments prioritised', tone: 'amber' }}
+        subtitle="Automated defect detection, surface quality indexing and civil repair dispatch"
         actions={<HeaderActions />}
       />
 
-      <div className="flex-1 overflow-auto p-6">
-        {/* Statistics */}
-        <ScrollReveal direction="up" delay={0}>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <KpiCard
-            label="Roads Scanned"
-            value={<AnimatedCounter value="1,284 km" />}
-            icon={Route}
-            accent="blue"
-            hint="Network coverage"
-            trend="+45 km today"
-            trendTone="positive"
-            delay={0}
-          />
+      <div className="flex-1 space-y-4 overflow-auto p-4 sm:p-5">
+        <MetricStrip
+          dense
+          items={[
+            { label: 'Roads scanned', value: '1,284 km', sublabel: 'Network coverage', icon: Route },
+            { label: 'Hazards detected', value: 327, sublabel: 'Surface defects logged', icon: AlertTriangle, valueTone: 'amber' },
+            { label: 'Critical segments', value: 24, sublabel: 'Needs civil repair', icon: Wrench, valueTone: 'rose' },
+            { label: 'Repair queue', value: 86, sublabel: 'Ranked by PCI', icon: ListOrdered },
+            { label: 'Mean PCI score', value: 58, sublabel: 'Below intervention line', icon: MapPin, valueTone: 'brand' },
+          ]}
+        />
 
-          <KpiCard
-            label="Hazards Detected"
-            value={<AnimatedCounter value="327" />}
-            icon={AlertTriangle}
-            accent="amber"
-            hint="Surface defects logged"
-            trend="+12 new today"
-            trendTone="warning"
-            delay={70}
-          />
-
-          <KpiCard
-            label="Critical Segments"
-            value={<AnimatedCounter value="24" />}
-            icon={Wrench}
-            accent="rose"
-            hint="Needs civil repair"
-            trend="Escalated"
-            trendTone="critical"
-            delay={140}
-          />
-
-          <KpiCard
-            label="Repair Priority Queue"
-            value={<AnimatedCounter value="86" />}
-            icon={ListOrdered}
-            accent="indigo"
-            hint="Road segments ranked"
-            trend="Ranked"
-            trendTone="neutral"
-            delay={210}
-          />
-        </div>
-        </ScrollReveal>
-
-        {/* Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Hazards Trend */}
-          <ScrollReveal direction="up" delay={40}>
-          <div className="panel-premium hover-lift p-6 h-full">
-            <div className="flex items-center gap-2.5 mb-4">
-              <span className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-blue-600 flex items-center justify-center shadow-2xs">
-                <TrendingUp className="w-4 h-4" />
-              </span>
-              <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase">Hazard Detection Trend</h2>
+        {/* ── Hero visualisation ─────────────────────────────────────── */}
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="u-panel p-4 sm:p-5">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="u-overline">Five-month view</p>
+                <h2 className="u-h3 mt-1">Detections against completed repairs</h2>
+              </div>
+              <div className="flex items-center gap-4 text-[11px]">
+                <span className="flex items-center gap-2 text-ink-secondary">
+                  <span className="h-0.5 w-4 rounded bg-rose-400" /> Hazards detected
+                </span>
+                <span className="flex items-center gap-2 text-ink-secondary">
+                  <span className="h-0.5 w-4 rounded bg-emerald-400" /> Repaired
+                </span>
+              </div>
             </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="month" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
-                <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  labelStyle={{ color: '#0f172a', fontWeight: 700 }}
-                  itemStyle={{ color: '#2563eb' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="hazards"
-                  stroke="#2563eb"
-                  strokeWidth={3}
-                  dot={{ fill: '#2563eb', r: 4 }}
-                  activeDot={{ r: 7 }}
-                  animationDuration={1400}
-                  animationEasing="ease-out"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          </ScrollReveal>
 
-          {/* Hazards by Category */}
-          <ScrollReveal direction="up" delay={90}>
-          <div className="panel-premium hover-lift p-6 h-full">
-            <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase mb-4">Hazards by Category</h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={hazardsByCategory}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  dataKey="value"
-                  animationDuration={1200}
-                  animationBegin={150}
-                >
-                  {hazardsByCategory.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          </ScrollReveal>
-
-          {/* Detection Confidence */}
-          <ScrollReveal direction="up" delay={40}>
-          <div className="panel-premium hover-lift p-6 h-full">
-            <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase mb-4">Detection Confidence Distribution</h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={confidenceData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="range" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
-                <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  labelStyle={{ color: '#0f172a', fontWeight: 700 }}
-                />
-                <Bar dataKey="count" fill="#3b82f6" radius={[6, 6, 0, 0]} animationDuration={1300} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          </ScrollReveal>
-
-          {/* Hazards by Zone */}
-          <ScrollReveal direction="up" delay={90}>
-          <div className="panel-premium hover-lift p-6 h-full">
-            <div className="flex items-center gap-2.5 mb-4">
-              <span className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-indigo-600 flex items-center justify-center shadow-2xs">
-                <Gauge className="w-4 h-4" />
-              </span>
-              <h2 className="font-extrabold text-slate-900 text-sm tracking-tight uppercase">Hazards by City Zone</h2>
+            <div className="u-recharts">
+              <ResponsiveContainer width="100%" height={264}>
+                <AreaChart data={trendData} margin={{ top: 4, right: 6, left: -18, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="hazardGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART.rose} stopOpacity={0.28} />
+                      <stop offset="100%" stopColor={CHART.rose} stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="repairGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART.emerald} stopOpacity={0.24} />
+                      <stop offset="100%" stopColor={CHART.emerald} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid {...gridProps} />
+                  <XAxis dataKey="month" tick={axisTick} axisLine={false} tickLine={false} />
+                  <YAxis tick={axisTick} axisLine={false} tickLine={false} />
+                  <Tooltip {...tooltipStyle} />
+                  <Area
+                    type="monotone"
+                    dataKey="hazards"
+                    stroke={CHART.rose}
+                    strokeWidth={2}
+                    fill="url(#hazardGrad)"
+                    animationDuration={1200}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="repaired"
+                    stroke={CHART.emerald}
+                    strokeWidth={2}
+                    fill="url(#repairGrad)"
+                    animationDuration={1400}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-            <div className="stagger-list space-y-3.5">
+
+            <div className="mt-4 grid grid-cols-3 divide-x divide-line/70 border-t border-line/70 pt-3">
               {[
-                { zone: 'Central Ahmedabad', count: 89, color: 'bg-rose-500' },
-                { zone: 'West Ahmedabad', count: 76, color: 'bg-amber-500' },
-                { zone: 'East Ahmedabad', count: 68, color: 'bg-blue-500' },
-                { zone: 'North Ahmedabad', count: 54, color: 'bg-emerald-500' },
-                { zone: 'South Ahmedabad', count: 40, color: 'bg-indigo-500' },
-              ].map(zone => (
-                <div key={zone.zone}>
-                  <div className="flex items-center justify-between mb-1.5 text-xs font-semibold">
-                    <span className="text-slate-700">{zone.zone}</span>
-                    <span className="text-slate-900 font-extrabold">{zone.count} defects</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div className={`${zone.color} bar-fill h-2 rounded-full`} style={{ width: `${(zone.count / 89) * 100}%` }}></div>
-                  </div>
+                ['Detected this month', '327'],
+                ['Repaired this month', '290'],
+                ['Backlog', '37'],
+              ].map(([k, v]) => (
+                <div key={k} className="px-3 first:pl-0">
+                  <p className="u-overline">{k}</p>
+                  <p className="u-num mt-1 text-[18px] font-semibold text-ink">{v}</p>
                 </div>
               ))}
             </div>
           </div>
-          </ScrollReveal>
-        </div>
 
-        {/* Maintenance Priority Table */}
-        <ScrollReveal direction="up" delay={40}>
-        <PremiumPanel
-          flush
-          title="Maintenance Priority Dispatch"
-          subtitle="Sorted by severity and detection frequency"
-          icon={Wrench}
-          badge={
-            <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
-              {maintenancePriority.length} Segments
-            </span>
-          }
-        >
-          <div className="overflow-x-auto">
-            <table className="premium-table w-full text-left">
-              <thead className="bg-slate-50/80 border-b border-slate-200/80">
+          {/* Hazard distribution */}
+          <div className="u-panel p-4 sm:p-5">
+            <p className="u-overline">Defect classification</p>
+            <h2 className="u-h3 mt-1">Hazard distribution</h2>
+
+            <div className="mt-4 flex items-center gap-5">
+              <div className="u-recharts relative">
+                <ResponsiveContainer width={148} height={148}>
+                  <PieChart>
+                    <Pie
+                      data={hazardsByCategory}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={48}
+                      outerRadius={70}
+                      paddingAngle={2}
+                      dataKey="value"
+                      strokeWidth={0}
+                      animationDuration={1100}
+                    >
+                      {hazardsByCategory.map(entry => (
+                        <Cell key={entry.name} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip {...tooltipStyle} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="u-num text-[20px] font-semibold text-ink">{totalHazards}</span>
+                  <span className="u-overline mt-0.5">flagged</span>
+                </div>
+              </div>
+
+              <ul className="flex-1 space-y-2.5">
+                {hazardsByCategory.map(c => (
+                  <li key={c.name} className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-2 text-[12px] text-ink-secondary">
+                      <span className="u-dot" style={{ backgroundColor: c.color }} />
+                      {c.name}
+                    </span>
+                    <span className="u-num text-[12px] font-medium text-ink">{c.value}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Zone + model quality ───────────────────────────────────── */}
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="u-panel p-4 sm:p-5">
+            <p className="u-overline">Spatial distribution</p>
+            <h2 className="u-h3 mt-1">Defects by city zone</h2>
+
+            <ul className="mt-4 space-y-3.5">
+              {zoneDefects.map(zone => (
+                <li key={zone.zone}>
+                  <div className="mb-1.5 flex items-center justify-between text-[12px]">
+                    <span className="flex items-center gap-2 text-ink-secondary">
+                      <span className="u-dot" style={{ backgroundColor: zone.color }} />
+                      {zone.zone}
+                    </span>
+                    <span className="u-num font-medium text-ink">{zone.count}</span>
+                  </div>
+                  <div className="u-progress">
+                    <div
+                      className="h-full rounded-full transition-[width] duration-700 ease-silk"
+                      style={{ width: `${(zone.count / 89) * 100}%`, backgroundColor: zone.color }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="u-panel p-4 sm:p-5">
+            <p className="u-overline">Model quality</p>
+            <h2 className="u-h3 mt-1">Detection confidence distribution</h2>
+
+            <div className="u-recharts mt-4">
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={confidenceData} barSize={44} margin={{ top: 4, right: 6, left: -18, bottom: 0 }}>
+                  <CartesianGrid {...gridProps} vertical={false} />
+                  <XAxis dataKey="range" tick={axisTick} axisLine={false} tickLine={false} />
+                  <YAxis tick={axisTick} axisLine={false} tickLine={false} />
+                  <Tooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]} animationDuration={1100}>
+                    {confidenceData.map(entry => (
+                      <Cell key={entry.range} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Maintenance queue ──────────────────────────────────────── */}
+        <section className="u-panel overflow-hidden">
+          <span className="u-hair" aria-hidden="true" />
+
+          <div className="u-panel-head">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-surface-3 text-amber-600">
+                <Wrench className="h-3.5 w-3.5" />
+              </span>
+              <div>
+                <h2 className="text-[13px] font-semibold text-ink">Maintenance queue</h2>
+                <p className="text-[11px] text-ink-muted">Ranked by pavement condition index and repeat detections</p>
+              </div>
+            </div>
+            <span className="u-chip u-chip-amber">{maintenancePriority.length} segments</span>
+          </div>
+
+          <div className="u-scroll-x">
+            <table className="w-full min-w-[820px] text-left">
+              <thead className="bg-surface-1/60">
                 <tr>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Road Segment</th>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Defect Count</th>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Severity Level</th>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Last Detected</th>
-                  <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Repair Priority</th>
+                  <th className="u-th">Segment</th>
+                  <th className="u-th">Defects</th>
+                  <th className="u-th">PCI score</th>
+                  <th className="u-th">Severity</th>
+                  <th className="u-th">Last detection</th>
+                  <th className="u-th">Priority</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {maintenancePriority.map((item, index) => (
-                  <tr key={index} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="w-4 h-4 text-blue-600" />
-                        <span className="font-semibold text-slate-800">{item.road}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 text-xs">
-                        {item.hazards} spots
+              <tbody>
+                {maintenancePriority.map(item => (
+                  <tr key={item.road} className="u-row">
+                    <td className="u-td">
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="h-6 w-[3px] rounded-full"
+                          style={{
+                            backgroundColor:
+                              item.priority === 'HIGH' ? CHART.rose : item.priority === 'MEDIUM' ? CHART.amber : CHART.brand,
+                          }}
+                        />
+                        <span className="font-medium text-ink">{item.road}</span>
                       </span>
                     </td>
-                    <td className="px-6 py-4 font-semibold">
-                      <span className={`${
-                        item.severity === 'Critical' ? 'text-rose-600' :
-                        item.severity === 'High' ? 'text-amber-600' : 'text-blue-600'
-                      }`}>
-                        {item.severity}
+                    <td className="u-td u-num">{item.hazards} spots</td>
+                    <td className="u-td">
+                      <span className="flex items-center gap-2.5">
+                        <span className="u-progress w-20">
+                          <span className={`block h-full rounded-full ${pciTone(item.pci)}`} style={{ width: `${item.pci}%` }} />
+                        </span>
+                        <span className="u-num text-ink">{item.pci}</span>
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-500 text-xs">
-                      {item.lastDetection}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold uppercase ${
-                        item.priority === 'HIGH' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                        item.priority === 'MEDIUM' ? 'bg-amber-50 text-amber-800 border border-amber-200' :
-                        'bg-blue-50 text-blue-700 border border-blue-200'
-                      }`}>
-                        {item.priority}
-                      </span>
+                    <td className="u-td">{item.severity}</td>
+                    <td className="u-td u-num text-ink-muted">{item.lastDetection}</td>
+                    <td className="u-td">
+                      <StatusBadge status={item.priority} tone={priorityTone[item.priority] ?? 'slate'} size="sm" dot={false} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </PremiumPanel>
-        </ScrollReveal>
+        </section>
       </div>
     </DashboardLayout>
   )

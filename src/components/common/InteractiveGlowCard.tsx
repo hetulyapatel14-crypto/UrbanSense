@@ -7,11 +7,15 @@ interface InteractiveGlowCardProps {
   glowColor?: string
 }
 
+/**
+ * Interactive module card — a neumorphic panel that lifts on hover while an
+ * LED-warm glow follows the cursor across its face.
+ */
 export const InteractiveGlowCard: React.FC<InteractiveGlowCardProps> = ({
   children,
   className = '',
   onClick,
-  glowColor = 'rgba(59, 130, 246, 0.08)',
+  glowColor = 'rgba(255, 71, 87, 0.1)',
 }) => {
   const cardRef = useRef<HTMLDivElement>(null)
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null)
@@ -39,12 +43,12 @@ export const InteractiveGlowCard: React.FC<InteractiveGlowCardProps> = ({
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className={`relative rounded-2xl bg-white border border-slate-200/90 shadow-card transition-all duration-300 overflow-hidden hover:shadow-card-hover hover:border-blue-300/80 hover:-translate-y-1.5 ${className}`}
+      className={`u-panel u-panel-hover overflow-hidden ${className}`}
       style={{
-        transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        transitionTimingFunction: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
       }}
     >
-      {/* Subtle mouse follow glow */}
+      {/* Subtle mouse-follow glow */}
       {isHovered && mousePosition && (
         <div
           className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-300"
@@ -54,8 +58,10 @@ export const InteractiveGlowCard: React.FC<InteractiveGlowCardProps> = ({
         />
       )}
 
-      {/* Card Content */}
+      {/* Card content */}
       <div className="relative z-10">{children}</div>
     </div>
   )
 }
+
+export default InteractiveGlowCard

@@ -20,6 +20,8 @@ import { JourneyPlanResult, AiJourneyResponse } from '../../types/transit'
 interface AiJourneyAssistantBarProps {
   onJourneyPlanned: (plan: JourneyPlanResult, queryText: string) => void
   onUpdateSearchParams?: (from: string, to: string) => void
+  /** query pushed in from the example-query chips on the planner page */
+  presetQuery?: string
 }
 
 const SAMPLE_QUERIES = [
@@ -30,9 +32,15 @@ const SAMPLE_QUERIES = [
 
 export const AiJourneyAssistantBar: React.FC<AiJourneyAssistantBarProps> = ({
   onJourneyPlanned,
-  onUpdateSearchParams
+  onUpdateSearchParams,
+  presetQuery
 }) => {
   const [query, setQuery] = useState('')
+
+  // Example chips on the planner page hand their text over here
+  useEffect(() => {
+    if (presetQuery) setQuery(presetQuery)
+  }, [presetQuery])
   const [loading, setLoading] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [speechSupported, setSpeechSupported] = useState(false)
@@ -113,26 +121,29 @@ export const AiJourneyAssistantBar: React.FC<AiJourneyAssistantBarProps> = ({
   const bestRoute = aiData?.journey_plan?.routes?.[0]
 
   return (
-    <div className="w-full bg-white/95 border border-slate-200/90 rounded-2xl p-4 shadow-sm backdrop-blur-xl transition-all">
+    <div className="u-panel w-full p-4 backdrop-blur-xl transition-all">
       {/* Top Header */}
-      <div className="flex items-center justify-between gap-2 mb-3">
+      <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 via-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-xs">
-            <Sparkles className="w-4 h-4" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface-3 text-iris-500">
+            <Sparkles className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              AI Journey Assistant
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80">
-                Transit AI
-              </span>
+            <h3 className="flex items-center gap-2 text-[13.5px] font-semibold text-ink">
+              UrbanSense AI
+              <span className="u-chip u-chip-iris">Transit AI</span>
             </h3>
+            <p className="mt-0.5 text-[11px] text-ink-muted">
+              Answers are grounded in the live transit network
+            </p>
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80">
-          <Radio className="w-2.5 h-2.5 animate-pulse" />
-          <span>Real-Time AI Engine</span>
+        <div className="hidden items-center gap-1.5 sm:flex">
+          <span className="u-chip u-chip-mint">
+            <Radio className="h-2.5 w-2.5 animate-pulse" />
+            Live network data
+          </span>
         </div>
       </div>
 
@@ -154,7 +165,7 @@ export const AiJourneyAssistantBar: React.FC<AiJourneyAssistantBarProps> = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Ask anything (e.g., 'Fastest way from Gandhinagar Sec 21 to Airport' or 'Reach GIFT City before 9 AM')"
-            className="w-full bg-slate-50/80 hover:bg-white focus:bg-white border border-slate-200/90 hover:border-indigo-400 focus:border-indigo-500 rounded-xl pl-10 pr-10 py-2.5 text-xs text-slate-900 placeholder-slate-400 outline-none transition shadow-2xs"
+            className="u-input py-2.5 pl-10 pr-10 text-[12.5px]"
           />
 
           {speechSupported && (
@@ -174,7 +185,7 @@ export const AiJourneyAssistantBar: React.FC<AiJourneyAssistantBarProps> = ({
         <button
           type="submit"
           disabled={loading || !query.trim()}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-xs flex-shrink-0 cursor-pointer"
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-xs flex-shrink-0 cursor-pointer"
         >
           {loading ? (
             <>
@@ -234,7 +245,7 @@ export const AiJourneyAssistantBar: React.FC<AiJourneyAssistantBarProps> = ({
 
             {/* Concise Stats Row (Travel Time, Fare, Transfers, Punctuality) */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              <div className="bg-white rounded-lg p-2.5 border border-slate-200/80 shadow-2xs">
+              <div className="rounded-xl border border-line bg-surface-2/60 p-2.5">
                 <div className="text-[10px] text-slate-500 flex items-center gap-1 font-medium">
                   <Clock className="w-3 h-3 text-indigo-600" /> Travel Time
                 </div>
@@ -248,7 +259,7 @@ export const AiJourneyAssistantBar: React.FC<AiJourneyAssistantBarProps> = ({
                 )}
               </div>
 
-              <div className="bg-white rounded-lg p-2.5 border border-slate-200/80 shadow-2xs">
+              <div className="rounded-xl border border-line bg-surface-2/60 p-2.5">
                 <div className="text-[10px] text-slate-500 flex items-center gap-1 font-medium">
                   <IndianRupee className="w-3 h-3 text-emerald-600" /> Total Fare
                 </div>
@@ -260,9 +271,9 @@ export const AiJourneyAssistantBar: React.FC<AiJourneyAssistantBarProps> = ({
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-2.5 border border-slate-200/80 shadow-2xs">
+              <div className="rounded-xl border border-line bg-surface-2/60 p-2.5">
                 <div className="text-[10px] text-slate-500 flex items-center gap-1 font-medium">
-                  <Shuffle className="w-3 h-3 text-blue-600" /> Transfers
+                  <Shuffle className="w-3 h-3 text-iris-600" /> Transfers
                 </div>
                 <div className="font-extrabold text-slate-900 text-sm mt-0.5">
                   {card.transfers_count === 0 ? 'Direct (0)' : `${card.transfers_count} transfer`}
@@ -272,7 +283,7 @@ export const AiJourneyAssistantBar: React.FC<AiJourneyAssistantBarProps> = ({
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-2.5 border border-slate-200/80 shadow-2xs">
+              <div className="rounded-xl border border-line bg-surface-2/60 p-2.5">
                 <div className="text-[10px] text-slate-500 flex items-center gap-1 font-medium">
                   <ShieldCheck className="w-3 h-3 text-purple-600" /> Reliability
                 </div>
@@ -329,7 +340,7 @@ export const AiJourneyAssistantBar: React.FC<AiJourneyAssistantBarProps> = ({
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   isApplied
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
+                    : 'bg-brand-500 hover:bg-brand-400 text-white shadow-xs'
                 }`}
               >
                 {isApplied ? (

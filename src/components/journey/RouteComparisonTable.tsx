@@ -25,7 +25,7 @@ export const RouteComparisonTable: React.FC<RouteComparisonTableProps> = ({
   const minTransfers = Math.min(...routes.map((r) => r.transfers))
 
   return (
-    <div className="w-full bg-slate-900/95 border border-slate-700/80 rounded-2xl p-5 shadow-2xl backdrop-blur-xl mb-6 animate-fadeIn">
+    <div className="u-glass mb-4 w-full p-5 animate-fade">
       <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
@@ -34,7 +34,7 @@ export const RouteComparisonTable: React.FC<RouteComparisonTableProps> = ({
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               Route Comparison Matrix
-              <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+              <span className="rounded-full border border-line bg-surface-3 px-2.5 py-0.5 text-[11.5px] font-normal text-ink-secondary">
                 {routes.length} Multimodal Options Evaluated
               </span>
             </h3>
@@ -47,7 +47,7 @@ export const RouteComparisonTable: React.FC<RouteComparisonTableProps> = ({
         {onClose && (
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+            className="u-icon-btn"
           >
             <X className="w-4 h-4" />
           </button>
@@ -115,7 +115,7 @@ export const RouteComparisonTable: React.FC<RouteComparisonTableProps> = ({
                   className={`transition-colors cursor-pointer ${
                     isSelected
                       ? 'bg-indigo-950/40 border-l-4 border-indigo-500'
-                      : 'hover:bg-slate-800/40'
+                      : 'hover:bg-surface-3/50'
                   }`}
                   onClick={() => onSelectRoute(r.route_key)}
                 >
@@ -145,7 +145,7 @@ export const RouteComparisonTable: React.FC<RouteComparisonTableProps> = ({
                               ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-600/30'
                               : r.category_badge === 'ACCESSIBLE'
                               ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                              : 'bg-slate-800 text-slate-300 border border-slate-700'
+                              : 'border border-line bg-surface-3 text-ink-secondary'
                           }`}
                         >
                           {r.tag_label || r.category_badge || 'RECOMMENDED'}
@@ -154,7 +154,7 @@ export const RouteComparisonTable: React.FC<RouteComparisonTableProps> = ({
                       </div>
                       <div className="flex items-center gap-1 text-[11px] text-slate-400 flex-wrap">
                         {r.modes.map((m, mi) => (
-                          <span key={mi} className="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 text-[10px]">
+                          <span key={mi} className="rounded border border-line bg-surface-3 px-1.5 py-0.5 text-[10px] text-ink-secondary">
                             {m}
                           </span>
                         ))}
@@ -265,8 +265,8 @@ export const RouteComparisonTable: React.FC<RouteComparisonTableProps> = ({
                       }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
                         isSelected
-                          ? 'bg-indigo-600 text-white shadow-md'
-                          : 'bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700'
+                          ? 'bg-brand-500 text-white shadow-key'
+                          : 'border border-line bg-surface-3 text-ink-secondary hover:border-line-strong hover:text-ink'
                       }`}
                     >
                       {isSelected ? 'Viewing' : 'Select'}

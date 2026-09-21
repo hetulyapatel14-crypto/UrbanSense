@@ -2,328 +2,344 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
 import { MapContainer, Marker, Circle } from 'react-leaflet'
-import { ArrowLeft, MapPin, Clock, Camera, CheckCircle2, Car, ShieldCheck, Users, FileText, Layers } from 'lucide-react'
+import {
+  ArrowLeft,
+  MapPin,
+  Clock,
+  Camera,
+  CheckCircle2,
+  Car,
+  ShieldCheck,
+  Users,
+  FileText,
+  Layers,
+  Crosshair,
+  ArrowRight,
+} from 'lucide-react'
 import { incidents } from '../data/incidents'
 import { PremiumPanel } from '../components/common/PremiumPanel'
-import { ScrollReveal } from '../components/common/ScrollReveal'
+import { StatusBadge, StatusTone } from '../components/common/StatusBadge'
 import { MapTileLayer, MapViewToggle, type MapTileMode } from '../components/common/MapTileLayer'
+import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
+
+delete (L.Icon.Default.prototype as any)._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  tooltipAnchor: [16, -28],
+  shadowSize: [41, 41],
+})
+
+const severityToneMap: Record<string, StatusTone> = {
+  critical: 'rose',
+  high: 'amber',
+  medium: 'blue',
+  low: 'slate',
+}
+
+const statusToneMap: Record<string, StatusTone> = {
+  open: 'rose',
+  investigating: 'amber',
+  assigned: 'blue',
+  resolved: 'emerald',
+}
+
+const TIMELINE = [
+  { time: '14:32:18', event: 'Optical event detected by on-vehicle AI', state: 'done' },
+  { time: '14:32:20', event: 'Bounding box and tracking telemetry locked', state: 'done' },
+  { time: '14:32:23', event: 'High-confidence ANPR plate extracted', state: 'done' },
+  { time: '14:32:25', event: 'Priority alert dispatched to command', state: 'done' },
+  { time: '14:33:00', event: 'Case assigned to Investigation Unit 3', state: 'active' },
+]
 
 export default function IncidentDetails() {
   const { id } = useParams()
   const [mapMode, setMapMode] = useState<MapTileMode>('street')
   const incident = incidents.find(i => i.id === id) || incidents[0]
 
-  const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case 'critical': return 'text-rose-700 bg-rose-50 border-rose-200'
-      case 'high': return 'text-amber-800 bg-amber-50 border-amber-200'
-      case 'medium': return 'text-blue-700 bg-blue-50 border-blue-200'
-      default: return 'text-slate-700 bg-slate-100 border-slate-200'
-    }
-  }
-
   return (
     <DashboardLayout>
-      <header className="relative bg-white/85 backdrop-blur-xl border-b border-slate-200/80 px-6 py-4 shadow-sm sticky top-0 z-20">
-        {/* Ambient aurora wash */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-70" aria-hidden="true">
-          <div className="absolute -top-24 -left-16 w-[28rem] h-48 bg-gradient-to-tr from-rose-400/12 via-indigo-400/10 to-transparent blur-3xl rounded-full animate-aurora" />
-          <div className="absolute -top-20 right-10 w-80 h-40 bg-gradient-to-tr from-cyan-400/12 to-transparent blur-3xl rounded-full animate-aurora" />
-        </div>
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-300/70 to-transparent" aria-hidden="true" />
-
-        <div className="relative flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center space-x-4">
-            <Link
-              to="/incident-center"
-              className="press-scale p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-              aria-label="Back to Incident Center"
-            >
-              <ArrowLeft className="w-5 h-5" />
+      {/* ── Case header ─────────────────────────────────────────────── */}
+      <header className="relative z-20 border-b border-line bg-surface-1/80 backdrop-blur-xl">
+        <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link to="/incident-center" className="u-icon-btn" aria-label="Back to incident center">
+              <ArrowLeft className="h-4 w-4" />
             </Link>
-            <div>
-              <div className="flex items-center space-x-2.5">
-                <h1 className="text-xl font-extrabold text-slate-900 tracking-tight animate-fade-in-up">Incident #{incident.id}</h1>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase border ${getSeverityBadge(incident.severity)}`}>
-                  {incident.severity}
-                </span>
+
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="u-num text-[19px] font-semibold tracking-tight text-ink sm:text-[21px]">
+                  {incident.id}
+                </h1>
+                <StatusBadge status={incident.severity} tone={severityToneMap[incident.severity] ?? 'slate'} />
+                <StatusBadge status={incident.status} tone={statusToneMap[incident.status] ?? 'slate'} />
               </div>
-              <p className="text-xs text-slate-500 mt-0.5 font-medium">{incident.type} • Automated Optical Detection</p>
+              <p className="u-overline mt-1 truncate">
+                {incident.type} · automated optical detection · {incident.location}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
-            <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot" />
-              Case File Active
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="u-chip u-chip-mint">
+              <span className="live-dot" />
+              Case file active
             </span>
-            <Link to="/vehicle-tracking" className="btn-primary group text-xs px-4 py-2">
-              Track Linked Vehicle
-              <ArrowLeft className="w-3.5 h-3.5 rotate-180 transition-transform duration-300 group-hover:translate-x-0.5" />
+            <Link to="/vehicle-tracking" className="u-btn u-btn-primary u-btn-sm">
+              Track linked vehicle
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Incident Overview */}
-            <ScrollReveal direction="up" delay={0}>
-            <div className="panel-premium p-6 animate-fade-in-up">
-              <div className="flex items-center gap-2.5 mb-4 relative">
-                <span className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center">
-                  <ShieldCheck className="w-4 h-4" />
+      <div className="flex-1 overflow-auto p-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+          {/* ── Evidence column ─────────────────────────────────────── */}
+          <div className="space-y-4">
+            {/* Overview */}
+            <section className="u-panel overflow-hidden">
+              <span className="u-hair" aria-hidden="true" />
+
+              <div className="u-panel-head">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-surface-3 text-rose-600">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                  </span>
+                  <div>
+                    <h2 className="text-[13px] font-semibold text-ink">Detection summary</h2>
+                    <p className="text-[11px] text-ink-muted">What the network recorded</p>
+                  </div>
+                </div>
+                <span className="u-num text-[11px] text-ink-muted">
+                  {incident.gps[0].toFixed(4)}, {incident.gps[1].toFixed(4)}
                 </span>
-                <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-                  {incident.type} Detected
-                </h2>
               </div>
 
-              <div className="stagger-list grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 relative">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <div className="text-xs font-bold text-slate-500 mb-1">STATUS</div>
-                  <div className="text-base font-extrabold text-amber-600 uppercase">{incident.status}</div>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <div className="text-xs font-bold text-slate-500 mb-1">CONFIDENCE</div>
-                  <div className="text-base font-extrabold text-emerald-600">{incident.confidence}%</div>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <div className="text-xs font-bold text-slate-500 mb-1">LOCATION</div>
-                  <div className="text-base font-extrabold text-slate-900 truncate">{incident.location}</div>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70 hover:bg-white hover:shadow-xs hover:-translate-y-0.5 transition-all duration-300">
-                  <div className="text-xs font-bold text-slate-500 mb-1">SENSED BY</div>
-                  <div className="text-base font-extrabold text-blue-600">{incident.busId}</div>
-                </div>
-              </div>
-
-              {incident.description && (
-                <div className="relative bg-slate-50 border border-slate-200/80 rounded-xl p-4 text-sm text-slate-700 leading-relaxed font-medium">
-                  {incident.description}
-                </div>
-              )}
-            </div>
-            </ScrollReveal>
-
-            {/* Timeline */}
-            <ScrollReveal direction="up" delay={60}>
-            <div className="panel-premium p-6">
-              <div className="flex items-center gap-2.5 mb-5 relative">
-                <span className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center">
-                  <Clock className="w-4 h-4" />
-                </span>
-                <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Investigation Timeline</h2>
-              </div>
-
-              <div className="stagger-list space-y-4 relative">
+              <div className="grid grid-cols-2 divide-line/70 sm:grid-cols-4 sm:divide-x">
                 {[
-                  { time: '14:32:18', event: 'Optical event detected by on-bus Edge AI', status: 'completed' },
-                  { time: '14:32:20', event: 'Bounding box & tracking telemetry locked', status: 'completed' },
-                  { time: '14:32:23', event: 'High-confidence ANPR plate extracted', status: 'completed' },
-                  { time: '14:32:25', event: 'High-priority alert dispatched to central command', status: 'completed' },
-                  { time: '14:33:00', event: 'Case assigned to Investigation Unit 3', status: 'active' },
-                ].map((item, index) => (
-                  <div key={index} className="group/tl flex items-start space-x-4">
-                    <div className="flex flex-col items-center">
-                      <div className={`w-3.5 h-3.5 rounded-full transition-all duration-300 group-hover/tl:scale-110 ${item.status === 'completed' ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-blue-600 ring-4 ring-blue-100 live-dot'}`}></div>
-                      {index < 4 && <div className="w-0.5 h-8 bg-slate-200 mt-1"></div>}
-                    </div>
-                    <div className="flex-1 pb-2">
-                      <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <span className="font-semibold text-slate-800">{item.event}</span>
-                        <span className="font-mono text-xs text-slate-400 font-bold">{item.time}</span>
-                      </div>
-                    </div>
+                  ['Status', incident.status, 'text-amber-600'],
+                  ['Confidence', `${incident.confidence}%`, 'text-emerald-600'],
+                  ['Location', incident.location, 'text-ink'],
+                  ['Sensed by', incident.busId, 'text-brand-600'],
+                ].map(([k, v, tone]) => (
+                  <div key={k} className="px-4 py-3.5">
+                    <p className="u-overline">{k}</p>
+                    <p className={`mt-1.5 truncate text-[13px] font-medium capitalize ${tone}`}>{v}</p>
                   </div>
                 ))}
               </div>
-            </div>
-            </ScrollReveal>
 
-            {/* Vehicle Information */}
-            {incident.vehicleInfo && (
-              <ScrollReveal direction="up" delay={60}>
-              <div className="panel-premium p-6">
-                <div className="flex items-center space-x-2 mb-4 relative">
-                  <span className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center">
-                    <Car className="w-4 h-4" />
-                  </span>
-                  <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Flagged Vehicle Telemetry</h2>
-                </div>
+              {incident.description && (
+                <p className="border-t border-line/70 px-4 py-3.5 text-[12.5px] leading-relaxed text-ink-secondary sm:px-5">
+                  {incident.description}
+                </p>
+              )}
+            </section>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/80">
-                    <div className="text-xs font-bold text-slate-500 mb-1">REGISTRATION NUMBER</div>
-                    <div className="text-2xl font-extrabold text-blue-700 font-mono tracking-wider">{incident.vehicleInfo.registration}</div>
-                    <div className="text-xs font-bold text-emerald-600 mt-1.5 flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      ANPR Confidence: {incident.confidence}%
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-200/70">
-                      <span className="text-slate-500 font-medium">Vehicle Model:</span>
-                      <span className="font-bold text-slate-800">{incident.vehicleInfo.type}</span>
-                    </div>
-                    <div className="flex justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-200/70">
-                      <span className="text-slate-500 font-medium">Detected Exterior:</span>
-                      <span className="font-bold text-slate-800">{incident.vehicleInfo.color}</span>
-                    </div>
-                    <div className="flex justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-200/70 hover:bg-white transition-colors">
-                      <span className="text-slate-500 font-medium">Heading Direction:</span>
-                      <span className="font-bold text-slate-800">{incident.vehicleInfo.direction}</span>
-                    </div>
-                  </div>
-                </div>
+            {/* Timeline */}
+            <section className="u-panel p-4 sm:p-5">
+              <div className="mb-5 flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-surface-3 text-brand-500">
+                  <Clock className="h-3.5 w-3.5" />
+                </span>
+                <h2 className="text-[13px] font-semibold text-ink">Investigation timeline</h2>
               </div>
-              </ScrollReveal>
+
+              <ol className="relative space-y-4 pl-4">
+                <span className="u-timeline-rail top-1.5" aria-hidden="true" />
+                {TIMELINE.map((item, index) => (
+                  <li key={index} className="relative">
+                    <span
+                      className={`absolute -left-4 top-1 h-3 w-3 rounded-full border-2 border-surface-2 ${
+                        item.state === 'done' ? 'bg-emerald-400' : 'bg-brand-500'
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-[12.5px] font-medium text-ink">{item.event}</span>
+                      <span className="u-num text-[11px] text-ink-faint">{item.time}</span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            {/* Vehicle telemetry */}
+            {incident.vehicleInfo && (
+              <section className="u-panel overflow-hidden">
+                <span className="u-hair" aria-hidden="true" />
+                <div className="u-panel-head">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-surface-3 text-iris-500">
+                      <Car className="h-3.5 w-3.5" />
+                    </span>
+                    <div>
+                      <h2 className="text-[13px] font-semibold text-ink">Flagged vehicle</h2>
+                      <p className="text-[11px] text-ink-muted">Automatic number plate recognition</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-5">
+                  <div className="rounded-xl border border-line bg-surface-1/60 p-4">
+                    <p className="u-overline">Registration</p>
+                    <p className="u-num mt-2 text-[22px] font-semibold tracking-[0.06em] text-ink">
+                      {incident.vehicleInfo.registration}
+                    </p>
+                    <p className="mt-2 flex items-center gap-1.5 text-[11.5px] text-emerald-600">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      ANPR confidence {incident.confidence}%
+                    </p>
+                  </div>
+
+                  <dl className="divide-y divide-line/70 rounded-xl border border-line/70 bg-surface-1/40 px-3.5 py-1">
+                    {[
+                      ['Vehicle model', incident.vehicleInfo.type],
+                      ['Detected exterior', incident.vehicleInfo.color],
+                      ['Heading', incident.vehicleInfo.direction],
+                    ].map(([k, v]) => (
+                      <div key={k} className="flex items-center justify-between gap-3 py-2.5">
+                        <dt className="text-[11.5px] text-ink-muted">{k}</dt>
+                        <dd className="text-[11.5px] font-medium text-ink-secondary">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              </section>
             )}
 
-            {/* Evidence Frame */}
-            <ScrollReveal direction="up" delay={60}>
-            <div className="panel-premium p-6">
-              <div className="flex items-center justify-between mb-4 relative">
-                <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Optical Evidence Capture</h2>
-                <span className="flex items-center gap-1.5 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 live-dot" />
+            {/* Optical evidence */}
+            <section className="u-panel p-4 sm:p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h2 className="text-[13px] font-semibold text-ink">Optical evidence capture</h2>
+                <span className="u-chip u-chip-rose">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />
                   REC
                 </span>
               </div>
 
-              <div className="group/frame bg-slate-900 rounded-xl aspect-video flex items-center justify-center relative overflow-hidden shadow-inner border border-slate-800">
-                <div className="scanline" aria-hidden="true" />
-                <Camera className="w-16 h-16 text-slate-600 opacity-40 transition-transform duration-500 group-hover/frame:scale-110" />
-                <div className="absolute top-4 left-4 bg-slate-900/80 text-white px-3 py-1 rounded text-xs font-bold border border-slate-700 backdrop-blur-xs">
-                  RAW FRAME #INC-{incident.id}-01
+              {/* Camera viewport — kept dark on purpose: a live video frame is content, not chrome. */}
+              <div className="relative aspect-video overflow-hidden rounded-xl border border-ink/30 bg-ink">
+                <div className="u-scanline" aria-hidden="true" />
+                <div className="absolute inset-5 rounded-lg border border-dashed border-white/15" aria-hidden="true" />
+
+                <div className="absolute left-4 top-4 flex items-center gap-2 rounded-md border border-white/15 bg-white/10 px-2 py-1 backdrop-blur-md">
+                  <Camera className="h-3.5 w-3.5 text-white/60" />
+                  <span className="u-num text-[10.5px] text-white/75">RAW FRAME #{incident.id}-01</span>
                 </div>
 
                 {incident.vehicleInfo && (
-                  <div className="absolute top-1/3 right-1/4 border-2 border-cyan-400 bg-slate-950/70 backdrop-blur-xs p-3 rounded-lg shadow-lg">
-                    <div className="text-xs font-bold text-cyan-300 font-mono mb-1">
-                      ANPR: {incident.vehicleInfo.registration}
-                    </div>
-                    <div className="text-[10px] text-emerald-400 font-semibold">
-                      CONFIDENCE: {incident.confidence}%
-                    </div>
+                  <div className="absolute right-[16%] top-1/3 rounded-lg border border-aqua-400/60 bg-ink/70 p-3 backdrop-blur-md">
+                    <p className="u-num text-[11.5px] font-medium text-aqua-300">
+                      ANPR {incident.vehicleInfo.registration}
+                    </p>
+                    <p className="u-num mt-1 text-[10.5px] text-emerald-300">CONFIDENCE {incident.confidence}%</p>
                   </div>
                 )}
-              </div>
-            </div>
-            </ScrollReveal>
 
-            {/* Action Bar */}
-            <ScrollReveal direction="up" delay={60}>
-            <div className="flex flex-wrap items-center gap-3">
-              <Link to="/vehicle-tracking" className="btn-primary group text-sm px-6 py-2.5">
-                Track Vehicle Across Fleet
-                <ArrowLeft className="w-3.5 h-3.5 rotate-180 transition-transform duration-300 group-hover:translate-x-0.5" />
-              </Link>
-              <Link to="/urban-map" className="btn-secondary text-sm px-6 py-2.5">
-                <Layers className="w-4 h-4" />
-                View On GIS Map
-              </Link>
-              <button className="btn-secondary text-sm px-6 py-2.5">
-                <FileText className="w-4 h-4" />
-                Export Evidence Dossier
-              </button>
-            </div>
-            </ScrollReveal>
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between border-t border-white/15 px-4 py-2.5">
+                  <span className="u-num text-[10.5px] text-white/50">{incident.busId} · CAM-FRONT</span>
+                  <span className="u-num flex items-center gap-1.5 text-[10.5px] text-white/50">
+                    <Crosshair className="h-3 w-3" />
+                    tracked 4.2s
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2.5">
+                <Link to="/vehicle-tracking" className="u-btn u-btn-primary u-btn-sm">
+                  Track across fleet
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+                <Link to="/urban-map" className="u-btn u-btn-outline u-btn-sm">
+                  <Layers className="h-3.5 w-3.5" />
+                  View on map
+                </Link>
+                <button className="u-btn u-btn-ghost u-btn-sm">
+                  <FileText className="h-3.5 w-3.5" />
+                  Export dossier
+                </button>
+              </div>
+            </section>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Location Map */}
-            <ScrollReveal direction="up" delay={60}>
+          {/* ── Case sidebar ────────────────────────────────────────── */}
+          <div className="space-y-4">
             <PremiumPanel
               flush
-              title="Geo-Location"
+              title="Geo-location"
               subtitle="Precise incident coordinates"
               icon={MapPin}
               actions={<MapViewToggle mode={mapMode} onChange={setMapMode} />}
             >
-              <div className="h-56 relative">
-                <MapContainer
-                  center={incident.gps}
-                  zoom={14}
-                  style={{ height: '100%', width: '100%' }}
-                  zoomControl={false}
-                >
+              <div className="relative h-56">
+                <MapContainer center={incident.gps} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
                   <MapTileLayer mode={mapMode} />
                   <Circle
                     center={incident.gps}
                     radius={300}
-                    pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.25 }}
+                    pathOptions={{ color: '#DC2626', fillColor: '#DC2626', fillOpacity: 0.14, weight: 1.2 }}
                   />
                   <Marker position={incident.gps} />
                 </MapContainer>
               </div>
-              <div className="p-3.5 bg-slate-50 border-t border-slate-200/80 text-xs font-semibold text-slate-700 flex items-center justify-between">
-                <span className="text-slate-500">GPS Coordinates:</span>
-                <span className="font-mono text-slate-900">{incident.gps.join(', ')}</span>
+              <div className="flex items-center justify-between border-t border-line px-4 py-2.5">
+                <span className="u-overline">GPS</span>
+                <span className="u-num text-[11.5px] text-ink-secondary">{incident.gps.join(', ')}</span>
               </div>
             </PremiumPanel>
-            </ScrollReveal>
 
-            {/* Quick Info */}
-            <ScrollReveal direction="up" delay={60}>
-            <div className="panel-premium p-5">
-              <div className="flex items-center gap-2.5 mb-4 relative">
-                <span className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center">
-                  <ShieldCheck className="w-4 h-4" />
+            <section className="u-panel p-4">
+              <div className="mb-3 flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-surface-3 text-emerald-600">
+                  <ShieldCheck className="h-3.5 w-3.5" />
                 </span>
-                <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Quick Audit Summary</h3>
+                <h3 className="text-[13px] font-semibold text-ink">Audit summary</h3>
               </div>
-              <div className="stagger-list space-y-3.5 text-xs relative">
-                <div className="flex items-center space-x-3 p-2 bg-slate-50 rounded-lg">
-                  <Clock className="w-4 h-4 text-blue-600" />
-                  <div>
-                    <div className="text-slate-400 font-medium">Detection Time</div>
-                    <div className="font-bold text-slate-800">{incident.time}</div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-2 bg-slate-50 rounded-lg">
-                  <MapPin className="w-4 h-4 text-emerald-600" />
-                  <div>
-                    <div className="text-slate-400 font-medium">Incident Location</div>
-                    <div className="font-bold text-slate-800">{incident.location}</div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-2 bg-slate-50 rounded-lg">
-                  <Camera className="w-4 h-4 text-indigo-600" />
-                  <div>
-                    <div className="text-slate-400 font-medium">Sensing Fleet Bus</div>
-                    <div className="font-bold text-slate-800">{incident.busId}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            </ScrollReveal>
 
-            {/* Assigned Team */}
-            <ScrollReveal direction="up" delay={60}>
-            <div className="panel-premium p-5">
-              <div className="flex items-center gap-2.5 mb-4 relative">
-                <span className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center">
-                  <Users className="w-4 h-4" />
+              <dl className="divide-y divide-line/70">
+                {[
+                  { icon: Clock, k: 'Detection time', v: incident.time },
+                  { icon: MapPin, k: 'Location', v: incident.location },
+                  { icon: Camera, k: 'Sensing vehicle', v: incident.busId },
+                  { icon: CheckCircle2, k: 'Confidence', v: `${incident.confidence}%` },
+                ].map(row => (
+                  <div key={row.k} className="flex items-center gap-3 py-2.5">
+                    <row.icon className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
+                    <dt className="flex-1 text-[11.5px] text-ink-muted">{row.k}</dt>
+                    <dd className="u-num truncate text-[11.5px] font-medium text-ink-secondary">{row.v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+
+            <section className="u-panel p-4">
+              <div className="mb-3 flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-surface-3 text-brand-500">
+                  <Users className="h-3.5 w-3.5" />
                 </span>
-                <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Civic Enforcement Team</h3>
+                <h3 className="text-[13px] font-semibold text-ink">Assigned teams</h3>
               </div>
-              <div className="stagger-list space-y-2.5 text-xs relative">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70 hover:bg-white hover:shadow-xs hover:-translate-y-0.5 transition-all duration-300">
-                  <div className="font-bold text-slate-900">Investigation Unit 3</div>
-                  <div className="text-slate-500 mt-0.5">Primary Case Lead</div>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70 hover:bg-white hover:shadow-xs hover:-translate-y-0.5 transition-all duration-300">
-                  <div className="font-bold text-slate-900">Traffic Command & Control</div>
-                  <div className="text-slate-500 mt-0.5">Civil Support Dispatch</div>
-                </div>
-              </div>
-            </div>
-            </ScrollReveal>
+
+              <ul className="space-y-2">
+                {[
+                  { name: 'Investigation Unit 3', role: 'Primary case lead' },
+                  { name: 'Traffic command & control', role: 'Civil support dispatch' },
+                ].map(team => (
+                  <li key={team.name} className="rounded-xl border border-line bg-surface-2/60 px-3.5 py-2.5">
+                    <p className="text-[12.5px] font-medium text-ink">{team.name}</p>
+                    <p className="mt-0.5 text-[11px] text-ink-muted">{team.role}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
           </div>
         </div>
       </div>

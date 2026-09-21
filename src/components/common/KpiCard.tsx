@@ -2,7 +2,6 @@ import React from 'react'
 import { LucideIcon } from 'lucide-react'
 
 type Accent = 'blue' | 'indigo' | 'emerald' | 'amber' | 'rose' | 'cyan' | 'slate'
-
 type Tone = 'positive' | 'warning' | 'critical' | 'neutral'
 
 interface KpiCardProps {
@@ -17,61 +16,28 @@ interface KpiCardProps {
   className?: string
 }
 
-const accentStyles: Record<Accent, { icon: string; value: string; rail: string }> = {
-  blue: {
-    icon: 'bg-blue-50 text-blue-600 border-blue-200/80',
-    value: 'text-blue-600',
-    rail: 'from-blue-500 to-indigo-500',
-  },
-  indigo: {
-    icon: 'bg-indigo-50 text-indigo-600 border-indigo-200/80',
-    value: 'text-indigo-600',
-    rail: 'from-indigo-500 to-violet-500',
-  },
-  emerald: {
-    icon: 'bg-emerald-50 text-emerald-600 border-emerald-200/80',
-    value: 'text-emerald-600',
-    rail: 'from-emerald-500 to-teal-500',
-  },
-  amber: {
-    icon: 'bg-amber-50 text-amber-600 border-amber-200/80',
-    value: 'text-amber-600',
-    rail: 'from-amber-500 to-orange-500',
-  },
-  rose: {
-    icon: 'bg-rose-50 text-rose-600 border-rose-200/80',
-    value: 'text-rose-600',
-    rail: 'from-rose-500 to-pink-500',
-  },
-  cyan: {
-    icon: 'bg-cyan-50 text-cyan-600 border-cyan-200/80',
-    value: 'text-cyan-600',
-    rail: 'from-cyan-500 to-blue-500',
-  },
-  slate: {
-    icon: 'bg-slate-100 text-slate-600 border-slate-200/80',
-    value: 'text-slate-800',
-    rail: 'from-slate-400 to-slate-600',
-  },
+/** Signal mapping — the safety-orange accent is reserved; other tones carry data meaning only. */
+const ACCENT: Record<Accent, { icon: string }> = {
+  blue: { icon: 'text-iris-500' },
+  indigo: { icon: 'text-iris-500' },
+  emerald: { icon: 'text-emerald-500' },
+  amber: { icon: 'text-amber-500' },
+  rose: { icon: 'text-rose-500' },
+  cyan: { icon: 'text-aqua-500' },
+  slate: { icon: 'text-ink-muted' },
 }
 
-const trendStyles: Record<Tone, string> = {
-  positive: 'text-emerald-700 bg-emerald-50 border-emerald-200/70',
-  warning: 'text-amber-700 bg-amber-50 border-amber-200/70',
-  critical: 'text-rose-700 bg-rose-50 border-rose-200/70',
-  neutral: 'text-slate-600 bg-slate-100 border-slate-200/70',
-}
-
-const pillStyles: Record<Tone, string> = {
-  positive: 'bg-emerald-500',
-  warning: 'bg-amber-500',
-  critical: 'bg-rose-500',
-  neutral: 'bg-slate-400',
+const TREND: Record<Tone, { text: string; led: string; glow: string }> = {
+  positive: { text: 'text-emerald-600', led: '#22c55e', glow: 'rgba(34,197,94,0.6)' },
+  warning: { text: 'text-amber-600', led: '#d97706', glow: 'rgba(217,119,6,0.6)' },
+  critical: { text: 'text-rose-600', led: '#e11d48', glow: 'rgba(225,29,72,0.6)' },
+  neutral: { text: 'text-ink-muted', led: '#8391a2', glow: 'rgba(131,145,162,0.45)' },
 }
 
 /**
- * Premium telemetry tile — animated entrance, hover lift, sheen sweep and a
- * gradient accent rail. Purely presentational.
+ * Telemetry tile — a bolted instrument module: recessed icon housing,
+ * stamped mono label and a tabular readout. Lifts on hover like a panel
+ * being picked up.
  */
 export const KpiCard: React.FC<KpiCardProps> = ({
   label,
@@ -84,52 +50,42 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   delay = 0,
   className = '',
 }) => {
-  const styles = accentStyles[accent]
+  const styles = ACCENT[accent]
+  const trendStyle = TREND[trendTone]
 
   return (
     <div
-      className={`stat-card accent-top sheen-sweep group ${className}`}
+      className={`u-panel u-panel-hover group u-screws overflow-hidden px-4 py-3.5 ${className}`}
       style={{
-        animation: 'fade-in-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both',
+        animation: 'riseIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both',
         animationDelay: `${delay}ms`,
       }}
     >
-      {/* Gradient accent rail pinned to the bottom edge */}
-      <span
-        className={`pointer-events-none absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r ${styles.rail} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
-        aria-hidden="true"
-      />
-
-      <div className="flex items-start justify-between gap-3 relative">
-        <div className="min-w-0">
-          <div className="text-[11px] font-extrabold text-slate-500 mb-1.5 uppercase tracking-wide leading-tight break-words">
-            {label}
-          </div>
-          <div className={`text-2xl lg:text-3xl font-black tracking-tight tabular-nums ${styles.value}`}>
-            {value}
-          </div>
-        </div>
-
+      <div className="flex items-start justify-between gap-3">
+        <span className="u-overline truncate">{label}</span>
         {Icon && (
-          <div
-            className={`shrink-0 w-10 h-10 rounded-xl border flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:-rotate-3 ${styles.icon}`}
-          >
-            <Icon className="w-5 h-5" />
-          </div>
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-0 shadow-groove transition-transform duration-200 ease-mech group-hover:scale-110 group-hover:rotate-6">
+            <Icon className={`h-3.5 w-3.5 ${styles.icon}`} />
+          </span>
         )}
       </div>
 
+      <div className="u-num mt-2.5 text-[26px] font-bold leading-none tracking-[-0.02em] text-ink">
+        {value}
+      </div>
+
       {(hint || trend) && (
-        <div className="flex flex-wrap items-center gap-2 mt-3 relative">
+        <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[rgba(163,177,198,0.3)] pt-2">
           {trend && (
-            <span
-              className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full border ${trendStyles[trendTone]}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${pillStyles[trendTone]}`} />
+            <span className={`inline-flex items-center gap-1.5 font-mono text-[11px] font-semibold ${trendStyle.text}`}>
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{ background: trendStyle.led, boxShadow: `0 0 6px 1px ${trendStyle.glow}` }}
+              />
               {trend}
             </span>
           )}
-          {hint && <span className="text-[11px] text-slate-500 font-medium leading-tight break-words">{hint}</span>}
+          {hint && <span className="u-meta truncate">{hint}</span>}
         </div>
       )}
     </div>

@@ -21,43 +21,40 @@ interface MapTileLayerProps {
   mode: MapTileMode
 }
 
+/**
+ * Cartography for the operations canvas. Street tiles use the standard light
+ * basemap so marker and corridor colours stay legible against the canvas.
+ */
 export const MapTileLayer: React.FC<MapTileLayerProps> = ({ mode }) => {
   if (mode === 'satellite') {
     return (
       <>
-        {/* Base high-res satellite imagery */}
         <TileLayer
           key="satellite-base-imagery"
           url={SATELLITE_TILE_URL}
           attribution={SATELLITE_ATTRIBUTION}
           maxZoom={19}
         />
-        {/* Road and street network overlay */}
         <TileLayer
           key="satellite-roads-overlay"
           url={SATELLITE_ROADS_URL}
           attribution=""
           maxZoom={19}
-          opacity={0.85}
+          opacity={0.7}
         />
-        {/* Area names, city labels, and boundary names overlay */}
         <TileLayer
           key="satellite-places-overlay"
           url={SATELLITE_LABELS_URL}
           attribution=""
           maxZoom={19}
-          opacity={0.95}
+          opacity={0.85}
         />
       </>
     )
   }
 
   return (
-    <TileLayer
-      key="street-tiles"
-      url={STREET_TILE_URL}
-      attribution={STREET_ATTRIBUTION}
-    />
+    <TileLayer key="street-tiles" url={STREET_TILE_URL} attribution={STREET_ATTRIBUTION} />
   )
 }
 
@@ -75,33 +72,32 @@ export const MapViewToggle: React.FC<MapViewToggleProps> = ({
   floating = false,
 }) => {
   return (
-    <div
-      className={`inline-flex items-center p-0.5 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-lg shadow-sm ${
-        floating ? 'absolute top-3 right-3 z-[400]' : ''
-      } ${className}`}
+    <div        className={`u-seg inline-flex items-center gap-0.5 rounded-lg p-0.5 backdrop-blur-xl ${
+          floating ? 'absolute right-3 top-3 z-[400]' : ''
+        } ${className}`}
+      role="group"
+      aria-label="Basemap style"
     >
       <button
         type="button"
         onClick={() => onChange('street')}
-        className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-          mode === 'street'
-            ? 'bg-blue-600 text-white shadow-xs'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+        aria-pressed={mode === 'street'}
+        className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all duration-150 ${
+          mode === 'street' ? 'u-seg-item-active' : 'text-ink-muted hover:text-ink'
         }`}
       >
-        <MapIcon className="w-3 h-3" />
+        <MapIcon className="h-3 w-3" />
         <span>Street</span>
       </button>
       <button
         type="button"
         onClick={() => onChange('satellite')}
-        className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-          mode === 'satellite'
-            ? 'bg-blue-600 text-white shadow-xs'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+        aria-pressed={mode === 'satellite'}
+        className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all duration-150 ${
+          mode === 'satellite' ? 'u-seg-item-active' : 'text-ink-muted hover:text-ink'
         }`}
       >
-        <Globe className="w-3 h-3" />
+        <Globe className="h-3 w-3" />
         <span>Satellite</span>
       </button>
     </div>

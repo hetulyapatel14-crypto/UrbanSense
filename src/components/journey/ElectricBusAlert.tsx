@@ -36,60 +36,60 @@ export const ElectricBusAlert: React.FC<ElectricBusAlertProps> = ({
   const getSeverityStyle = (sev: string) => {
     switch (sev) {
       case 'CRITICAL':
-        return 'bg-rose-950/40 border-rose-500/60 text-rose-300'
+        return 'bg-rose-50 border-rose-200 text-rose-700'
       case 'WARNING':
-        return 'bg-amber-950/40 border-amber-500/60 text-amber-300'
+        return 'bg-amber-50 border-amber-200 text-amber-700'
       default:
-        return 'bg-emerald-950/40 border-emerald-500/60 text-emerald-300'
+        return 'bg-emerald-50 border-emerald-200 text-emerald-700'
     }
   }
 
   const getSeverityIcon = (sev: string) => {
     switch (sev) {
       case 'CRITICAL':
-        return <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+        return <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
       case 'WARNING':
-        return <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+        return <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
       default:
-        return <Zap className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+        return <Zap className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
     }
   }
 
   return (
-    <div className={`rounded-xl border p-4 shadow-lg transition-all ${getSeverityStyle(alertSev)}`}>
+    <div className={`rounded-xl border p-4 shadow-e1 transition-all ${getSeverityStyle(alertSev)}`}>
       <div className="flex items-start gap-3">
         {getSeverityIcon(alertSev)}
         <div className="flex-1 space-y-1">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h4 className="text-sm font-bold text-white tracking-tight">
+            <h4 className="text-sm font-semibold tracking-tight text-ink">
               {alertTitle}
             </h4>
             {routeNumber && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-black/40 text-emerald-300 border border-emerald-500/30 font-mono">
+              <span className="u-num rounded border border-line bg-surface-3/70 px-2 py-0.5 text-[10px] font-semibold text-ink-secondary">
                 Route {routeNumber}
               </span>
             )}
           </div>
 
-          <p className="text-xs text-slate-300 leading-relaxed">
+          <p className="text-xs leading-relaxed text-ink-secondary">
             {alertDesc}
           </p>
 
           {/* Alternative Route Advice */}
           {recommendedAlternative && (
-            <div className="mt-2 p-2.5 rounded-lg bg-black/40 border border-white/10 text-xs text-slate-200">
-              <p className="font-semibold text-emerald-300 flex items-center gap-1.5 mb-0.5">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Recommended Alternative Route:</span>
+            <div className="mt-2 rounded-lg border border-line bg-surface-1 p-2.5 text-xs">
+              <p className="mb-0.5 flex items-center gap-1.5 font-semibold text-emerald-700">
+                <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Recommended alternative route</span>
               </p>
-              <p className="text-slate-300">{recommendedAlternative}</p>
+              <p className="text-ink-secondary">{recommendedAlternative}</p>
             </div>
           )}
 
           {impact && impact > 0 && (
-            <p className="text-[11px] font-mono text-amber-300 mt-1 flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              <span>Estimated delay impact: +{impact} minutes</span>
+            <p className="u-num mt-1 flex items-center gap-1 text-[11px] text-amber-700">
+              <Clock className="h-3 w-3" />
+              <span>Estimated delay impact +{impact} minutes</span>
             </p>
           )}
         </div>

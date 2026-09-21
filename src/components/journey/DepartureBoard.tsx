@@ -86,11 +86,11 @@ export const DepartureBoard: React.FC<DepartureBoardProps> = ({
     : []
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-4">
+    <div className="u-panel space-y-4 p-4 sm:p-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
         <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 text-iris-600 flex items-center justify-center font-bold">
             <Clock className="w-4 h-4" />
           </div>
           <div>
@@ -137,7 +137,7 @@ export const DepartureBoard: React.FC<DepartureBoardProps> = ({
                 onClick={() => setSelectedModeFilter(item.id)}
                 className={`px-3 py-1 rounded-lg font-semibold border transition-all text-[11px] ${
                   isSelected
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                    ? 'border-line-strong bg-surface-4 text-ink shadow-e1'
                     : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                 }`}
               >
@@ -149,7 +149,7 @@ export const DepartureBoard: React.FC<DepartureBoardProps> = ({
 
         {/* Quick Search Input */}
         <div className="relative">
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 text-xs w-48 focus-within:w-64 focus-within:border-blue-500 focus-within:bg-white transition-all">
+          <div className="flex w-48 items-center rounded-xl border border-line bg-surface-1/70 px-2.5 py-1 text-[12.5px] transition-all focus-within:w-64 focus-within:border-brand-400/70">
             <Search className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
             <input
               type="text"
@@ -166,7 +166,7 @@ export const DepartureBoard: React.FC<DepartureBoardProps> = ({
 
           {/* Autocomplete Dropdown */}
           {showSearchDropdown && searchedStops.length > 0 && (
-            <div className="absolute right-0 top-full mt-1.5 w-64 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 max-h-48 overflow-y-auto">
+            <div className="u-glass u-scroll absolute right-0 top-full z-30 mt-1.5 max-h-48 w-64 overflow-y-auto py-1">
               {searchedStops.map((st) => (
                 <button
                   key={st.stop_id}
@@ -205,10 +205,11 @@ export const DepartureBoard: React.FC<DepartureBoardProps> = ({
               key={st.id}
               type="button"
               onClick={() => setSelectedStopId(st.id)}
-              className={`px-3 py-1.5 rounded-xl font-semibold border whitespace-nowrap transition-all text-xs flex items-center gap-1.5 ${
+              aria-pressed={isSelected}
+              className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors ${
                 isSelected
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  ? 'border-brand-200/70 bg-brand-50 text-brand-600'
+                  : 'border-line bg-surface-3/60 text-ink-secondary hover:border-line-strong hover:bg-surface-4/70'
               }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${dotColor} flex-shrink-0`}></span>

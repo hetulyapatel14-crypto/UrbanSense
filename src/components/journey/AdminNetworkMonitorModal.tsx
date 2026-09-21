@@ -46,15 +46,15 @@ export const AdminNetworkMonitorModal: React.FC<AdminNetworkMonitorModalProps> =
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-surface-0/75 p-4 backdrop-blur-sm animate-fade"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-4xl bg-white border border-slate-200/90 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150"
+        className="u-glass flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden animate-pop"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 bg-gradient-to-r from-slate-50 via-indigo-50/40 to-slate-50 border-b border-slate-200/90 flex items-center justify-between">
+        <div className="p-5 bg-surface-2 border-b border-[rgba(163,177,198,0.35)] flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
               <Activity className="w-5 h-5 animate-pulse" />
@@ -76,14 +76,14 @@ export const AdminNetworkMonitorModal: React.FC<AdminNetworkMonitorModalProps> =
             <button
               onClick={fetchStatus}
               disabled={loading}
-              className="p-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 transition-colors shadow-xs"
+              className="u-icon-btn"
               title="Refresh telemetry"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-900 transition-colors shadow-xs"
+              className="u-icon-btn"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
@@ -92,7 +92,7 @@ export const AdminNetworkMonitorModal: React.FC<AdminNetworkMonitorModalProps> =
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto space-y-6 bg-white">
+        <div className="u-scroll space-y-6 overflow-y-auto p-5">
           {/* Top Metric Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-slate-50/90 border border-slate-200/80 rounded-2xl p-4 shadow-xs">
@@ -125,9 +125,9 @@ export const AdminNetworkMonitorModal: React.FC<AdminNetworkMonitorModalProps> =
             <div className="bg-slate-50/90 border border-slate-200/80 rounded-2xl p-4 shadow-xs">
               <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">
                 <span>Data Feed Health</span>
-                <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                <CheckCircle2 className="w-4 h-4 text-iris-600" />
               </div>
-              <div className="text-3xl font-black text-blue-600">
+              <div className="text-3xl font-black text-iris-600">
                 100%
               </div>
               <div className="text-[11px] font-semibold text-slate-500 mt-1">
@@ -195,7 +195,7 @@ export const AdminNetworkMonitorModal: React.FC<AdminNetworkMonitorModalProps> =
                       <td className="py-2.5 px-3.5 text-slate-500 font-medium">{ds.provider_type}</td>
                       <td className="py-2.5 px-3.5">
                         <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold ${
-                          ds.is_live_telemetry ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-blue-50 text-blue-700 border border-blue-200'
+                          ds.is_live_telemetry ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-iris-50 text-blue-700 border border-iris-200'
                         }`}>
                           {ds.is_live_telemetry ? 'LIVE TELEMETRY' : 'DEMO SIMULATION'}
                         </span>
@@ -219,7 +219,7 @@ export const AdminNetworkMonitorModal: React.FC<AdminNetworkMonitorModalProps> =
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-sm cursor-pointer"
+            className="u-btn u-btn-primary u-btn-sm cursor-pointer"
           >
             Close Monitor
           </button>

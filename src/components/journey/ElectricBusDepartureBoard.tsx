@@ -117,89 +117,75 @@ export const ElectricBusDepartureBoard: React.FC = () => {
   })
 
   return (
-    <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-950 p-5 shadow-2xl space-y-4">
+    <div className="space-y-4 rounded-2xl border border-emerald-200 bg-surface-1 p-5 shadow-e1">
       {/* Top Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap border-b border-white/10 pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              <Zap className="w-5 h-5 fill-emerald-400" />
+            <span className="rounded-lg border border-emerald-200 bg-emerald-50 p-1.5 text-emerald-600">
+              <Zap className="h-5 w-5 fill-emerald-600" />
             </span>
-            <h2 className="text-lg font-bold text-white tracking-tight">
-              Live Gandhinagar Electric Bus Departure Board
+            <h2 className="text-lg font-semibold tracking-tight text-ink">
+              Gandhinagar electric bus departures
             </h2>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            GGTSL PM-eBus Sewa & GIFT City Electric Transit Live Countdown
+          <p className="mt-1 text-xs text-ink-muted">
+            GGTSL PM-eBus Sewa and GIFT City electric transit, live countdown
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Operator Filter Tabs */}
-          <div className="flex items-center bg-black/40 rounded-lg p-1 border border-white/10 text-xs">
-            <button
-              onClick={() => setOperatorFilter('ALL')}
-              className={`px-2.5 py-1 rounded font-bold transition-all ${
-                operatorFilter === 'ALL'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              All EV Fleet
-            </button>
-            <button
-              onClick={() => setOperatorFilter('GGTSL')}
-              className={`px-2.5 py-1 rounded font-bold transition-all ${
-                operatorFilter === 'GGTSL'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              GGTSL Gandhinagar
-            </button>
-            <button
-              onClick={() => setOperatorFilter('GIFT')}
-              className={`px-2.5 py-1 rounded font-bold transition-all ${
-                operatorFilter === 'GIFT'
-                  ? 'bg-teal-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              GIFT City EV
-            </button>
+          <div className="u-seg text-xs">
+            {([
+              ['ALL', 'All EV fleet'],
+              ['GGTSL', 'GGTSL Gandhinagar'],
+              ['GIFT', 'GIFT City EV'],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setOperatorFilter(value)}
+                aria-pressed={operatorFilter === value}
+                className={`u-seg-item ${operatorFilter === value ? 'u-seg-item-active font-semibold' : ''}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           <button
             onClick={() => fetchDepartures(selectedStopId)}
             disabled={isLoading}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 transition-all disabled:opacity-50"
+            className="u-icon-btn disabled:opacity-50"
             title="Refresh Live Departures"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-emerald-400' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin text-emerald-600' : ''}`} />
           </button>
         </div>
       </div>
 
       {/* Station Selector Dropdown Pills */}
       <div>
-        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-          Select Station / Transit Terminal:
+        <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+          Select station or transit terminal
         </label>
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="no-scrollbar u-scroll-x flex items-center gap-2 pb-2">
           {GANDHINAGAR_MAJOR_STOPS.map((stop) => (
             <button
               key={stop.stop_id}
               onClick={() => setSelectedStopId(stop.stop_id)}
-              className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+              aria-pressed={selectedStopId === stop.stop_id}
+              className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
                 selectedStopId === stop.stop_id
-                  ? 'bg-emerald-500/20 border-emerald-400 text-white ring-1 ring-emerald-500/50 shadow-md shadow-emerald-950'
-                  : 'bg-slate-800/80 border-white/5 text-slate-300 hover:bg-slate-800 hover:text-white'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/20'
+                  : 'border-line bg-surface-2 text-ink-secondary hover:border-line-strong hover:text-ink'
               }`}
             >
               <div className="flex items-center gap-1.5">
-                <MapPin className="w-3 h-3 text-emerald-400" />
+                <MapPin className="h-3 w-3 text-emerald-600" />
                 <span>{stop.name}</span>
-                <span className="text-[10px] opacity-60 font-mono">({stop.city})</span>
+                <span className="u-num text-[10px] text-ink-faint">({stop.city})</span>
               </div>
             </button>
           ))}
@@ -209,10 +195,10 @@ export const ElectricBusDepartureBoard: React.FC = () => {
       {/* Live Departures List */}
       <div className="space-y-2">
         {filteredDepartures.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 bg-black/20 rounded-xl border border-white/5">
-            <Zap className="w-8 h-8 mx-auto text-emerald-500/40 mb-2" />
-            <p className="font-semibold text-sm">No live departures matching current filter</p>
-            <p className="text-xs text-slate-500 mt-1">Check back shortly or select another station hub</p>
+          <div className="rounded-xl border border-line bg-surface-2 p-8 text-center text-ink-muted">
+            <Zap className="mx-auto mb-2 h-8 w-8 text-emerald-500/50" />
+            <p className="text-sm font-medium text-ink-secondary">No live departures match the current filter</p>
+            <p className="mt-1 text-xs text-ink-faint">Check back shortly, or select another station hub</p>
           </div>
         ) : (
           filteredDepartures.map((dep, idx) => {
@@ -220,45 +206,45 @@ export const ElectricBusDepartureBoard: React.FC = () => {
             return (
               <div
                 key={dep.vehicle_id || dep.route_number || idx}
-                className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-slate-900/90 hover:bg-slate-850 border border-white/10 hover:border-emerald-500/40 transition-all duration-200"
+                className="flex items-center justify-between gap-4 rounded-xl border border-line bg-surface-1 p-3.5 transition-all duration-200 hover:border-emerald-200 hover:bg-surface-2"
               >
                 {/* Left: Route Badge & Destination */}
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="shrink-0">
                     <span
-                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg font-bold text-sm text-white shadow-sm ${
+                      className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold ${
                         isGift
-                          ? 'bg-gradient-to-r from-teal-700 to-emerald-700 border border-teal-400/40'
-                          : 'bg-gradient-to-r from-emerald-700 to-teal-700 border border-emerald-400/40'
+                          ? 'border-teal-200 bg-teal-50 text-teal-700'
+                          : 'border-emerald-200 bg-emerald-50 text-emerald-700'
                       }`}
                     >
-                      <Zap className="w-3.5 h-3.5 fill-emerald-300 text-emerald-300" />
-                      <span>{dep.route_number || 'E-Bus'}</span>
+                      <Zap className="h-3.5 w-3.5 fill-emerald-600 text-emerald-600" />
+                      <span className="u-num">{dep.route_number || 'E-Bus'}</span>
                     </span>
                   </div>
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-white truncate">
+                      <p className="truncate text-sm font-medium text-ink">
                         {dep.destination || dep.route_name}
                       </p>
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                        {isGift ? 'GIFT City EV' : 'GGTSL Electric'}
+                      <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-px text-[10px] font-medium text-emerald-700">
+                        {isGift ? 'GIFT City EV' : 'GGTSL electric'}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-500" />
-                        <span>Sched: {dep.departure_time || '14:30'}</span>
+                    <div className="mt-0.5 flex items-center gap-3 text-xs text-ink-muted">
+                      <span className="u-num flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-ink-faint" />
+                        <span>{dep.departure_time || '14:30'}</span>
                       </span>
                       {dep.platform && (
-                        <span className="font-mono text-cyan-300 font-semibold">
+                        <span className="u-num font-medium text-aqua-700">
                           {dep.platform}
                         </span>
                       )}
-                      <span className="flex items-center gap-1 text-emerald-400 font-mono text-[11px]">
-                        ⚡ {dep.battery_soc_pct || 80}% SOC
+                      <span className="u-num flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+                        {dep.battery_soc_pct || 80}% SOC
                       </span>
                     </div>
                   </div>
@@ -267,26 +253,26 @@ export const ElectricBusDepartureBoard: React.FC = () => {
                 {/* Right: ETA Minutes Countdown */}
                 <div className="text-right shrink-0">
                   <div
-                    className={`inline-flex items-baseline gap-1 px-3 py-1 rounded-xl font-bold font-mono ${
+                    className={`u-num inline-flex items-baseline gap-1 rounded-xl border px-3 py-1 font-semibold ${
                       dep.eta_minutes <= 3
-                        ? 'bg-emerald-500 text-slate-950 animate-pulse'
+                        ? 'border-emerald-600 bg-emerald-600 text-white'
                         : dep.eta_minutes <= 7
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                        : 'bg-slate-800 text-slate-300 border border-white/10'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        : 'border-line bg-surface-3 text-ink-secondary'
                     }`}
                   >
-                    <span className="text-base font-extrabold">{dep.eta_minutes}</span>
-                    <span className="text-[11px] font-sans">min</span>
+                    <span className="text-base font-semibold">{dep.eta_minutes}</span>
+                    <span className="text-[11px] font-normal">min</span>
                   </div>
 
-                  <div className="flex items-center justify-end gap-1 text-[10px] font-bold mt-1 text-slate-400">
+                  <div className="mt-1 flex items-center justify-end gap-1 text-[10px] font-medium">
                     {dep.status === 'LIVE' ? (
-                      <span className="text-emerald-400 flex items-center gap-1">
-                        <Radio className="w-2.5 h-2.5 animate-ping" />
-                        <span>LIVE GPS</span>
+                      <span className="flex items-center gap-1 text-emerald-700">
+                        <Radio className="h-2.5 w-2.5 animate-pulse-soft" />
+                        <span>Live GPS</span>
                       </span>
                     ) : (
-                      <span className="text-slate-500">SCHEDULED</span>
+                      <span className="text-ink-faint">Scheduled</span>
                     )}
                   </div>
                 </div>
@@ -297,9 +283,9 @@ export const ElectricBusDepartureBoard: React.FC = () => {
       </div>
 
       {/* Footer info */}
-      <div className="flex items-center justify-between text-[11px] text-slate-500 border-t border-white/5 pt-3 font-mono">
-        <span>PM-eBus Sewa Telemetry Active</span>
-        <span>Refreshed: {lastRefreshed.toLocaleTimeString()}</span>
+      <div className="u-num flex items-center justify-between border-t border-line pt-3 text-[11px] text-ink-faint">
+        <span>PM-eBus Sewa telemetry active</span>
+        <span>Refreshed {lastRefreshed.toLocaleTimeString()}</span>
       </div>
     </div>
   )

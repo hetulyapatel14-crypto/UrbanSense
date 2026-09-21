@@ -1,17 +1,18 @@
-import { useState, useEffect, type CSSProperties } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import { MapContainer, Marker, Popup, Circle } from 'react-leaflet'
 import {
-  TrendingUp,
-  AlertCircle,
-  ShieldAlert,
-  Radar,
-  Bus,
   Activity,
-  ScanLine,
+  Bus,
+  Layers,
   AlertTriangle,
-  Siren,
-  Map as MapIcon
+  ShieldCheck,
+  Play,
+  Square,
+  MapPin,
+  ChevronRight,
+  Crosshair,
+  Waypoints,
 } from 'lucide-react'
 
 import { buses as defaultBuses } from '../data/buses'
@@ -21,12 +22,12 @@ import { roadSimulator } from '../services/roadSimulator'
 import { Link } from 'react-router-dom'
 import HeaderActions from '../components/HeaderActions'
 import { PageHeader } from '../components/common/PageHeader'
-import { KpiCard } from '../components/common/KpiCard'
-import { PremiumPanel } from '../components/common/PremiumPanel'
-import { AnimatedCounter } from '../components/common/AnimatedCounter'
+import { MetricStrip } from '../components/common/MetricStrip'
+import { StatusBadge, StatusTone } from '../components/common/StatusBadge'
 import { MapTileLayer, MapViewToggle, type MapTileMode } from '../components/common/MapTileLayer'
+import { vehicleIcon, eventIcon, severityTone } from '../components/common/mapIcons'
+import { EmptyState } from '../components/common/EmptyState'
 import 'leaflet/dist/leaflet.css'
-
 import L from 'leaflet'
 
 // Fix Leaflet default icon issue
@@ -42,11 +43,19 @@ L.Icon.Default.mergeOptions({
   shadowSize: [41, 41],
 })
 
+const severityToneMap: Record<string, StatusTone> = {
+  critical: 'rose',
+  high: 'amber',
+  medium: 'blue',
+  low: 'slate',
+}
+
 export default function CommandCenter() {
   const [mapMode, setMapMode] = useState<MapTileMode>('street')
   const [demoMode, setDemoMode] = useState(false)
   const [buses, setBuses] = useState(defaultBuses)
   const [alerts, setAlerts] = useState(defaultAlerts)
+  const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null)
   const [stats, setStats] = useState({
     activeBuses: 248,
     onlineBuses: 236,
@@ -55,7 +64,7 @@ export default function CommandCenter() {
     criticalAlerts: 4,
   })
 
-  // Fetch live stats and alerts, and subscribe to road-snapped live bus movement
+  // Live stats, alerts and road-snapped vehicle movement
   useEffect(() => {
     apiService.getDashboardSummary().then(data => {
       setStats(prev => ({ ...prev, ...data }))
@@ -85,7 +94,6 @@ export default function CommandCenter() {
     apiService.startDemoMode()
 
     const interval = setInterval(() => {
-      // Pull fresh data from backend
       apiService.getDashboardSummary().then(data => {
         setStats(prev => ({ ...prev, ...data }))
       })
@@ -97,335 +105,342 @@ export default function CommandCenter() {
     return () => clearInterval(interval)
   }, [demoMode])
 
-  const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case 'critical':
-        return 'text-rose-700 bg-rose-50 border-rose-200'
-      case 'high':
-        return 'text-amber-800 bg-amber-50 border-amber-200'
-      case 'medium':
-        return 'text-blue-700 bg-blue-50 border-blue-200'
-      default:
-        return 'text-slate-700 bg-slate-100 border-slate-200'
-    }
-  }
+  const selectedAlert = useMemo(
+    () => alerts.find(a => String(a.id) === selectedAlertId) ?? alerts[0],
+    [alerts, selectedAlertId]
+  )
 
-  const getSeverityBorder = (severity: string) => {
-    switch (severity) {
-      case 'critical':
-        return 'hover:border-rose-400 border-slate-200'
-      case 'high':
-        return 'hover:border-amber-400 border-slate-200'
-      case 'medium':
-        return 'hover:border-blue-400 border-slate-200'
-      default:
-        return 'hover:border-slate-300 border-slate-200'
-    }
-  }
+  const criticalCount = alerts.filter(a => a.severity === 'critical').length
 
   return (
     <DashboardLayout>
-      {/* Top Bar */}
       <PageHeader
         title="Command Center"
-        icon={Radar}
-        live={{
-          label: `${stats.activeBuses} Buses Sensing`,
-          tone: 'emerald'
-        }}
-        subtitle="Real-time edge-AI telemetry and geospatial events across Ahmedabad"
+        eyebrow="Operations · Ahmedabad region"
+        icon={Activity}
+        live={{ label: 'All systems operational', tone: 'emerald' }}
+        subtitle={`${stats.onlineBuses} vehicles transmitting · ${alerts.length} events in feed · ${criticalCount} critical escalations`}
         actions={
           <div className="flex items-center gap-2">
             <button
               onClick={() => setDemoMode(!demoMode)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
-                demoMode
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                  : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-slate-200'
-              }`}
+              className={`u-btn u-btn-sm ${demoMode ? 'u-btn-danger' : 'u-btn-outline'}`}
+              aria-pressed={demoMode}
             >
-              <span className={`w-2 h-2 rounded-full ${demoMode ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
-              <span>{demoMode ? 'Demo Active' : 'Simulation'}</span>
+              {demoMode ? (
+                <>
+                  <Square className="h-3 w-3 fill-current" />
+                  <span className="hidden sm:inline">Pause stream</span>
+                </>
+              ) : (
+                <>
+                  <Play className="h-3 w-3 fill-current" />
+                  <span className="hidden sm:inline">Live stream</span>
+                </>
+              )}
             </button>
-
             <HeaderActions />
           </div>
         }
       />
 
+      <div className="flex-1 space-y-4 overflow-auto p-4 sm:p-5">
+        {/* Operational telemetry strip */}
+        <MetricStrip
+          dense
+          items={[
+            { label: 'Fleet active', value: stats.activeBuses, sublabel: 'Probes transmitting', icon: Bus },
+            { label: 'AI events today', value: '12.8K', sublabel: 'On-vehicle inferences', icon: Activity },
+            { label: 'Road hazards', value: '327', sublabel: 'Awaiting repair', icon: Layers, valueTone: 'amber' },
+            { label: 'Open incidents', value: stats.incidents, sublabel: `${stats.criticalAlerts} priority`, icon: AlertTriangle, valueTone: 'rose' },
+            { label: 'Detection confidence', value: '94.6%', sublabel: 'Network benchmark', icon: ShieldCheck, valueTone: 'emerald' },
+          ]}
+        />
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-6">
-          {/* KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <KpiCard
-              label="Active Fleet"
-              value={<AnimatedCounter value={stats.activeBuses} />}
-              icon={Bus}
-              accent="blue"
-              hint="Buses en route"
-              trend="Live"
-              trendTone="positive"
-              delay={0}
-            />
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+          {/* ── Live city canvas ─────────────────────────────────────── */}
+          <section className="u-panel flex min-h-[560px] flex-col overflow-hidden lg:min-h-[640px]">
+            <span className="u-hair" aria-hidden="true" />
 
-            <KpiCard
-              label="Online Sensors"
-              value={<AnimatedCounter value={stats.onlineBuses} />}
-              icon={Activity}
-              accent="emerald"
-              hint="95.2% operational"
-              trend="+1.4%"
-              trendTone="positive"
-              delay={70}
-            />
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2.5">
+              <div className="flex items-center gap-2.5">
+                <span className="live-dot" />
+                <h2 className="text-[13px] font-semibold text-ink">Regional operations canvas</h2>
+                <span className="u-overline hidden sm:inline">GIS · live</span>
+              </div>
 
-            <KpiCard
-              label="AI Detections"
-              value={<AnimatedCounter value={stats.detections.toLocaleString()} />}
-              icon={ScanLine}
-              accent="indigo"
-              hint="Today's total events"
-              trend="+8.2%"
-              trendTone="positive"
-              delay={140}
-            />
-
-            <KpiCard
-              label="Open Incidents"
-              value={<AnimatedCounter value={stats.incidents} />}
-              icon={AlertTriangle}
-              accent="amber"
-              hint="Action required"
-              trend="Monitoring"
-              trendTone="warning"
-              delay={210}
-            />
-
-            <KpiCard
-              label="Critical Alerts"
-              value={<AnimatedCounter value={stats.criticalAlerts} />}
-              icon={Siren}
-              accent="rose"
-              hint="Urgent attention"
-              trend="Escalated"
-              trendTone="critical"
-              delay={280}
-            />
-          </div>
-
-          {/* Map and Alerts */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Map */}
-            <div className="lg:col-span-2">
-              <PremiumPanel
-                flush
-                title="Live Urban Geospatial Feed"
-                subtitle="Bus telemetry, incident zones and hazard overlays"
-                icon={MapIcon}
-                badge={
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
-                    Interactive
-                  </span>
-                }
-                actions={
-                  <div className="flex items-center gap-3 text-xs font-semibold text-slate-600">
-                    <MapViewToggle mode={mapMode} onChange={setMapMode} />
-                    <div className="h-3.5 w-px bg-slate-200 hidden sm:block" />
-                    <label className="flex items-center space-x-1.5 cursor-pointer">
-                      <input type="checkbox" defaultChecked className="rounded text-blue-600 focus:ring-blue-500" />
-                      <span>Buses</span>
-                    </label>
-                    <label className="flex items-center space-x-1.5 cursor-pointer">
-                      <input type="checkbox" defaultChecked className="rounded text-blue-600 focus:ring-blue-500" />
-                      <span>Incidents</span>
-                    </label>
-                    <label className="flex items-center space-x-1.5 cursor-pointer">
-                      <input type="checkbox" defaultChecked className="rounded text-blue-600 focus:ring-blue-500" />
-                      <span>Hazards</span>
-                    </label>
-                  </div>
-                }
-              >
-                <div className="h-[550px] relative">
-                  {/* Cinematic scan sweep over the live feed */}
-                  <div className="scanline z-[450]" aria-hidden="true" />
-                  <MapContainer
-                    center={[23.0300, 72.5700]}
-                    zoom={12}
-                    style={{ height: '100%', width: '100%' }}
-                    zoomControl={true}
-                  >
-                    <MapTileLayer mode={mapMode} />
-
-                    {/* Buses */}
-                    {buses.filter(b => b.status === 'online').map(bus => (
-                      <Marker key={bus.id} position={bus.gps}>
-                        <Popup>
-                          <div className="text-slate-900 font-sans p-1">
-                            <div className="font-extrabold text-base text-blue-700">{bus.id}</div>
-                            <div className="text-xs text-slate-600 mt-1 font-semibold">Route: {bus.route}</div>
-                            <div className="text-xs text-slate-600">{bus.location}</div>
-                            <div className="text-xs font-bold text-slate-800 mt-1">{bus.speed} km/h</div>
-                            <Link to="/live-fleet" className="text-blue-600 hover:text-blue-800 text-xs font-bold mt-2 block">
-                              View Fleet Telemetry →
-                            </Link>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    ))}
-
-                    {/* Alert zones */}
-                    {alerts.map(alert => (
-                      <Circle
-                        key={alert.id}
-                        center={alert.gps}
-                        radius={200}
-                        pathOptions={{
-                          color: alert.severity === 'critical' ? '#ef4444' : alert.severity === 'high' ? '#f59e0b' : '#3b82f6',
-                          fillColor: alert.severity === 'critical' ? '#ef4444' : alert.severity === 'high' ? '#f59e0b' : '#3b82f6',
-                          fillOpacity: 0.25,
-                          weight: 2,
-                        }}
-                      >
-                        <Popup>
-                          <div className="text-slate-900 font-sans p-1">
-                            <div className="font-extrabold text-sm">{alert.type}</div>
-                            <div className="text-xs text-slate-600 mt-0.5">{alert.location}</div>
-                            <div className="text-xs font-bold text-blue-600 mt-1">Confidence: {alert.confidence}%</div>
-                            <Link to={`/incident/${alert.id}`} className="text-xs font-bold text-blue-600 hover:underline mt-1 block">
-                              Investigate Incident →
-                            </Link>
-                          </div>
-                        </Popup>
-                      </Circle>
-                    ))}
-                  </MapContainer>
-                </div>
-              </PremiumPanel>
+              <div className="flex items-center gap-2">
+                <span className="u-num hidden rounded-lg border border-line bg-surface-3/60 px-2 py-1 text-[11px] text-ink-muted sm:inline">
+                  {buses.length} nodes
+                </span>
+                <MapViewToggle mode={mapMode} onChange={setMapMode} />
+              </div>
             </div>
 
-            {/* Live Alerts */}
-            <div>
-              <PremiumPanel
-                title="Live Urban Alerts"
-                icon={ShieldAlert}
-                badge={
-                  <span className="flex items-center gap-1.5 text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 live-dot" />
-                    {alerts.length} Active
-                  </span>
-                }
+            <div className="relative flex-1">
+              <div className="u-scanline z-[450]" aria-hidden="true" />
+
+              <MapContainer
+                center={[23.03, 72.57]}
+                zoom={12}
+                style={{ height: '100%', width: '100%' }}
+                zoomControl={true}
               >
-                <div className="space-y-3 max-h-[550px] overflow-y-auto pr-0.5">
-                  {alerts.map((alert, alertIndex) => (
-                    <div
-                      key={alert.id}
-                      style={{ '--i': alertIndex } as CSSProperties}
-                      className={`stagger-item bg-white border rounded-xl p-3.5 transition-all duration-300 ease-silk shadow-sm hover:shadow-card hover:-translate-y-0.5 ${getSeverityBorder(alert.severity)}`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${getSeverityBadge(alert.severity)}`}>
-                          {alert.severity}
-                        </span>
-                        <span className="text-xs font-medium text-slate-400">{alert.timestamp}</span>
-                      </div>
+                <MapTileLayer mode={mapMode} />
 
-                      <div className="font-bold text-slate-900 text-sm mb-2">{alert.type}</div>
-
-                      <div className="space-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-slate-500">Location:</span>
-                          <span className="font-semibold text-slate-800">{alert.location}</span>
+                {/* Fleet nodes */}
+                {buses.map(bus => (
+                  <Marker
+                    key={bus.id}
+                    position={bus.gps}
+                    icon={vehicleIcon({ tone: 'brand', speed: bus.speed })}
+                  >
+                    <Popup>
+                      <div className="space-y-1.5">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="font-mono text-[12px] font-semibold text-ink">{bus.id}</span>
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted">{bus.route}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-500">Sensed By:</span>
-                          <span className="font-semibold text-slate-800">{alert.busId}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-500">Confidence:</span>
-                          <span className="font-semibold text-emerald-600">{alert.confidence}%</span>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 flex justify-end">
+                        <p className="text-[11.5px] text-ink-secondary">{bus.location}</p>
+                        <p className="font-mono text-[11px] text-ink-muted">
+                          {bus.speed} km/h · {bus.status}
+                        </p>
                         <Link
-                          to={`/incident/${alert.id}`}
-                          className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors"
+                          to={`/live-fleet?bus=${bus.id}`}
+                          className="inline-block pt-1 text-[11.5px] font-medium text-brand-600 hover:text-brand-500"
                         >
-                          View Details →
+                          Open vehicle feed →
                         </Link>
                       </div>
-                    </div>
+                    </Popup>
+                  </Marker>
+                ))}
+
+                {/* Incident radius zones */}
+                {alerts.map(alert => (
+                  <Circle
+                    key={`zone-${alert.id}`}
+                    center={alert.gps}
+                    radius={200}
+                    pathOptions={{
+                      color: alert.severity === 'critical' ? '#DC2626' : alert.severity === 'high' ? '#D97706' : '#FF4757',
+                      fillColor: alert.severity === 'critical' ? '#DC2626' : alert.severity === 'high' ? '#D97706' : '#FF4757',
+                      fillOpacity: 0.12,
+                      weight: 1.2,
+                    }}
+                  />
+                ))}
+
+                {/* Incident markers */}
+                {alerts.map(alert => (
+                  <Marker
+                    key={alert.id}
+                    position={alert.gps}
+                    icon={eventIcon(alert.severity, String(alert.id) === String(selectedAlert?.id) ? 22 : 16)}
+                  >
+                    <Popup>
+                      <div className="space-y-1.5">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="text-[12px] font-semibold text-ink">{alert.type}</span>
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted">{alert.severity}</span>
+                        </div>
+                        <p className="text-[11.5px] text-ink-secondary">{alert.location}</p>
+                        <p className="font-mono text-[11px] text-ink-muted">
+                          {alert.busId} · {alert.confidence}% · {alert.timestamp}
+                        </p>
+                        <Link
+                          to={`/incident/${alert.id}`}
+                          className="inline-block pt-1 text-[11.5px] font-medium text-brand-600 hover:text-brand-500"
+                        >
+                          Open incident dossier →
+                        </Link>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+
+              {/* Floating canvas overlays */}
+              <div className="pointer-events-none absolute bottom-4 left-4 z-[400] flex flex-wrap gap-2">
+                <div className="u-glass pointer-events-auto px-3 py-2">
+                  <p className="u-overline">Snap quality</p>
+                  <p className="u-num mt-1 text-[12px] font-semibold text-emerald-600">100% centreline</p>
+                </div>
+                <div className="u-glass pointer-events-auto px-3 py-2">
+                  <p className="u-overline">Open incidents</p>
+                  <p className="u-num mt-1 text-[12px] font-semibold text-rose-600">{alerts.length} active</p>
+                </div>
+              </div>
+
+              <div className="pointer-events-none absolute right-4 top-4 z-[400] hidden lg:block">
+                <div className="u-glass pointer-events-auto space-y-1.5 px-3 py-2.5">
+                  <p className="u-overline mb-1">Legend</p>
+                  {[
+                    { c: '#FF4757', l: 'Fleet node' },
+                    { c: '#DC2626', l: 'Critical event' },
+                    { c: '#D97706', l: 'High severity' },
+                    { c: '#059669', l: 'Nominal corridor' },
+                  ].map(item => (
+                    <p key={item.l} className="flex items-center gap-2 text-[11px] text-ink-secondary">
+                      <span className="u-dot" style={{ backgroundColor: item.c }} />
+                      {item.l}
+                    </p>
                   ))}
-                </div>
-              </PremiumPanel>
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <PremiumPanel
-            className="mt-6"
-            title="Recent Event Stream"
-            subtitle="Autonomous edge detections"
-            icon={Activity}
-            badge={
-              <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot" />
-                Streaming
-              </span>
-            }
-          >
-            <div className="relative">
-              <div className="stagger-list space-y-3.5">
-                <div className="flex flex-wrap items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200/60 text-xs sm:text-sm">
-                  <div className="flex items-center space-x-3">
-                    <span className="p-1.5 rounded-md bg-rose-50 text-rose-600 border border-rose-200">
-                      <AlertCircle className="w-4 h-4" />
-                    </span>
-                    <span className="font-semibold text-slate-400">14:32:18</span>
-                    <span className="font-medium text-slate-800">Hit-and-run detected on SG Highway by BUS-104</span>
-                  </div>
-                  <span className="font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded text-xs">96.4% confidence</span>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200/60 text-xs sm:text-sm">
-                  <div className="flex items-center space-x-3">
-                    <span className="p-1.5 rounded-md bg-amber-50 text-amber-600 border border-amber-200">
-                      <AlertCircle className="w-4 h-4" />
-                    </span>
-                    <span className="font-semibold text-slate-400">14:20:45</span>
-                    <span className="font-medium text-slate-800">Heavy congestion detected on Ashram Road</span>
-                  </div>
-                  <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-xs">91% confidence</span>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200/60 text-xs sm:text-sm">
-                  <div className="flex items-center space-x-3">
-                    <span className="p-1.5 rounded-md bg-emerald-50 text-emerald-600 border border-emerald-200">
-                      <TrendingUp className="w-4 h-4" />
-                    </span>
-                    <span className="font-semibold text-slate-400">14:15:22</span>
-                    <span className="font-medium text-slate-800">BUS-234 came online on Route 33 (5 cameras active)</span>
-                  </div>
-                  <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-xs">Online</span>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200/60 text-xs sm:text-sm">
-                  <div className="flex items-center space-x-3">
-                    <span className="p-1.5 rounded-md bg-blue-50 text-blue-600 border border-blue-200">
-                      <AlertCircle className="w-4 h-4" />
-                    </span>
-                    <span className="font-semibold text-slate-400">14:10:10</span>
-                    <span className="font-medium text-slate-800">Pothole detected on Ring Road by BUS-121</span>
-                  </div>
-                  <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-xs">94% confidence</span>
                 </div>
               </div>
             </div>
-          </PremiumPanel>
+          </section>
+
+          {/* ── Live operations feed ─────────────────────────────────── */}
+          <section className="u-panel flex max-h-[640px] flex-col overflow-hidden">
+            <span className="u-hair" aria-hidden="true" />
+
+            <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
+              <div className="flex items-center gap-2.5">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                  <span className="absolute h-1.5 w-1.5 animate-ping-slow rounded-full bg-rose-400" />
+                </span>
+                <h2 className="text-[13px] font-semibold text-ink">Live event feed</h2>
+              </div>
+              <span className="u-num text-[11px] text-ink-muted">{alerts.length} events</span>
+            </div>
+
+            <div className="u-scroll flex-1 space-y-2 overflow-y-auto p-3">
+              {alerts.length === 0 && (
+                <EmptyState title="No active events" description="Detections will appear here as the fleet moves." />
+              )}
+
+              {alerts.map(alert => {
+                const isSelected = String(alert.id) === String(selectedAlert?.id)
+                return (
+                  <button
+                    key={alert.id}
+                    onClick={() => setSelectedAlertId(String(alert.id))}
+                    className={`group relative w-full overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-200 ease-silk ${
+                      isSelected
+                        ? 'border-brand-200/70 bg-brand-50/60'
+                        : 'border-line bg-surface-2/60 hover:border-line-strong hover:bg-surface-3/60'
+                    }`}
+                  >
+                    <span
+                      className="absolute inset-y-0 left-0 w-[2px]"
+                      style={{
+                        backgroundColor:
+                          alert.severity === 'critical' ? '#DC2626' : alert.severity === 'high' ? '#D97706' : '#FF4757',
+                        opacity: isSelected ? 1 : 0.5,
+                      }}
+                      aria-hidden="true"
+                    />
+
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-medium text-ink">{alert.type}</p>
+                        <p className="mt-1 flex items-center gap-1.5 text-[11.5px] text-ink-muted">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{alert.location}</span>
+                        </p>
+                      </div>
+                      <StatusBadge status={alert.severity} tone={severityToneMap[alert.severity] ?? 'slate'} size="sm" />
+                    </div>
+
+                    <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-line/70 pt-2">
+                      <span className="u-num text-[10.5px] text-ink-faint">
+                        {alert.busId} · {alert.confidence}% · {alert.timestamp}
+                      </span>
+                      <Link
+                        to={`/incident/${alert.id}`}
+                        onClick={e => e.stopPropagation()}
+                        className="inline-flex items-center gap-0.5 text-[11px] font-medium text-brand-600 transition-colors hover:text-brand-500"
+                      >
+                        Dossier
+                        <ChevronRight className="h-3 w-3" />
+                      </Link>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="flex items-center justify-between border-t border-line px-4 py-2.5">
+              <Link
+                to="/incident-center"
+                className="inline-flex items-center gap-1.5 text-[12px] font-medium text-brand-600 transition-colors hover:text-brand-500"
+              >
+                All queued incidents
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+              <span className="flex items-center gap-1.5 text-[11px] text-ink-faint">
+                <Crosshair className="h-3.5 w-3.5" />
+                {severityTone(selectedAlert?.severity ?? 'medium')}
+              </span>
+            </div>
+          </section>
         </div>
+
+        {/* ── Corridor summary rows ─────────────────────────────────── */}
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {[
+            {
+              title: 'Corridor health',
+              icon: Waypoints,
+              rows: [
+                { k: 'SG Highway', v: 'Degraded · 18 hazards' },
+                { k: '132ft Ring Road', v: 'Watch · 14 hazards' },
+                { k: 'Ashram Road', v: 'Watch · 12 hazards' },
+              ],
+              to: '/road-intelligence',
+              cta: 'Road intelligence',
+            },
+            {
+              title: 'Fleet readiness',
+              icon: Bus,
+              rows: [
+                { k: 'Transmitting', v: `${stats.onlineBuses} vehicles` },
+                { k: 'Depot standby', v: `${Math.max(stats.activeBuses - stats.onlineBuses, 0)} vehicles` },
+                { k: 'Camera channels', v: `${stats.onlineBuses * 5} streams` },
+              ],
+              to: '/live-fleet',
+              cta: 'Fleet console',
+            },
+            {
+              title: 'Transit network',
+              icon: Layers,
+              rows: [
+                { k: 'Metro & BRTS', v: 'Nominal service' },
+                { k: 'AMTS feeders', v: '2 corridor delays' },
+                { k: 'GIFT EV loop', v: 'Nominal service' },
+              ],
+              to: '/journey-planner',
+              cta: 'Journey planner',
+            },
+          ].map(card => (
+            <div key={card.title} className="u-panel u-panel-hover group p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <card.icon className="h-3.5 w-3.5 text-brand-500" />
+                  <h3 className="text-[13px] font-semibold text-ink">{card.title}</h3>
+                </div>
+                <Link
+                  to={card.to}
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-ink-muted transition-colors hover:text-brand-600"
+                >
+                  {card.cta}
+                  <ChevronRight className="h-3 w-3" />
+                </Link>
+              </div>
+
+              <dl className="mt-3 divide-y divide-line/70 border-t border-line/70">
+                {card.rows.map(row => (
+                  <div key={row.k} className="flex items-center justify-between py-2">
+                    <dt className="text-[12px] text-ink-muted">{row.k}</dt>
+                    <dd className="u-num text-[12px] font-medium text-ink-secondary">{row.v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ))}
+        </section>
       </div>
     </DashboardLayout>
   )
